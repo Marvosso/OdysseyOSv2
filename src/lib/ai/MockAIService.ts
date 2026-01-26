@@ -8,9 +8,13 @@
 import type {
   IAIService,
   AIServiceConfig,
+} from './AIService.interface';
+import type {
   Scene,
   Character,
   Chapter,
+} from '@/types/models';
+import type {
   SceneAnalysisContext,
   SceneAnalysisResult,
   OutlineSuggestionContext,
