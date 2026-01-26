@@ -5,6 +5,8 @@
  * Prevents XSS and handles encoding issues
  */
 
+import React from 'react';
+
 /**
  * Sanitize text for safe React rendering
  * Removes dangerous characters and validates encoding
