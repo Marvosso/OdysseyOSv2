@@ -5,6 +5,9 @@
  * Prevents garbled text from incorrect encoding assumptions
  */
 
+// BufferEncoding type from Node.js
+type BufferEncoding = 'ascii' | 'utf8' | 'utf-8' | 'utf16le' | 'ucs2' | 'ucs-2' | 'base64' | 'base64url' | 'latin1' | 'binary' | 'hex';
+
 /**
  * Encoding detection result
  */
@@ -276,7 +279,7 @@ export class NodeTextDecoder {
   static decodeBuffer(buffer: Buffer, encoding?: string): DecodedText {
     try {
       // Detect encoding if not provided
-      const detectedEncoding = encoding || this.detectEncoding(buffer);
+      const detectedEncoding = (encoding || this.detectEncoding(buffer)) as BufferEncoding;
       
       // Decode with detected encoding
       const text = buffer.toString(detectedEncoding);
