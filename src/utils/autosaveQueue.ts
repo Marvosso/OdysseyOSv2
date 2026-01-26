@@ -112,7 +112,8 @@ class AutosaveQueue {
       this.saveResults.set(save.id, result);
 
       // Process next item in queue if any
-      if (this.queues.get(key)?.length > 0) {
+      const queue = this.queues.get(key);
+      if (queue && queue.length > 0) {
         // Small delay to prevent overwhelming the system
         setTimeout(() => {
           this.processQueue(key);
@@ -123,7 +124,8 @@ class AutosaveQueue {
     } catch (error) {
       this.activeSaves.delete(key);
       // Continue processing queue even on error
-      if (this.queues.get(key)?.length > 0) {
+      const queue = this.queues.get(key);
+      if (queue && queue.length > 0) {
         this.processQueue(key);
       }
     }
