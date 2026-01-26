@@ -259,8 +259,8 @@ export class BrowserTextDecoder {
     
     return {
       isValid: errors.length === 0,
-      errors: errors as readonly string[],
-      warnings: warnings as readonly string[],
+      errors,
+      warnings,
     };
   }
 }
