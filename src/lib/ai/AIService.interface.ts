@@ -8,6 +8,9 @@ import type {
   Scene,
   Character,
   Chapter,
+  StoryId,
+} from '@/types/models';
+import type {
   SceneAnalysisContext,
   SceneAnalysisResult,
   OutlineSuggestionContext,
