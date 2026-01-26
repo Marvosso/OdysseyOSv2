@@ -218,6 +218,6 @@ export async function createFileWithEncoding(
     bytes = new TextEncoder().encode(content);
   }
   
-  const blob = new Blob([bytes]);
+  const blob = new Blob([bytes] as BlobPart[]);
   return new File([blob], filename, { type: 'text/plain' });
 }
