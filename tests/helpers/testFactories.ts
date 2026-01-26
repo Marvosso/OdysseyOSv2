@@ -153,7 +153,7 @@ export function createMockStoryWithStructure(options?: {
     
     // Create chapter with storyId and scenes already set
     const chapter = createMockChapter({
-      id: `chapter-${i + 1}`,
+      id: createChapterId(`chapter-${i + 1}`),
       storyId: story.id,
       scenes: chapterScenes,
       order: i + 1,
