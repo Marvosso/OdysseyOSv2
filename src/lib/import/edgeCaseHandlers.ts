@@ -124,24 +124,28 @@ export class EdgeCaseHandlers {
       return { chapters, warnings };
     }
 
-    // Rename duplicates
+    // Rename duplicates by creating new objects
     const titleCounts = new Map<string, number>();
-    for (const chapter of chapters) {
+    const renamedChapters = chapters.map((chapter) => {
       const count = titleCounts.get(chapter.title) || 0;
       titleCounts.set(chapter.title, count + 1);
 
       if (count > 0) {
-        // This is a duplicate - modify title
-        chapter.title = `${chapter.title} (${count + 1})`;
+        // This is a duplicate - create new object with modified title
+        return {
+          ...chapter,
+          title: `${chapter.title} (${count + 1})`,
+        };
       }
-    }
+      return chapter;
+    });
 
     warnings.push(
       `Found ${duplicates.length} duplicate chapter title(s). ` +
       `They have been automatically renamed with numbers (e.g., "Chapter 1 (2)").`
     );
 
-    return { chapters, warnings };
+    return { chapters: renamedChapters, warnings };
   }
 
   /**
