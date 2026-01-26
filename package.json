@@ -1,7 +1,7 @@
 {
   "name": "odysseyos",
   "version": "1.0.0",
-  "description": "OdysseyOS Next.js app",
+  "description": "OdysseyOS - A comprehensive story writing and narrative management platform built with Next.js, TypeScript, and Supabase",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -14,13 +14,18 @@
     "next": "^16.0.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "@supabase/supabase-js": "^2.45.0"
+    "@supabase/supabase-js": "^2.45.0",
+    "framer-motion": "^11.0.0",
+    "lucide-react": "^0.400.0"
   },
   "devDependencies": {
     "typescript": "^5.6.0",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.0"
   },
