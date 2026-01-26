@@ -55,8 +55,8 @@ export function validateTextForStorage(text: string): {
     return {
       isValid: false,
       sanitized: String(text),
-      errors: errors as readonly string[],
-      warnings: warnings as readonly string[],
+      errors,
+      warnings,
     };
   }
   
@@ -86,8 +86,8 @@ export function validateTextForStorage(text: string): {
   return {
     isValid: errors.length === 0,
     sanitized,
-    errors: errors as readonly string[],
-    warnings: warnings as readonly string[],
+    errors,
+    warnings,
   };
 }
 
