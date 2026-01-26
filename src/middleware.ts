@@ -12,7 +12,7 @@ import { checkRateLimit, RateLimitConfigs } from '@/lib/api/rateLimit';
 /**
  * Middleware configuration
  */
-const config = {
+const middlewareConfig = {
   // API routes to apply middleware to
   apiRoutes: ['/api'],
   
@@ -28,19 +28,19 @@ const config = {
  * Check if path matches API routes
  */
 function isApiRoute(pathname: string): boolean {
-  return config.apiRoutes.some(route => pathname.startsWith(route));
+  return middlewareConfig.apiRoutes.some(route => pathname.startsWith(route));
 }
 
 /**
  * Get rate limit config for path
  */
 function getRateLimitConfig(pathname: string) {
-  for (const [pattern, config] of Object.entries(config.rateLimits)) {
+  for (const [pattern, rateLimitConfig] of Object.entries(middlewareConfig.rateLimits)) {
     if (pathname.startsWith(pattern)) {
-      return config;
+      return rateLimitConfig;
     }
   }
-  return config.rateLimits.default;
+  return middlewareConfig.rateLimits.default;
 }
 
 /**
