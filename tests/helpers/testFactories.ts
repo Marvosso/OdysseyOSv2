@@ -140,27 +140,34 @@ export function createMockStoryWithStructure(options?: {
   const scenes: Scene[] = [];
   
   for (let i = 0; i < chapterCount; i++) {
-    const chapter = createMockChapter(`chapter-${i + 1}`, i + 1);
-    chapter.storyId = story.id;
-    
     const chapterScenes: SceneId[] = [];
     for (let j = 0; j < scenesPerChapter; j++) {
       const scene = createMockScene(
         `scene-${i + 1}-${j + 1}`,
-        chapter.id,
+        createChapterId(`chapter-${i + 1}`),
         j + 1
       );
       scenes.push(scene);
       chapterScenes.push(scene.id);
     }
     
-    chapter.scenes = chapterScenes;
+    // Create chapter with storyId and scenes already set
+    const chapter = createMockChapter({
+      id: `chapter-${i + 1}`,
+      storyId: story.id,
+      scenes: chapterScenes,
+      order: i + 1,
+    });
     chapters.push(chapter);
   }
   
-  story.chapters = chapters.map(c => c.id);
+  // Create story with chapters already set
+  const storyWithChapters = createMockStory({
+    ...story,
+    chapters: chapters.map(c => c.id),
+  });
   
-  return { story, chapters, scenes };
+  return { story: storyWithChapters, chapters, scenes };
 }
 
 /**
