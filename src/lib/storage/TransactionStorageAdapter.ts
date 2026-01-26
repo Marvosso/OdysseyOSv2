@@ -211,9 +211,10 @@ export class TransactionStorageAdapter implements IStoryStorage {
             versionTracker.recordVersion(op.story.id, op.story, transaction);
           } else if (op.type === 'update' && op.storyId) {
             // Get updated story to record version
-            this.baseAdapter.getStory(op.storyId).then((result) => {
+            const storyId = op.storyId; // Store in const for type narrowing
+            this.baseAdapter.getStory(storyId).then((result) => {
               if (result.success && result.data) {
-                versionTracker.recordVersion(op.storyId, result.data, transaction);
+                versionTracker.recordVersion(storyId, result.data, transaction);
               }
             });
           }
