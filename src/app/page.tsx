@@ -20,7 +20,6 @@ export default function HomePage() {
       padding: '2rem',
       fontFamily: 'system-ui, -apple-system, sans-serif'
     }}>
-      {/* Main heading */}
       <h1 style={{ 
         fontSize: '2.5rem', 
         fontWeight: 'bold', 
@@ -30,7 +29,6 @@ export default function HomePage() {
         OdysseyOS is Live!
       </h1>
 
-      {/* Homepage description */}
       <p style={{ 
         fontSize: '1.125rem', 
         lineHeight: '1.6',
@@ -39,25 +37,6 @@ export default function HomePage() {
       }}>
         This is the homepage placeholder for testing Vercel deployment.
       </p>
-
-      {/* Environment variables note */}
-      <div style={{ 
-        padding: '1rem', 
-        backgroundColor: '#f3f4f6', 
-        borderRadius: '8px',
-        border: '1px solid #e5e7eb'
-      }}>
-        <p style={{ 
-          fontSize: '0.875rem', 
-          color: '#6b7280',
-          margin: 0
-        }}>
-          <strong>Note:</strong> Make sure to configure your Supabase environment variables 
-          (<code style={{ backgroundColor: '#e5e7eb', padding: '0.125rem 0.25rem', borderRadius: '4px' }}>NEXT_PUBLIC_SUPABASE_URL</code> and{' '}
-          <code style={{ backgroundColor: '#e5e7eb', padding: '0.125rem 0.25rem', borderRadius: '4px' }}>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>) 
-          in your Vercel project settings for authentication to work.
-        </p>
-      </div>
     </div>
   );
 }
