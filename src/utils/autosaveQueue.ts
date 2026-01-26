@@ -60,7 +60,7 @@ class AutosaveQueue {
     const queue = this.queues.get(key)!;
 
     // Add to queue
-    const queuedSave: QueuedSave<T> = {
+    const queuedSave: QueuedSave<unknown> = {
       id: saveId,
       data,
       timestamp,
@@ -132,7 +132,7 @@ class AutosaveQueue {
   /**
    * Execute a save operation
    */
-  private async executeSave<T>(save: QueuedSave<T>): Promise<SaveResult> {
+  private async executeSave(save: QueuedSave<unknown>): Promise<SaveResult> {
     try {
       await save.saveFn(save.data);
       return {
