@@ -20,7 +20,7 @@ import { createStoryId } from '@/types/models';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Rate limiting
@@ -38,8 +38,9 @@ export async function GET(
     // Require session
     await requireSession(request);
 
-    // Get story ID from params
-    const storyId = createStoryId(params.id);
+    // Get story ID from params (await params in Next.js 16+)
+    const { id } = await params;
+    const storyId = createStoryId(id);
 
     // Get story from storage
     const storage = getStoryStorage();
@@ -95,7 +96,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Rate limiting
@@ -113,8 +114,9 @@ export async function PATCH(
     // Require session
     await requireSession(request);
 
-    // Get story ID from params
-    const storyId = createStoryId(params.id);
+    // Get story ID from params (await params in Next.js 16+)
+    const { id } = await params;
+    const storyId = createStoryId(id);
 
     // Parse request body
     const updates = await parseJsonBody<Partial<Omit<Story, 'id' | 'version'>>>(request);
@@ -183,7 +185,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Rate limiting
@@ -201,8 +203,9 @@ export async function DELETE(
     // Require session
     await requireSession(request);
 
-    // Get story ID from params
-    const storyId = createStoryId(params.id);
+    // Get story ID from params (await params in Next.js 16+)
+    const { id } = await params;
+    const storyId = createStoryId(id);
 
     // Delete story from storage
     const storage = getStoryStorage();
