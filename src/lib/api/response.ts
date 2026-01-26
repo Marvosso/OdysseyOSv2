@@ -4,7 +4,7 @@
  * Standardized response formatting for API routes
  */
 
-import type { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * Success response type
@@ -48,7 +48,7 @@ export function createSuccessResponse<T>(
     statusCode?: number;
     requestId?: string;
   }
-): Response {
+): NextResponse<ApiSuccessResponse<T>> {
   const response: ApiSuccessResponse<T> = {
     success: true,
     data,
@@ -58,11 +58,8 @@ export function createSuccessResponse<T>(
     },
   };
 
-  return new Response(JSON.stringify(response), {
+  return NextResponse.json(response, {
     status: options?.statusCode || 200,
-    headers: {
-      'Content-Type': 'application/json',
-    },
   });
 }
 
@@ -79,7 +76,7 @@ export function createErrorResponse(
     statusCode?: number;
     requestId?: string;
   }
-): Response {
+): NextResponse<ApiErrorResponse> {
   const response: ApiErrorResponse = {
     success: false,
     error,
@@ -89,11 +86,8 @@ export function createErrorResponse(
     },
   };
 
-  return new Response(JSON.stringify(response), {
+  return NextResponse.json(response, {
     status: options?.statusCode || 500,
-    headers: {
-      'Content-Type': 'application/json',
-    },
   });
 }
 
