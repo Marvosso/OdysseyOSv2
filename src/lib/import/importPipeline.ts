@@ -660,7 +660,7 @@ export class PreviewGenerator {
    * Generate preview data for UI
    */
   static generatePreview(
-    result: Omit<ImportResult, 'preview'>
+    result: Omit<ImportResult, 'validation' | 'preview'>
   ): PreviewData {
     const previewText = result.normalizedText.text
       .slice(0, 500)
