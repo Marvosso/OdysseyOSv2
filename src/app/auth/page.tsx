@@ -13,7 +13,8 @@
  * - Modern React hooks and best practices
  */
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
 /**
@@ -28,16 +29,66 @@ type AuthError = {
  * Authentication page component
  */
 export default function AuthPage() {
+  const router = useRouter();
+  
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   
   // UI state
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start with true to check session
   const [error, setError] = useState<AuthError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+
+  /**
+   * Check if user is authenticated and redirect if needed
+   */
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session check error:', sessionError);
+          setLoading(false);
+          return;
+        }
+
+        if (session?.user) {
+          // User is authenticated, redirect to dashboard
+          setUser(session.user);
+          router.push('/dashboard');
+          return;
+        }
+
+        // No session, user can stay on auth page
+        setLoading(false);
+      } catch (err) {
+        console.error('Error checking session:', err);
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        router.push('/dashboard');
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   /**
    * Sign up a new user
@@ -115,8 +166,10 @@ export default function AuthPage() {
       setEmail('');
       setPassword('');
 
-      // Optional: Redirect after successful signup
-      // router.push('/dashboard');
+      // Redirect after successful signup if session exists
+      if (authData.session) {
+        router.push('/dashboard');
+      }
     } catch (err) {
       // Step 3: Handle errors gracefully
       const errorMessage =
@@ -182,8 +235,8 @@ export default function AuthPage() {
       setEmail('');
       setPassword('');
 
-      // Optional: Redirect after successful login
-      // router.push('/dashboard');
+      // Redirect after successful login
+      router.push('/dashboard');
     } catch (err) {
       // Step 2: Handle errors gracefully
       const errorMessage =
@@ -224,6 +277,7 @@ export default function AuthPage() {
 
       setSuccess('Successfully signed out');
       setUser(null);
+      // Redirect stays on auth page (no redirect needed)
     } catch (err) {
       setError({
         message: err instanceof Error ? err.message : 'Sign out failed',
@@ -233,44 +287,41 @@ export default function AuthPage() {
     }
   };
 
-  // If user is logged in, show sign out option
-  if (user) {
+  // Show loading state while checking session
+  if (loading) {
     return (
-      <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold mb-4">Welcome!</h1>
-        <p className="mb-4">You are signed in as: {user.email}</p>
-        <button
-          onClick={handleSignOut}
-          disabled={loading}
-          className="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Signing out...' : 'Sign Out'}
-        </button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="max-w-md mx-auto p-6 bg-gray-800/30 backdrop-blur-sm rounded-xl border border-gray-700">
+        <div className="text-center">
+          <p className="text-gray-300">Checking authentication...</p>
+        </div>
+      </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6">
-        {isSignUp ? 'Sign Up' : 'Sign In'}
-      </h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 py-8 px-4">
+      <div className="max-w-md w-full p-6 bg-gray-800/30 backdrop-blur-sm rounded-xl border border-gray-700">
+        <h1 className="text-2xl font-bold text-white mb-6">
+          {isSignUp ? 'Sign Up' : 'Sign In'}
+        </h1>
 
       {/* Error Display */}
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700">
-          <p className="font-semibold">Error</p>
-          <p>{error.message}</p>
+        <div className="mb-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+          <p className="font-semibold text-red-300">Error</p>
+          <p className="text-red-200">{error.message}</p>
           {error.code && (
-            <p className="text-sm text-red-600 mt-1">Code: {error.code}</p>
+            <p className="text-sm text-red-300 mt-1">Code: {error.code}</p>
           )}
         </div>
       )}
 
       {/* Success Display */}
       {success && (
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-green-700">
-          <p>{success}</p>
+        <div className="mb-4 p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
+          <p className="text-green-200">{success}</p>
         </div>
       )}
 
@@ -278,7 +329,7 @@ export default function AuthPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Email Input */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-200 mb-1">
             Email
           </label>
           <input
@@ -288,7 +339,7 @@ export default function AuthPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={loading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder:text-gray-400 transition-colors"
             placeholder="your.email@example.com"
             autoComplete="email"
           />
@@ -296,7 +347,7 @@ export default function AuthPage() {
 
         {/* Password Input */}
         <div>
-          <label htmlFor="password" className="block text-sm font-medium mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-200 mb-1">
             Password
           </label>
           <input
@@ -307,12 +358,12 @@ export default function AuthPage() {
             required
             disabled={loading}
             minLength={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white placeholder:text-gray-400 transition-colors"
             placeholder="••••••••"
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
           />
           {isSignUp && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-300">
               Password must be at least 6 characters
             </p>
           )}
@@ -322,7 +373,7 @@ export default function AuthPage() {
         <button
           type="submit"
           disabled={loading || !email || !password}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors disabled:bg-gray-700 disabled:text-gray-300 disabled:cursor-not-allowed disabled:hover:bg-gray-700"
         >
           {loading
             ? isSignUp
@@ -344,12 +395,13 @@ export default function AuthPage() {
             setSuccess(null);
           }}
           disabled={loading}
-          className="text-blue-600 hover:text-blue-700 text-sm disabled:opacity-50"
+          className="text-gray-300 hover:text-purple-300 text-sm disabled:text-gray-500 disabled:cursor-not-allowed transition-colors"
         >
           {isSignUp
             ? 'Already have an account? Sign in'
             : "Don't have an account? Sign up"}
         </button>
+      </div>
       </div>
     </div>
   );
