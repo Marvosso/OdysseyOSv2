@@ -24,21 +24,12 @@ export interface SearchResults {
 }
 
 /**
- * Search match structure for scenes (includes index for content matches)
+ * Search match structure
  */
-interface SceneSearchMatch {
+type SearchMatch = {
   index: number;
   relevance: number;
-  text: string;
-}
-
-/**
- * Search match structure for characters (no index needed)
- */
-interface CharacterSearchMatch {
-  relevance: number;
-  text: string;
-}
+};
 
 /**
  * Search indexer for OdysseyOS content
@@ -161,19 +152,20 @@ export class SearchIndex {
 
     for (const scene of scenes) {
       let hasMatch = false;
-      let bestMatch: SceneSearchMatch | null = null;
+      let bestMatch: SearchMatch | null = null;
+      let matchText = '';
 
       // Search scene title
       if (scene.title) {
         const titleMatches = this.findMatches(scene.title, query);
         if (titleMatches.length > 0) {
           const relevance = this.calculateRelevance(query, scene.title, 0, true);
-          if (!bestMatch || relevance > bestMatch.relevance) {
+          if (bestMatch === null || relevance > bestMatch.relevance) {
             bestMatch = {
               index: 0,
               relevance,
-              text: scene.title,
             };
+            matchText = scene.title;
           }
           hasMatch = true;
         }
@@ -185,13 +177,12 @@ export class SearchIndex {
         if (contentMatches.length > 0) {
           const firstMatch = contentMatches[0];
           const relevance = this.calculateRelevance(query, scene.content, firstMatch.index, false);
-          if (!bestMatch || relevance > bestMatch.relevance) {
-            const context = this.extractContext(scene.content, firstMatch.index);
+          if (bestMatch === null || relevance > bestMatch.relevance) {
             bestMatch = {
               index: firstMatch.index,
               relevance,
-              text: context,
             };
+            matchText = this.extractContext(scene.content, firstMatch.index);
           }
           hasMatch = true;
         }
@@ -202,8 +193,8 @@ export class SearchIndex {
           type: 'scene',
           id: scene.id,
           title: scene.title || 'Untitled Scene',
-          content: bestMatch.text,
-          matchText: bestMatch.text,
+          content: matchText,
+          matchText: matchText,
           relevance: bestMatch.relevance,
         });
       }
@@ -222,17 +213,21 @@ export class SearchIndex {
 
     for (const character of characters) {
       let hasMatch = false;
-      let bestMatch: CharacterSearchMatch | null = null;
+      let bestMatch: SearchMatch | null = null;
+      let matchText = '';
 
       // Search character name
       if (character.name) {
         const nameMatches = this.findMatches(character.name, query);
         if (nameMatches.length > 0) {
           const relevance = this.calculateRelevance(query, character.name, 0, true);
-          bestMatch = {
-            relevance,
-            text: character.name,
-          };
+          if (bestMatch === null || relevance > bestMatch.relevance) {
+            bestMatch = {
+              index: 0,
+              relevance,
+            };
+            matchText = character.name;
+          }
           hasMatch = true;
         }
       }
@@ -243,12 +238,12 @@ export class SearchIndex {
         if (descMatches.length > 0) {
           const firstMatch = descMatches[0];
           const relevance = this.calculateRelevance(query, character.description, firstMatch.index, false);
-          if (!bestMatch || relevance > bestMatch.relevance) {
-            const context = this.extractContext(character.description, firstMatch.index);
+          if (bestMatch === null || relevance > bestMatch.relevance) {
             bestMatch = {
+              index: firstMatch.index,
               relevance,
-              text: context,
             };
+            matchText = this.extractContext(character.description, firstMatch.index);
           }
           hasMatch = true;
         }
@@ -259,8 +254,8 @@ export class SearchIndex {
           type: 'character',
           id: character.id,
           title: character.name,
-          content: bestMatch.text,
-          matchText: bestMatch.text,
+          content: matchText,
+          matchText: matchText,
           relevance: bestMatch.relevance,
         });
       }
