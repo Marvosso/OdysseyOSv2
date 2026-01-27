@@ -1,9 +1,15 @@
+export type SceneStatus = 'draft' | 'revised' | 'final';
+
 export interface Scene {
   id: string;
   title: string;
   content: string;
   position: number;
   emotion: EmotionType;
+  status: SceneStatus;
+  wordCount?: number; // Computed word count
+  povCharacter?: string; // Point of view character
+  location?: string; // Scene location
   createdAt: Date;
   updatedAt?: Date;
 }

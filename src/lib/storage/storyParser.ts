@@ -2,6 +2,7 @@
 
 import { Scene } from '@/types/story';
 import { Chapter } from '@/types/outline';
+import { computeWordCount } from '@/utils/wordCount';
 
 export interface ParsedStory {
   title: string;
@@ -135,12 +136,15 @@ export class StoryParser {
     // Detect emotion from content (simple keyword-based)
     const emotion = this.detectEmotion(cleanContent);
     
+    const wordCount = computeWordCount(cleanContent);
     return {
       id: `scene-${index}`,
       title: `Scene ${index + 1}`,
       content: cleanContent,
       position: index,
       emotion,
+      status: 'draft',
+      wordCount,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

@@ -66,6 +66,20 @@ export interface DetectedScene {
 }
 
 /**
+ * Result of character detection
+ */
+export interface DetectedCharacter {
+  /** Character name */
+  readonly name: string;
+  /** Confidence score (0-1) */
+  readonly confidence: number;
+  /** Number of occurrences in text */
+  readonly occurrences: number;
+  /** First occurrence line index */
+  readonly firstSeen: number;
+}
+
+/**
  * Normalized text with metadata
  */
 export interface NormalizedText {
@@ -97,6 +111,8 @@ export interface ImportResult {
   readonly detectedChapters: readonly DetectedChapter[];
   /** Detected scenes */
   readonly detectedScenes: readonly DetectedScene[];
+  /** Detected characters */
+  readonly detectedCharacters: readonly DetectedCharacter[];
   /** Word count for entire document */
   readonly totalWordCount: WordCount;
   /** Word count per chapter (if chapters detected) */
@@ -137,6 +153,8 @@ export interface PreviewData {
   readonly chapterCount: number;
   /** Number of scenes detected */
   readonly sceneCount: number;
+  /** Number of characters detected */
+  readonly characterCount: number;
   /** Estimated reading time (minutes) */
   readonly estimatedReadingTime: number;
   /** Sample of first 500 characters */
@@ -552,6 +570,187 @@ export class WordCounter {
 }
 
 // ============================================================================
+// Stage 5.5: Character Detection (Non-AI Heuristics)
+// ============================================================================
+
+export class CharacterDetector {
+  /**
+   * Common words to exclude from character detection
+   */
+  private static readonly EXCLUDED_WORDS = new Set([
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
+    'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+    'could', 'should', 'may', 'might', 'must', 'can', 'this', 'that',
+    'these', 'those', 'he', 'she', 'it', 'they', 'we', 'you', 'i', 'me',
+    'him', 'her', 'us', 'them', 'his', 'hers', 'its', 'their', 'our',
+    'your', 'my', 'mine', 'yours', 'theirs', 'ours', 'said', 'says',
+    'say', 'asked', 'asks', 'ask', 'replied', 'replies', 'reply',
+    'thought', 'think', 'thinks', 'felt', 'feels', 'feel', 'looked',
+    'looks', 'look', 'saw', 'see', 'sees', 'went', 'go', 'goes', 'came',
+    'come', 'comes', 'got', 'get', 'gets', 'took', 'take', 'takes',
+    'made', 'make', 'makes', 'know', 'knows', 'knew', 'want', 'wants',
+    'wanted', 'need', 'needs', 'needed', 'like', 'likes', 'liked',
+  ]);
+
+  /**
+   * Detect character names using heuristics
+   */
+  static detectCharacters(
+    lines: readonly string[],
+    text: string
+  ): readonly DetectedCharacter[] {
+    const candidates = new Map<string, {
+      occurrences: number;
+      firstSeen: number;
+      contexts: string[];
+    }>();
+
+    // Pattern 1: Capitalized words at start of sentences (likely names)
+    const sentenceStartPattern = /(?:^|\.\s+|!\s+|\?\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g;
+    let match;
+    let lineIndex = 0;
+    let charIndex = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lineStart = charIndex;
+      
+      // Check for dialogue patterns: "Name said" or 'Name said'
+      const dialoguePattern = /["']([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)["']\s+(?:said|says|asked|asks|replied|replies|whispered|shouted|exclaimed)/gi;
+      let dialogueMatch;
+      while ((dialogueMatch = dialoguePattern.exec(line)) !== null) {
+        const name = dialogueMatch[1].trim();
+        if (this.isValidCharacterName(name)) {
+          this.addCandidate(candidates, name, i, line);
+        }
+      }
+
+      // Check for "Name said" pattern (without quotes)
+      const saidPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:said|says|asked|asks|replied|replies|whispered|shouted|exclaimed|thought|thinks)/gi;
+      let saidMatch;
+      while ((saidMatch = saidPattern.exec(line)) !== null) {
+        const name = saidMatch[1].trim();
+        if (this.isValidCharacterName(name)) {
+          this.addCandidate(candidates, name, i, line);
+        }
+      }
+
+      // Check for capitalized words at sentence start
+      while ((match = sentenceStartPattern.exec(line)) !== null) {
+        const potentialName = match[1].trim();
+        if (this.isValidCharacterName(potentialName)) {
+          this.addCandidate(candidates, potentialName, i, line);
+        }
+      }
+
+      charIndex += line.length + 1; // +1 for newline
+    }
+
+    // Convert to DetectedCharacter array with confidence scores
+    const detected: DetectedCharacter[] = [];
+    
+    for (const [name, data] of candidates.entries()) {
+      // Calculate confidence based on:
+      // - Number of occurrences (more = higher confidence)
+      // - Context (dialogue patterns = higher confidence)
+      // - Length (2-3 words typical for names)
+      const wordCount = name.split(/\s+/).length;
+      const occurrenceScore = Math.min(data.occurrences / 10, 1.0); // Cap at 10 occurrences
+      const lengthScore = wordCount >= 1 && wordCount <= 3 ? 1.0 : 0.7;
+      const contextScore = data.contexts.some(ctx => 
+        /said|asked|replied|whispered|shouted/.test(ctx.toLowerCase())
+      ) ? 1.0 : 0.6;
+
+      const confidence = (occurrenceScore * 0.4 + lengthScore * 0.3 + contextScore * 0.3);
+      
+      // Only include if confidence is above threshold and appears multiple times
+      if (confidence >= 0.4 && data.occurrences >= 2) {
+        detected.push({
+          name,
+          confidence,
+          occurrences: data.occurrences,
+          firstSeen: data.firstSeen,
+        });
+      }
+    }
+
+    // Sort by confidence (highest first), then by occurrences
+    return detected.sort((a, b) => {
+      if (b.confidence !== a.confidence) {
+        return b.confidence - a.confidence;
+      }
+      return b.occurrences - a.occurrences;
+    });
+  }
+
+  /**
+   * Check if a word/phrase is a valid character name candidate
+   */
+  private static isValidCharacterName(name: string): boolean {
+    // Must be 2-30 characters total
+    if (name.length < 2 || name.length > 30) {
+      return false;
+    }
+
+    // Must start with capital letter
+    if (!/^[A-Z]/.test(name)) {
+      return false;
+    }
+
+    // Must not be all caps (likely acronyms or emphasis)
+    if (name === name.toUpperCase() && name.length > 1) {
+      return false;
+    }
+
+    // Must not be excluded word
+    const lowerName = name.toLowerCase();
+    if (this.EXCLUDED_WORDS.has(lowerName)) {
+      return false;
+    }
+
+    // Must not contain numbers or special chars (except spaces, hyphens, apostrophes)
+    if (!/^[A-Za-z\s\-']+$/.test(name)) {
+      return false;
+    }
+
+    // Must not be common titles
+    const titles = ['mr', 'mrs', 'ms', 'dr', 'prof', 'sir', 'madam', 'lord', 'lady'];
+    const firstWord = lowerName.split(/\s+/)[0];
+    if (titles.includes(firstWord)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Add a candidate name to the map
+   */
+  private static addCandidate(
+    candidates: Map<string, { occurrences: number; firstSeen: number; contexts: string[] }>,
+    name: string,
+    lineIndex: number,
+    line: string
+  ): void {
+    const normalized = name.trim();
+    if (!candidates.has(normalized)) {
+      candidates.set(normalized, {
+        occurrences: 0,
+        firstSeen: lineIndex,
+        contexts: [],
+      });
+    }
+    
+    const candidate = candidates.get(normalized)!;
+    candidate.occurrences++;
+    if (candidate.contexts.length < 3) {
+      candidate.contexts.push(line.substring(0, 100));
+    }
+  }
+}
+
+// ============================================================================
 // Stage 6: Validation & Preview
 // ============================================================================
 
@@ -681,6 +880,7 @@ export class PreviewGenerator {
       totalCharacters: result.normalizedText.characterCount,
       chapterCount: result.detectedChapters.length,
       sceneCount: result.detectedScenes.length,
+      characterCount: result.detectedCharacters.length,
       estimatedReadingTime,
       previewText,
       chapterTitles,
@@ -724,6 +924,12 @@ export class ImportPipeline {
         detectedChapters
       );
       
+      // Stage 4.5: Character detection
+      const detectedCharacters = CharacterDetector.detectCharacters(
+        normalizedText.lines,
+        normalizedText.text
+      );
+      
       // Stage 5: Word counting
       const totalWordCount = WordCounter.countWords(normalizedText.text);
       const chapterWordCounts = WordCounter.countChapterWords(
@@ -741,6 +947,7 @@ export class ImportPipeline {
         normalizedText,
         detectedChapters,
         detectedScenes,
+        detectedCharacters,
         totalWordCount,
         chapterWordCounts,
         sceneWordCounts,

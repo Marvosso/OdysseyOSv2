@@ -7,7 +7,7 @@
  * Wraps all dashboard feature pages
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import Link from 'next/link';
@@ -22,10 +22,16 @@ import {
   Music,
   Share2,
   BarChart3,
+  Upload,
+  Search,
+  Info,
 } from 'lucide-react';
+import GlobalSearch from '@/components/search/GlobalSearch';
 
 const navigationItems = [
+  { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome' },
   { id: 'stories', label: 'Stories', icon: BookOpen, path: '/dashboard' },
+  { id: 'import', label: 'Import', icon: Upload, path: '/dashboard/import' },
   { id: 'characters', label: 'Characters', icon: Users, path: '/dashboard/characters' },
   { id: 'ai', label: 'AI Tools', icon: Sparkles, path: '/dashboard/ai' },
   { id: 'outline', label: 'Outline', icon: FileText, path: '/dashboard/outline' },
@@ -43,6 +49,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   /**
    * Check authentication and redirect if not authenticated
@@ -85,6 +92,27 @@ export default function DashboardLayout({
     };
   }, [router]);
 
+  /**
+   * Handle keyboard shortcut for search (Cmd/Ctrl + K)
+   */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+      
+      // Close search on Escape
+      if (e.key === 'Escape' && isSearchOpen) {
+        setIsSearchOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
@@ -97,10 +125,28 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-900 flex">
+      {/* Global Search */}
+      <GlobalSearch
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
+
       {/* Sidebar */}
       <aside className="w-64 bg-gray-800/50 border-r border-gray-700 flex flex-col">
         <div className="p-6 border-b border-gray-700">
-          <h1 className="text-xl font-bold text-white">OdysseyOS</h1>
+          <h1 className="text-xl font-bold text-white mb-3">OdysseyOS</h1>
+          {/* Search Button */}
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-700/50 hover:bg-gray-700 rounded-lg text-gray-300 hover:text-white transition-colors text-sm"
+            title="Search (Cmd/Ctrl + K)"
+          >
+            <Search className="w-4 h-4" />
+            <span className="flex-1 text-left">Search...</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs text-gray-400">
+              {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}K
+            </kbd>
+          </button>
         </div>
         
         <nav className="flex-1 p-4 space-y-1">

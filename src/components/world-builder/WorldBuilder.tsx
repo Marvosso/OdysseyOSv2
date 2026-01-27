@@ -1,25 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, MapPin, Crown, Clock, Save, X } from 'lucide-react';
-
-interface WorldElement {
-  id: string;
-  name: string;
-  type: 'location' | 'culture' | 'rule' | 'event';
-  description: string;
-  details: string[];
-  imageUrl?: string;
-}
+import { Globe, MapPin, Crown, Clock, Save, X, Link2, ExternalLink, FileText, Users, ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import type { WorldElement } from '@/types/world';
+import { getLinkableItems, linkWorldElement, unlinkWorldElement, getLinkedScenes, getLinkedCharacters, isLinked } from '@/lib/world/worldLinker';
+import type { LinkableItem } from '@/lib/world/worldLinker';
+import type { Scene, Character } from '@/types/story';
 
 let worldCounter = 0;
 
 export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate: (world: WorldElement[]) => void }) {
+  const router = useRouter();
   const [elements, setElements] = useState<WorldElement[]>(
-    story?.worldElements || []
+    (story?.worldElements || []).map((el: any) => ({
+      ...el,
+      relatedScenes: el.relatedScenes || [],
+      relatedCharacters: el.relatedCharacters || [],
+      connections: el.connections || [],
+      rules: el.rules || [],
+      consistencyNotes: el.consistencyNotes || [],
+    }))
   );
   const [selectedElement, setSelectedElement] = useState<WorldElement | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<WorldElement>>({});
+  const [showLinkPanel, setShowLinkPanel] = useState(false);
+  const [linkableItems, setLinkableItems] = useState<{ scenes: LinkableItem[]; characters: LinkableItem[] }>({
+    scenes: [],
+    characters: [],
+  });
+
+  // Load linkable items
+  useEffect(() => {
+    const items = getLinkableItems();
+    setLinkableItems(items);
+  }, []);
 
   const handleAddElement = (type: WorldElement['type']) => {
     const newId = `world-${worldCounter++}`;
@@ -28,11 +43,46 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
       name: '',
       type,
       description: '',
-      details: [],
+      rules: [],
+      connections: [],
+      relatedScenes: [],
+      relatedCharacters: [],
+      consistencyNotes: [],
     };
     setSelectedElement(newElement);
     setEditForm(newElement);
     setIsEditing(true);
+  };
+
+  const handleToggleLink = (itemId: string, itemType: 'scene' | 'character') => {
+    if (!editForm.id) return;
+
+    const currentElement = elements.find(e => e.id === editForm.id) || editForm as WorldElement;
+    const isCurrentlyLinked = isLinked(currentElement, itemId, itemType);
+    const updatedElement = isCurrentlyLinked
+      ? unlinkWorldElement(currentElement, itemId, itemType)
+      : linkWorldElement(currentElement, [itemId], itemType);
+
+    // Update edit form
+    setEditForm({
+      ...editForm,
+      relatedScenes: updatedElement.relatedScenes,
+      relatedCharacters: updatedElement.relatedCharacters,
+    });
+
+    // Update elements list
+    const updated = elements.map(e => e.id === updatedElement.id ? updatedElement : e);
+    setElements(updated);
+    onUpdate(updated);
+  };
+
+  const handleNavigateToItem = (itemId: string, itemType: 'scene' | 'character') => {
+    if (itemType === 'scene') {
+      router.push('/dashboard');
+      // TODO: Scroll to scene or highlight it
+    } else {
+      router.push('/dashboard/characters');
+    }
   };
 
   const handleSaveElement = () => {
@@ -43,7 +93,11 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
       name: editForm.name || '',
       type: editForm.type || 'location',
       description: editForm.description || '',
-      details: editForm.details || [],
+      rules: editForm.rules || [],
+      connections: editForm.connections || [],
+      relatedScenes: editForm.relatedScenes || [],
+      relatedCharacters: editForm.relatedCharacters || [],
+      consistencyNotes: editForm.consistencyNotes || [],
       imageUrl: editForm.imageUrl,
     };
 
@@ -68,29 +122,35 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
     }
   };
 
-  const handleAddDetail = () => {
-    if (!editForm.details) setEditForm({ ...editForm, details: [''] });
-    else setEditForm({ ...editForm, details: [...editForm.details, ''] });
+  const handleAddRule = () => {
+    if (!editForm.rules) setEditForm({ ...editForm, rules: [''] });
+    else setEditForm({ ...editForm, rules: [...(editForm.rules || []), ''] });
   };
 
-  const handleUpdateDetail = (index: number, value: string) => {
-    const newDetails = [...(editForm.details || [])];
-    newDetails[index] = value;
-    setEditForm({ ...editForm, details: newDetails });
+  const handleUpdateRule = (index: number, value: string) => {
+    const newRules = [...(editForm.rules || [])];
+    newRules[index] = value;
+    setEditForm({ ...editForm, rules: newRules });
   };
 
-  const icons = {
+  const icons: Record<WorldElement['type'], typeof MapPin> = {
     location: MapPin,
     culture: Globe,
-    rule: Crown,
-    event: Clock,
+    'magic-system': Crown,
+    technology: Clock,
+    politics: Crown,
+    economy: Globe,
+    religion: Clock,
   };
 
-  const typeColors = {
+  const typeColors: Record<WorldElement['type'], string> = {
     location: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
     culture: 'bg-green-500/20 text-green-300 border-green-500/30',
-    rule: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    event: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    'magic-system': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    technology: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    politics: 'bg-red-500/20 text-red-300 border-red-500/30',
+    economy: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    religion: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
   };
 
   if (isEditing && editForm) {
@@ -131,29 +191,186 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
           />
         </div>
 
-        {editForm.details && (
+        {editForm.rules && editForm.rules.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm text-gray-400">Details</label>
+              <label className="text-sm text-gray-400">Rules</label>
               <button
-                onClick={handleAddDetail}
+                onClick={handleAddRule}
                 className="text-sm text-purple-400 hover:text-purple-300"
               >
-                + Add Detail
+                + Add Rule
               </button>
             </div>
-            {editForm.details.map((detail) => (
+            {editForm.rules.map((rule, index) => (
               <input
-                key={detail}
+                key={index}
                 type="text"
-                value={detail}
-                onChange={(e) => handleUpdateDetail(editForm.details?.indexOf(detail) ?? 0, e.target.value)}
+                value={rule}
+                onChange={(e) => handleUpdateRule(index, e.target.value)}
                 className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                placeholder="Detail..."
+                placeholder="Rule..."
               />
             ))}
           </div>
         )}
+
+        {/* Linking Section */}
+        <div className="border-t border-gray-700 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm text-gray-400 flex items-center gap-2">
+              <Link2 className="w-4 h-4" />
+              Links
+            </label>
+            <button
+              onClick={() => setShowLinkPanel(!showLinkPanel)}
+              className="text-xs text-purple-400 hover:text-purple-300"
+            >
+              {showLinkPanel ? 'Hide' : 'Show'} Link Manager
+            </button>
+          </div>
+
+          {/* Quick Link Display */}
+          {editForm.id && (
+            <div className="space-y-2">
+              {(editForm.relatedScenes && editForm.relatedScenes.length > 0) && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Linked Scenes</div>
+                  <div className="flex flex-wrap gap-1">
+                    {getLinkedScenes(editForm as WorldElement).map((scene: Scene) => (
+                      <button
+                        key={scene.id}
+                        onClick={() => handleNavigateToItem(scene.id, 'scene')}
+                        className="text-xs px-2 py-1 bg-blue-900/30 border border-blue-700/50 text-blue-300 rounded hover:bg-blue-900/50 flex items-center gap-1"
+                      >
+                        <FileText className="w-3 h-3" />
+                        {scene.title || 'Untitled Scene'}
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(editForm.relatedCharacters && editForm.relatedCharacters.length > 0) && (
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Linked Characters</div>
+                  <div className="flex flex-wrap gap-1">
+                    {getLinkedCharacters(editForm as WorldElement).map((character: Character) => (
+                      <button
+                        key={character.id}
+                        onClick={() => handleNavigateToItem(character.id, 'character')}
+                        className="text-xs px-2 py-1 bg-green-900/30 border border-green-700/50 text-green-300 rounded hover:bg-green-900/50 flex items-center gap-1"
+                      >
+                        <Users className="w-3 h-3" />
+                        {character.name}
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Link Manager Panel */}
+          {showLinkPanel && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-3 space-y-3 max-h-64 overflow-y-auto"
+            >
+              {/* Link to Scenes */}
+              {linkableItems.scenes.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-400 mb-2 flex items-center gap-2">
+                    <FileText className="w-3 h-3" />
+                    Scenes
+                  </div>
+                  <div className="space-y-1">
+                    {linkableItems.scenes.map(scene => {
+                      const currentElement = editForm.id ? (elements.find(e => e.id === editForm.id) || editForm as WorldElement) : null;
+                      const linked = currentElement ? isLinked(currentElement, scene.id, 'scene') : false;
+                      return (
+                        <label
+                          key={scene.id}
+                          className="flex items-center gap-2 p-2 bg-gray-700/50 rounded hover:bg-gray-700 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={linked}
+                            onChange={() => handleToggleLink(scene.id, 'scene')}
+                            className="rounded"
+                          />
+                          <span className="text-sm text-gray-300 flex-1">{scene.name}</span>
+                          {linked && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleNavigateToItem(scene.id, 'scene');
+                              }}
+                              className="text-xs text-purple-400 hover:text-purple-300"
+                            >
+                              <ChevronRight className="w-3 h-3" />
+                            </button>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Link to Characters */}
+              {linkableItems.characters.length > 0 && (
+                <div>
+                  <div className="text-xs text-gray-400 mb-2 flex items-center gap-2">
+                    <Users className="w-3 h-3" />
+                    Characters
+                  </div>
+                  <div className="space-y-1">
+                    {linkableItems.characters.map(character => {
+                      const currentElement = editForm.id ? (elements.find(e => e.id === editForm.id) || editForm as WorldElement) : null;
+                      const linked = currentElement ? isLinked(currentElement, character.id, 'character') : false;
+                      return (
+                        <label
+                          key={character.id}
+                          className="flex items-center gap-2 p-2 bg-gray-700/50 rounded hover:bg-gray-700 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={linked}
+                            onChange={() => handleToggleLink(character.id, 'character')}
+                            className="rounded"
+                          />
+                          <span className="text-sm text-gray-300 flex-1">{character.name}</span>
+                          {linked && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleNavigateToItem(character.id, 'character');
+                              }}
+                              className="text-xs text-purple-400 hover:text-purple-300"
+                            >
+                              <ChevronRight className="w-3 h-3" />
+                            </button>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {linkableItems.scenes.length === 0 && linkableItems.characters.length === 0 && (
+                <div className="text-xs text-gray-500 text-center py-4">
+                  No scenes or characters available to link
+                </div>
+              )}
+            </motion.div>
+          )}
+        </div>
 
         <div className="flex gap-2">
           <button
@@ -185,7 +402,7 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        {(['location', 'culture', 'rule', 'event'] as const).map((type) => {
+        {(['location', 'culture', 'magic-system', 'technology', 'politics', 'economy', 'religion'] as WorldElement['type'][]).map((type) => {
           const Icon = icons[type];
           return (
             <button
@@ -194,7 +411,7 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
               className="flex items-center gap-2 p-3 bg-gray-800/50 hover:bg-gray-700 rounded-lg border border-gray-700 transition-colors"
             >
               <Icon className="w-4 h-4 text-gray-400" />
-              <span className="text-sm text-gray-300 capitalize">{type}</span>
+              <span className="text-sm text-gray-300 capitalize">{type.replace('-', ' ')}</span>
             </button>
           );
         })}
@@ -225,8 +442,24 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
                       {element.description && (
                         <p className="text-xs text-gray-400 mt-1 line-clamp-2">{element.description}</p>
                       )}
-                      {element.details && element.details.length > 0 && (
-                        <span className="text-xs text-gray-500 mt-1">{element.details.length} details</span>
+                      {element.rules && element.rules.length > 0 && (
+                        <span className="text-xs text-gray-500 mt-1">{element.rules.length} rules</span>
+                      )}
+                      {(element.relatedScenes?.length > 0 || element.relatedCharacters?.length > 0) && (
+                        <div className="flex items-center gap-2 mt-1">
+                          {element.relatedScenes?.length > 0 && (
+                            <span className="text-xs text-blue-400 flex items-center gap-1">
+                              <FileText className="w-3 h-3" />
+                              {element.relatedScenes.length}
+                            </span>
+                          )}
+                          {element.relatedCharacters?.length > 0 && (
+                            <span className="text-xs text-green-400 flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              {element.relatedCharacters.length}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -266,15 +499,68 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
             {selectedElement.description && (
               <p className="text-sm text-gray-300 mb-3">{selectedElement.description}</p>
             )}
-            {selectedElement.details && selectedElement.details.length > 0 && (
-              <ul className="space-y-1">
-                {selectedElement.details.map((detail) => (
-                  <li key={detail} className="text-sm text-gray-400 flex items-start gap-2">
-                    <span className="text-xs mt-1">•</span>
-                    <span>{detail}</span>
-                  </li>
-                ))}
-              </ul>
+            {selectedElement.rules && selectedElement.rules.length > 0 && (
+              <div className="mb-3">
+                <h5 className="text-xs font-semibold text-gray-400 mb-2">Rules</h5>
+                <ul className="space-y-1">
+                  {selectedElement.rules.map((rule, index) => (
+                    <li key={index} className="text-sm text-gray-400 flex items-start gap-2">
+                      <span className="text-xs mt-1">•</span>
+                      <span>{rule}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Linked Items Display */}
+            {(selectedElement.relatedScenes?.length > 0 || selectedElement.relatedCharacters?.length > 0) && (
+              <div className="mt-3 pt-3 border-t border-gray-700/50">
+                <h5 className="text-xs font-semibold text-gray-400 mb-2">Linked Items</h5>
+                <div className="space-y-2">
+                  {selectedElement.relatedScenes?.length > 0 && (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        Scenes ({selectedElement.relatedScenes.length})
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {getLinkedScenes(selectedElement).map(scene => (
+                          <button
+                            key={scene.id}
+                            onClick={() => handleNavigateToItem(scene.id, 'scene')}
+                            className="text-xs px-2 py-1 bg-blue-900/30 border border-blue-700/50 text-blue-300 rounded hover:bg-blue-900/50 flex items-center gap-1 transition-colors"
+                          >
+                            {scene.title || 'Untitled Scene'}
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedElement.relatedCharacters?.length > 0 && (
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        Characters ({selectedElement.relatedCharacters.length})
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {getLinkedCharacters(selectedElement).map(character => (
+                          <button
+                            key={character.id}
+                            onClick={() => handleNavigateToItem(character.id, 'character')}
+                            className="text-xs px-2 py-1 bg-green-900/30 border border-green-700/50 text-green-300 rounded hover:bg-green-900/50 flex items-center gap-1 transition-colors"
+                          >
+                            {character.name}
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </motion.div>
         )}
