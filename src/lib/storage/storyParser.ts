@@ -253,8 +253,15 @@ export class StoryParser {
         return code >= 32 && code <= 126;
       }).length;
       
-      // Skip if less than 70% of characters are printable ASCII (likely still corrupted)
-      if (line.length > 0 && asciiCount / line.length < 0.7) {
+      // CRITICAL: Skip if less than 90% of characters are printable ASCII (likely still corrupted)
+      // Also check if ANY non-ASCII characters remain (should be impossible after filtering, but defensive)
+      const hasNonAscii = line.split('').some((char: string) => {
+        const code = char.charCodeAt(0);
+        return code < 32 || code > 126;
+      });
+      
+      if (line.length > 0 && (asciiCount / line.length < 0.9 || hasNonAscii)) {
+        // Line is still corrupted - skip it entirely
         continue;
       }
       
