@@ -44,12 +44,27 @@ export function detectFileType(fileName: string): SupportedFileType | null {
 
 /**
  * Normalize line endings and trim text
+ * Also converts smart quotes and dashes to plain ASCII
  */
 function normalizeText(text: string): string {
-  return text
-    .replace(/\r\n/g, '\n')  // Windows line endings
-    .replace(/\r/g, '\n')     // Old Mac line endings
-    .trim();
+  let normalized = text
+    .replace(/\r\n/g, '\n')  // Windows line endings (\r\n → \n)
+    .replace(/\r/g, '\n');    // Old Mac line endings (\r → \n)
+  
+  // Convert smart quotes to plain ASCII
+  normalized = normalized
+    .replace(/[""]/g, '"')      // Left/right double quotes → straight quote
+    .replace(/['']/g, "'")      // Left/right single quotes → straight apostrophe
+    .replace(/['']/g, "'")      // Alternative single quotes → apostrophe
+    .replace(/[""]/g, '"');     // Alternative double quotes → straight quote
+  
+  // Convert smart dashes to plain ASCII
+  normalized = normalized
+    .replace(/—/g, '--')        // Em dash (—) → double hyphen
+    .replace(/–/g, '-')         // En dash (–) → single hyphen
+    .replace(/―/g, '--');       // Horizontal bar (―) → double hyphen
+  
+  return normalized.trim();
 }
 
 /**
