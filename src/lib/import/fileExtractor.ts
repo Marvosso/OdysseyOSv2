@@ -27,8 +27,11 @@ export function detectFileType(fileName: string): SupportedFileType | null {
     case 'pdf':
       return 'pdf';
     case 'docx':
-    case 'doc':
       return 'docx';
+    case 'doc':
+      // .doc is the older binary format, not supported by mammoth
+      // Return null to trigger unsupported format error
+      return null;
     case 'txt':
       return 'txt';
     case 'md':
@@ -147,6 +150,14 @@ export async function extractTextFromFile(file: File): Promise<ExtractedText> {
   const fileType = detectFileType(file.name);
   
   if (!fileType) {
+    const extension = file.name.toLowerCase().split('.').pop();
+    if (extension === 'doc') {
+      throw new Error(
+        `Unsupported format: .doc files are not supported. ` +
+        `Please convert your .doc file to .docx format (File > Save As > Word Document in Microsoft Word) ` +
+        `or use one of the supported formats: .txt, .md, .pdf, .docx`
+      );
+    }
     throw new Error(`Unsupported format: ${file.name}. Supported formats: .txt, .md, .pdf, .docx`);
   }
   
