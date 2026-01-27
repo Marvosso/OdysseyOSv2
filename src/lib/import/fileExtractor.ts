@@ -74,7 +74,7 @@ function normalizeText(text: string): string {
 function isMostlyBinary(text: string): boolean {
   if (!text || text.length === 0) return false;
   
-  const nonPrintableCount = text.split('').filter(char => {
+  const nonPrintableCount = text.split('').filter((char: string) => {
     const code = char.charCodeAt(0);
     // Non-printable: not in range 32-126, and not common whitespace (9, 10, 13)
     return !(code >= 32 && code <= 126) && code !== 9 && code !== 10 && code !== 13;
@@ -165,7 +165,7 @@ async function extractPDFText(file: File): Promise<string> {
           
           // Filter out items that are mostly non-printable
           const str = item.str;
-          const printableCount = str.split('').filter(char => {
+          const printableCount = str.split('').filter((char: string) => {
             const code = char.charCodeAt(0);
             return code >= 32 && code <= 126;
           }).length;
@@ -214,9 +214,9 @@ async function extractDOCXText(file: File): Promise<string> {
     
     // Filter out binary/corrupted lines before sanitization
     const lines = result.value.split('\n');
-    const cleanLines = lines.map(line => {
+    const cleanLines = lines.map((line: string) => {
       // Check if line is mostly printable
-      const printableCount = line.split('').filter(char => {
+      const printableCount = line.split('').filter((char: string) => {
         const code = char.charCodeAt(0);
         return code >= 32 && code <= 126;
       }).length;
@@ -318,12 +318,12 @@ export async function extractTextFromFile(file: File): Promise<ExtractedText> {
   const hasNullBytes = text.includes('\0') || 
                        text.includes('\u0000') || 
                        text.includes('\x00') ||
-                       text.split('').some(char => char.charCodeAt(0) === 0);
+                       text.split('').some((char: string) => char.charCodeAt(0) === 0);
   
   if (hasNullBytes) {
     // Ultimate fallback: filter out any character with code 0
     // Also filter out other problematic control characters except whitespace
-    text = text.split('').filter(char => {
+    text = text.split('').filter((char: string) => {
       const code = char.charCodeAt(0);
       // Keep: printable chars (32-126), tab (9), newline (10), carriage return (13)
       // Remove: null (0) and other control chars

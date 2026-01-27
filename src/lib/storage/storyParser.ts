@@ -98,7 +98,7 @@ export class StoryParser {
   private static isMostlyBinary(text: string): boolean {
     if (!text || text.length === 0) return false;
     
-    const nonPrintableCount = text.split('').filter(char => {
+    const nonPrintableCount = text.split('').filter((char: string) => {
       const code = char.charCodeAt(0);
       return !(code >= 32 && code <= 126) && code !== 9 && code !== 10 && code !== 13;
     }).length;
@@ -126,7 +126,7 @@ export class StoryParser {
     
     // Step 2: Remove null bytes and other problematic control characters
     // Keep: printable chars (32-126), tab (9), newline (10), carriage return (13)
-    normalized = normalized.split('').filter(char => {
+    normalized = normalized.split('').filter((char: string) => {
       const code = char.charCodeAt(0);
       return code !== 0 && ((code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13);
     }).join('');
@@ -216,7 +216,7 @@ export class StoryParser {
       let line = lines[i];
       
       // Skip lines that are mostly binary/corrupted before processing
-      const nonPrintableCount = line.split('').filter(char => {
+      const nonPrintableCount = line.split('').filter((char: string) => {
         const code = char.charCodeAt(0);
         return !(code >= 32 && code <= 126) && code !== 9 && code !== 10 && code !== 13;
       }).length;
@@ -229,7 +229,7 @@ export class StoryParser {
       line = line.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
       
       // Remove any remaining non-printable characters except whitespace
-      line = line.split('').filter(char => {
+      line = line.split('').filter((char: string) => {
         const code = char.charCodeAt(0);
         return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
       }).join('');
@@ -283,14 +283,14 @@ export class StoryParser {
           .trim();
         
         // Additional cleaning: remove any remaining non-printable characters
-        cleanTitle = cleanTitle.split('').filter(char => {
+        cleanTitle = cleanTitle.split('').filter((char: string) => {
           const code = char.charCodeAt(0);
           // Keep only printable ASCII (32-126) and common punctuation
           return (code >= 32 && code <= 126) || code === 160; // 160 is non-breaking space
         }).join('');
         
         // Validate title is readable (mostly ASCII printable characters)
-        const asciiCount = cleanTitle.split('').filter(char => {
+        const asciiCount = cleanTitle.split('').filter((char: string) => {
           const code = char.charCodeAt(0);
           return code >= 32 && code <= 126;
         }).length;
@@ -313,7 +313,7 @@ export class StoryParser {
         cleanTitle = cleanTitle.trim();
         
         // Final safety check: if title is empty or still looks corrupted, use default
-        if (!cleanTitle || cleanTitle.length === 0 || isMostlyBinary(cleanTitle)) {
+        if (!cleanTitle || cleanTitle.length === 0 || this.isMostlyBinary(cleanTitle)) {
           cleanTitle = `Chapter ${chapters.length + 1}`;
         }
         
