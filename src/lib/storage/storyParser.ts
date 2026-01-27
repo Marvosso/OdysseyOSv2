@@ -112,6 +112,7 @@ export class StoryParser {
    * - Normalize line endings (\r\n → \n)
    * - Convert smart quotes and dashes to plain ASCII
    * - Remove hidden characters from Word/PDF exports
+   * - AGGRESSIVE: Remove ALL non-ASCII characters (keep only 32-126 range)
    */
   private static normalizeTextForParsing(text: string): string {
     if (!text || typeof text !== 'string') {
@@ -123,39 +124,45 @@ export class StoryParser {
       .replace(/\r\n/g, '\n')  // Windows line endings (\r\n → \n)
       .replace(/\r/g, '\n');    // Old Mac line endings (\r → \n)
     
-    // Step 2: Remove null bytes and other problematic control characters
-    // Keep: printable chars (32-126), tab (9), newline (10), carriage return (13)
+    // Step 2: AGGRESSIVE - Remove ALL non-ASCII characters immediately
+    // Keep ONLY printable ASCII (32-126) and essential whitespace (9, 10, 13)
     normalized = normalized.split('').filter((char: string) => {
       const code = char.charCodeAt(0);
-      return code !== 0 && ((code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13);
+      return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
     }).join('');
     
     // Step 3: Remove null bytes explicitly (defensive, multiple methods)
     normalized = normalized.replace(/\0/g, '').replace(/\u0000/g, '').replace(/\x00/g, '');
     
     // Step 4: Remove other non-printable characters except whitespace
-    normalized = normalized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+    normalized = normalized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
     
-    // Step 5: Convert smart quotes to plain ASCII
+    // Step 5: Convert smart quotes to plain ASCII (shouldn't be needed after Step 2, but defensive)
     normalized = normalized
       .replace(/[""]/g, '"')      // Left/right double quotes → straight quote
       .replace(/['']/g, "'")      // Left/right single quotes → straight apostrophe
       .replace(/['']/g, "'")      // Alternative single quotes → apostrophe
       .replace(/[""]/g, '"');     // Alternative double quotes → straight quote
     
-    // Step 6: Convert smart dashes to plain ASCII
+    // Step 6: Convert smart dashes to plain ASCII (shouldn't be needed after Step 2, but defensive)
     normalized = normalized
       .replace(/—/g, '--')        // Em dash (—) → double hyphen
       .replace(/–/g, '-')         // En dash (–) → single hyphen
       .replace(/―/g, '--');       // Horizontal bar (―) → double hyphen
     
-    // Step 7: Remove zero-width characters and other hidden Unicode
+    // Step 7: Remove zero-width characters and other hidden Unicode (shouldn't be needed after Step 2, but defensive)
     normalized = normalized.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
     
-    // Step 8: Normalize multiple consecutive newlines (max 2)
+    // Step 8: Final ASCII-only pass (defensive)
+    normalized = normalized.split('').filter((char: string) => {
+      const code = char.charCodeAt(0);
+      return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
+    }).join('');
+    
+    // Step 9: Normalize multiple consecutive newlines (max 2)
     normalized = normalized.replace(/\n{3,}/g, '\n\n');
     
-    // Step 9: Remove trailing whitespace from each line (but preserve structure)
+    // Step 10: Remove trailing whitespace from each line (but preserve structure)
     normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
     
     return normalized;
