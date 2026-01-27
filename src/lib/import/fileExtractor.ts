@@ -57,8 +57,19 @@ function normalizeText(text: string): string {
  * Null bytes can appear in extracted text from DOCX/PDF files as harmless artifacts
  */
 function sanitizeExtractedText(text: string): string {
-  // Remove null bytes (harmless artifacts from extraction)
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+  
+  // Remove null bytes using multiple methods to ensure they're caught
+  // Method 1: Direct null byte character
   let sanitized = text.replace(/\0/g, '');
+  
+  // Method 2: Unicode null character
+  sanitized = sanitized.replace(/\u0000/g, '');
+  
+  // Method 3: Hex null byte
+  sanitized = sanitized.replace(/\x00/g, '');
   
   // Remove other control characters except common whitespace (\n, \r, \t)
   // Keep only printable characters and common whitespace
@@ -199,10 +210,25 @@ export async function extractTextFromFile(file: File): Promise<ExtractedText> {
       throw new Error(`Unsupported format: ${fileType}`);
   }
   
-  // For plain text files (TXT/MD), null bytes indicate corruption
-  // For extracted files (PDF/DOCX), null bytes are already sanitized
-  if ((fileType === 'txt' || fileType === 'md') && text.includes('\0')) {
-    throw new Error('File contains null bytes - possible binary data corruption');
+  // Final sanitization pass to ensure no null bytes remain (defensive)
+  // This catches any null bytes that might have been introduced or missed
+  // Apply sanitization multiple times to ensure all null bytes are removed
+  text = sanitizeExtractedText(text);
+  text = sanitizeExtractedText(text); // Second pass to catch any edge cases
+  
+  // Final check: use character code filtering as ultimate fallback
+  // This ensures absolutely no null bytes remain
+  const hasNullBytes = text.includes('\0') || 
+                       text.includes('\u0000') || 
+                       text.includes('\x00') ||
+                       text.split('').some(char => char.charCodeAt(0) === 0);
+  
+  if (hasNullBytes) {
+    // Ultimate fallback: filter out any character with code 0
+    text = text.split('').filter(char => {
+      const code = char.charCodeAt(0);
+      return code !== 0 && (code >= 32 || code === 9 || code === 10 || code === 13);
+    }).join('');
   }
   
   return {
