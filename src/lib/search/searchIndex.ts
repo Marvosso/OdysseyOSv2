@@ -152,7 +152,7 @@ export class SearchIndex {
 
     for (const scene of scenes) {
       let hasMatch = false;
-      let bestMatch: SearchMatch | null = null;
+      const bestMatchRef: { current: SearchMatch | null } = { current: null };
       let matchText = '';
 
       // Search scene title
@@ -160,8 +160,8 @@ export class SearchIndex {
         const titleMatches = this.findMatches(scene.title, query);
         if (titleMatches.length > 0) {
           const relevance = this.calculateRelevance(query, scene.title, 0, true);
-          if (bestMatch === null || relevance > bestMatch.relevance) {
-            bestMatch = {
+          if (bestMatchRef.current === null || relevance > bestMatchRef.current.relevance) {
+            bestMatchRef.current = {
               index: 0,
               relevance,
             };
@@ -177,8 +177,8 @@ export class SearchIndex {
         if (contentMatches.length > 0) {
           const firstMatch = contentMatches[0];
           const relevance = this.calculateRelevance(query, scene.content, firstMatch.index, false);
-          if (bestMatch === null || relevance > bestMatch.relevance) {
-            bestMatch = {
+          if (bestMatchRef.current === null || relevance > bestMatchRef.current.relevance) {
+            bestMatchRef.current = {
               index: firstMatch.index,
               relevance,
             };
@@ -188,14 +188,14 @@ export class SearchIndex {
         }
       }
 
-      if (hasMatch && bestMatch) {
+      if (hasMatch && bestMatchRef.current) {
         results.push({
           type: 'scene',
           id: scene.id,
           title: scene.title || 'Untitled Scene',
           content: matchText,
           matchText: matchText,
-          relevance: bestMatch.relevance,
+          relevance: bestMatchRef.current.relevance,
         });
       }
     }
@@ -213,7 +213,7 @@ export class SearchIndex {
 
     for (const character of characters) {
       let hasMatch = false;
-      let bestMatch: SearchMatch | null = null;
+      const bestMatchRef: { current: SearchMatch | null } = { current: null };
       let matchText = '';
 
       // Search character name
@@ -221,8 +221,8 @@ export class SearchIndex {
         const nameMatches = this.findMatches(character.name, query);
         if (nameMatches.length > 0) {
           const relevance = this.calculateRelevance(query, character.name, 0, true);
-          if (bestMatch === null || relevance > bestMatch.relevance) {
-            bestMatch = {
+          if (bestMatchRef.current === null || relevance > bestMatchRef.current.relevance) {
+            bestMatchRef.current = {
               index: 0,
               relevance,
             };
@@ -238,8 +238,8 @@ export class SearchIndex {
         if (descMatches.length > 0) {
           const firstMatch = descMatches[0];
           const relevance = this.calculateRelevance(query, character.description, firstMatch.index, false);
-          if (bestMatch === null || relevance > bestMatch.relevance) {
-            bestMatch = {
+          if (bestMatchRef.current === null || relevance > bestMatchRef.current.relevance) {
+            bestMatchRef.current = {
               index: firstMatch.index,
               relevance,
             };
@@ -249,14 +249,14 @@ export class SearchIndex {
         }
       }
 
-      if (hasMatch && bestMatch) {
+      if (hasMatch && bestMatchRef.current) {
         results.push({
           type: 'character',
           id: character.id,
           title: character.name,
           content: matchText,
           matchText: matchText,
-          relevance: bestMatch.relevance,
+          relevance: bestMatchRef.current.relevance,
         });
       }
     }
