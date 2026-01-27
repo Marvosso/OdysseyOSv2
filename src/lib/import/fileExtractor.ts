@@ -53,6 +53,21 @@ function normalizeText(text: string): string {
 }
 
 /**
+ * Sanitize text by removing null bytes and other problematic characters
+ * Null bytes can appear in extracted text from DOCX/PDF files as harmless artifacts
+ */
+function sanitizeExtractedText(text: string): string {
+  // Remove null bytes (harmless artifacts from extraction)
+  let sanitized = text.replace(/\0/g, '');
+  
+  // Remove other control characters except common whitespace (\n, \r, \t)
+  // Keep only printable characters and common whitespace
+  sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  
+  return sanitized;
+}
+
+/**
  * Extract text from PDF file
  * Uses pdfjs-dist (browser-compatible equivalent of pdf-parse)
  */
@@ -87,8 +102,11 @@ async function extractPDFText(file: File): Promise<string> {
       fullText += pageText + '\n';
     }
     
+    // Sanitize extracted text (remove null bytes and control characters)
+    const sanitized = sanitizeExtractedText(fullText);
+    
     // Trim and normalize line endings
-    return normalizeText(fullText);
+    return normalizeText(sanitized);
   } catch (error) {
     throw new Error(`Failed to extract PDF text: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -111,8 +129,11 @@ async function extractDOCXText(file: File): Promise<string> {
       console.warn('DOCX extraction warnings:', result.messages);
     }
     
+    // Sanitize extracted text (remove null bytes and control characters)
+    const sanitized = sanitizeExtractedText(result.value);
+    
     // Trim and normalize line endings
-    return normalizeText(result.value);
+    return normalizeText(sanitized);
   } catch (error) {
     throw new Error(`Failed to extract DOCX text: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -178,8 +199,9 @@ export async function extractTextFromFile(file: File): Promise<ExtractedText> {
       throw new Error(`Unsupported format: ${fileType}`);
   }
   
-  // Ensure no binary data is passed as text (check for null bytes)
-  if (text.includes('\0')) {
+  // For plain text files (TXT/MD), null bytes indicate corruption
+  // For extracted files (PDF/DOCX), null bytes are already sanitized
+  if ((fileType === 'txt' || fileType === 'md') && text.includes('\0')) {
     throw new Error('File contains null bytes - possible binary data corruption');
   }
   
