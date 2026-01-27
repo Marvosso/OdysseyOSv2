@@ -5,6 +5,8 @@
  * and redirects authenticated users away from the auth page
  */
 
+export const dynamic = "force-dynamic";
+
 import { redirect } from 'next/navigation';
 import { hasActiveSession } from '@/lib/supabase/server';
 
