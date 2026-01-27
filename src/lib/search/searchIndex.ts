@@ -24,6 +24,23 @@ export interface SearchResults {
 }
 
 /**
+ * Search match structure for scenes (includes index for content matches)
+ */
+interface SceneSearchMatch {
+  index: number;
+  relevance: number;
+  text: string;
+}
+
+/**
+ * Search match structure for characters (no index needed)
+ */
+interface CharacterSearchMatch {
+  relevance: number;
+  text: string;
+}
+
+/**
  * Search indexer for OdysseyOS content
  */
 export class SearchIndex {
@@ -144,28 +161,19 @@ export class SearchIndex {
 
     for (const scene of scenes) {
       let hasMatch = false;
-      let bestMatch: { index: number; relevance: number; text: string } | null = null;
+      let bestMatch: SceneSearchMatch | null = null;
 
       // Search scene title
       if (scene.title) {
         const titleMatches = this.findMatches(scene.title, query);
         if (titleMatches.length > 0) {
           const relevance = this.calculateRelevance(query, scene.title, 0, true);
-          if (bestMatch === null) {
+          if (!bestMatch || relevance > bestMatch.relevance) {
             bestMatch = {
               index: 0,
               relevance,
               text: scene.title,
             };
-          } else {
-            const currentBest = bestMatch;
-            if (relevance > currentBest.relevance) {
-              bestMatch = {
-                index: 0,
-                relevance,
-                text: scene.title,
-              };
-            }
           }
           hasMatch = true;
         }
@@ -177,23 +185,13 @@ export class SearchIndex {
         if (contentMatches.length > 0) {
           const firstMatch = contentMatches[0];
           const relevance = this.calculateRelevance(query, scene.content, firstMatch.index, false);
-          if (bestMatch === null) {
+          if (!bestMatch || relevance > bestMatch.relevance) {
             const context = this.extractContext(scene.content, firstMatch.index);
             bestMatch = {
               index: firstMatch.index,
               relevance,
               text: context,
             };
-          } else {
-            const currentBest = bestMatch;
-            if (relevance > currentBest.relevance) {
-              const context = this.extractContext(scene.content, firstMatch.index);
-              bestMatch = {
-                index: firstMatch.index,
-                relevance,
-                text: context,
-              };
-            }
           }
           hasMatch = true;
         }
@@ -224,7 +222,7 @@ export class SearchIndex {
 
     for (const character of characters) {
       let hasMatch = false;
-      let bestMatch: { relevance: number; text: string } | null = null;
+      let bestMatch: CharacterSearchMatch | null = null;
 
       // Search character name
       if (character.name) {
@@ -245,21 +243,12 @@ export class SearchIndex {
         if (descMatches.length > 0) {
           const firstMatch = descMatches[0];
           const relevance = this.calculateRelevance(query, character.description, firstMatch.index, false);
-          if (bestMatch === null) {
+          if (!bestMatch || relevance > bestMatch.relevance) {
             const context = this.extractContext(character.description, firstMatch.index);
             bestMatch = {
               relevance,
               text: context,
             };
-          } else {
-            const currentBest = bestMatch;
-            if (relevance > currentBest.relevance) {
-              const context = this.extractContext(character.description, firstMatch.index);
-              bestMatch = {
-                relevance,
-                text: context,
-              };
-            }
           }
           hasMatch = true;
         }
