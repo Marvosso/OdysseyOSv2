@@ -151,7 +151,7 @@ export class SearchIndex {
         const titleMatches = this.findMatches(scene.title, query);
         if (titleMatches.length > 0) {
           const relevance = this.calculateRelevance(query, scene.title, 0, true);
-          if (!bestMatch || relevance > bestMatch.relevance) {
+          if (bestMatch === null || relevance > bestMatch.relevance) {
             bestMatch = {
               index: 0,
               relevance,
@@ -168,7 +168,7 @@ export class SearchIndex {
         if (contentMatches.length > 0) {
           const firstMatch = contentMatches[0];
           const relevance = this.calculateRelevance(query, scene.content, firstMatch.index, false);
-          if (!bestMatch || relevance > bestMatch.relevance) {
+          if (bestMatch === null || relevance > bestMatch.relevance) {
             const context = this.extractContext(scene.content, firstMatch.index);
             bestMatch = {
               index: firstMatch.index,
@@ -226,7 +226,7 @@ export class SearchIndex {
         if (descMatches.length > 0) {
           const firstMatch = descMatches[0];
           const relevance = this.calculateRelevance(query, character.description, firstMatch.index, false);
-          if (!bestMatch || relevance > bestMatch.relevance) {
+          if (bestMatch === null || relevance > bestMatch.relevance) {
             const context = this.extractContext(character.description, firstMatch.index);
             bestMatch = {
               relevance,
