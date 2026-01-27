@@ -221,19 +221,44 @@ export class BrowserTextDecoder {
   }
 
   /**
+   * Sanitize text by removing null bytes
+   */
+  static sanitizeText(text: string): string {
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+    // Remove null bytes using multiple methods
+    let sanitized = text.replace(/\0/g, '').replace(/\u0000/g, '').replace(/\x00/g, '');
+    // Filter by character code as ultimate fallback
+    sanitized = sanitized.split('').filter(char => char.charCodeAt(0) !== 0).join('');
+    return sanitized;
+  }
+
+  /**
    * Validate decoded text for corruption
    */
-  static validateDecodedText(text: string): {
+  static validateDecodedText(text: string, options?: { allowNullBytes?: boolean; autoSanitize?: boolean }): {
     isValid: boolean;
     errors: string[];
     warnings: string[];
+    sanitizedText?: string;
   } {
     const errors: string[] = [];
     const warnings: string[] = [];
+    let sanitizedText: string | undefined;
     
     // Check for null bytes (shouldn't be in text)
-    if (text.includes('\0')) {
-      errors.push('Text contains null bytes - possible corruption');
+    if (text.includes('\0') || text.includes('\u0000') || text.includes('\x00') || 
+        text.split('').some(char => char.charCodeAt(0) === 0)) {
+      if (options?.autoSanitize) {
+        // Auto-sanitize null bytes instead of failing
+        sanitizedText = this.sanitizeText(text);
+        warnings.push('Text contained null bytes - automatically sanitized');
+      } else if (!options?.allowNullBytes) {
+        errors.push('Text contains null bytes - possible corruption');
+      } else {
+        warnings.push('Text contains null bytes - will be sanitized');
+      }
     }
     
     // Check for excessive replacement characters
@@ -264,6 +289,7 @@ export class BrowserTextDecoder {
       isValid: errors.length === 0,
       errors,
       warnings,
+      sanitizedText,
     };
   }
 }

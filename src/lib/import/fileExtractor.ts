@@ -158,8 +158,14 @@ async function extractTextFile(file: File): Promise<string> {
     const { BrowserTextDecoder } = await import('@/lib/import/textDecoder');
     const decoded = await BrowserTextDecoder.decodeFile(file);
     
-    // Validate decoded text
-    const validation = BrowserTextDecoder.validateDecodedText(decoded.text);
+    // Validate decoded text with auto-sanitize enabled
+    const validation = BrowserTextDecoder.validateDecodedText(decoded.text, { 
+      autoSanitize: true 
+    });
+    
+    // Use sanitized text if available, otherwise use original
+    const textToUse = validation.sanitizedText || decoded.text;
+    
     if (!validation.isValid) {
       throw new Error(`Encoding error: ${validation.errors.join(', ')}`);
     }
@@ -169,7 +175,7 @@ async function extractTextFile(file: File): Promise<string> {
       console.warn('Text decoding warnings:', validation.warnings);
     }
     
-    return normalizeText(decoded.text);
+    return normalizeText(textToUse);
   } catch (error) {
     throw new Error(`Failed to extract text: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }

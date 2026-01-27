@@ -31,10 +31,20 @@ export default function StoryImport({ onImport }: StoryImportProps) {
       const { extractTextFromFile } = await import('@/lib/import/fileExtractor');
       const extracted = await extractTextFromFile(file);
       
+      // Final sanitization pass to ensure no null bytes (defensive)
+      // Remove any null bytes that might have slipped through
+      let cleanText = extracted.text;
+      if (cleanText.includes('\0') || cleanText.includes('\u0000') || cleanText.includes('\x00')) {
+        // Remove all null bytes using multiple methods
+        cleanText = cleanText.replace(/\0/g, '').replace(/\u0000/g, '').replace(/\x00/g, '');
+        // Also filter by character code as ultimate fallback
+        cleanText = cleanText.split('').filter(char => char.charCodeAt(0) !== 0).join('');
+      }
+      
       const title = file.name.replace(/\.[^/.]+$/, '');
       
-      // Parse the extracted text
-      const parsed = StoryParser.parseTextFile(extracted.text, title);
+      // Parse the cleaned text
+      const parsed = StoryParser.parseTextFile(cleanText, title);
       
       setParsedData(parsed);
       setSuccess(true);

@@ -180,8 +180,13 @@ export class FileReaderStage {
       // Use safe text decoder that handles encoding detection
       const decoded = await BrowserTextDecoder.decodeFile(file);
       
-      // Validate decoded text
-      const validation = BrowserTextDecoder.validateDecodedText(decoded.text);
+      // Validate decoded text with auto-sanitize enabled
+      const validation = BrowserTextDecoder.validateDecodedText(decoded.text, { 
+        autoSanitize: true 
+      });
+      
+      // Use sanitized text if available, otherwise use original
+      const textToUse = validation.sanitizedText || decoded.text;
       
       if (!validation.isValid) {
         throw new ImportError(
@@ -196,7 +201,7 @@ export class FileReaderStage {
       }
       
       return {
-        text: decoded.text,
+        text: textToUse,
         encoding: `${decoded.originalEncoding.encoding} (confidence: ${decoded.originalEncoding.confidence})`,
       };
     } catch (error) {
