@@ -45,7 +45,32 @@ export default function StoryImport({ onImport }: StoryImportProps) {
       // Parse the cleaned text
       const parsed = StoryParser.parseTextFile(cleanText, title);
       
-      setParsedData(parsed);
+      // Final defensive sanitization: ensure all chapter titles are ASCII-only
+      const sanitizedParsed = {
+        ...parsed,
+        chapters: parsed.chapters.map(chapter => {
+          // Remove ALL non-ASCII characters from chapter title as final safety check
+          const sanitizedTitle = chapter.title.split('').filter((char: string) => {
+            const code = char.charCodeAt(0);
+            return code >= 32 && code <= 126;
+          }).join('').trim();
+          
+          // If title is empty or corrupted after sanitization, use default
+          if (!sanitizedTitle || sanitizedTitle.length === 0) {
+            return {
+              ...chapter,
+              title: `Chapter ${parsed.chapters.indexOf(chapter) + 1}`
+            };
+          }
+          
+          return {
+            ...chapter,
+            title: sanitizedTitle
+          };
+        })
+      };
+      
+      setParsedData(sanitizedParsed);
       setSuccess(true);
       setError(null);
     } catch (err) {
