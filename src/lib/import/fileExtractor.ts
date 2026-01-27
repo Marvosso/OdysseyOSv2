@@ -88,6 +88,7 @@ function isMostlyBinary(text: string): boolean {
  * Sanitize text by removing null bytes and other problematic characters
  * Null bytes can appear in extracted text from DOCX/PDF files as harmless artifacts
  * Also filters out lines that are mostly binary/corrupted
+ * AGGRESSIVE: Removes ALL non-ASCII characters to prevent corrupted Unicode text
  */
 function sanitizeExtractedText(text: string): string {
   if (!text || typeof text !== 'string') {
@@ -108,18 +109,51 @@ function sanitizeExtractedText(text: string): string {
   // Keep only printable characters and common whitespace
   sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
   
+  // AGGRESSIVE: Remove ALL non-ASCII characters (keep only 32-126 range)
+  // This prevents corrupted Unicode characters from getting through
+  sanitized = sanitized.split('').filter((char: string) => {
+    const code = char.charCodeAt(0);
+    // Keep only printable ASCII (32-126) and common whitespace (9, 10, 13)
+    return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
+  }).join('');
+  
   // Filter out lines that are mostly binary/corrupted
   const lines = sanitized.split('\n');
   const cleanLines = lines.filter(line => {
+    // Skip empty lines
+    if (line.trim().length === 0) {
+      return false;
+    }
+    
     // Skip lines that are mostly non-printable
     if (isMostlyBinary(line)) {
       return false;
     }
-    // Skip lines that are mostly special characters (likely binary)
-    const specialCharCount = (line.match(/[^\w\s]/g) || []).length;
-    if (line.length > 0 && specialCharCount / line.length > 0.8) {
+    
+    // Check ASCII percentage - must be at least 90% ASCII
+    const asciiCount = line.split('').filter((char: string) => {
+      const code = char.charCodeAt(0);
+      return code >= 32 && code <= 126;
+    }).length;
+    
+    if (line.length > 0 && asciiCount / line.length < 0.9) {
       return false;
     }
+    
+    // Skip lines that are mostly special characters (likely binary)
+    const letterNumberCount = line.split('').filter((char: string) => {
+      const code = char.charCodeAt(0);
+      return (code >= 48 && code <= 57) || // 0-9
+             (code >= 65 && code <= 90) || // A-Z
+             (code >= 97 && code <= 122) || // a-z
+             code === 32; // space
+    }).length;
+    
+    // If less than 30% letters/numbers, likely corrupted
+    if (line.length > 0 && letterNumberCount / line.length < 0.3) {
+      return false;
+    }
+    
     return true;
   });
   
@@ -165,17 +199,20 @@ async function extractPDFText(file: File): Promise<string> {
           
           // Filter out items that are mostly non-printable
           const str = item.str;
-          const printableCount = str.split('').filter((char: string) => {
+          
+          // AGGRESSIVE: Remove ALL non-ASCII characters immediately
+          const asciiOnly = str.split('').filter((char: string) => {
             const code = char.charCodeAt(0);
             return code >= 32 && code <= 126;
-          }).length;
+          }).join('');
           
-          // Skip if less than 70% printable (likely binary/corrupted)
-          if (str.length > 0 && printableCount / str.length < 0.7) {
+          // Skip if less than 90% ASCII (likely corrupted Unicode)
+          if (str.length > 0 && asciiOnly.length / str.length < 0.9) {
             return '';
           }
           
-          return str;
+          // Return only ASCII characters
+          return asciiOnly;
         })
         .filter(str => str.length > 0) // Remove empty strings
         .join(' ');
@@ -215,18 +252,19 @@ async function extractDOCXText(file: File): Promise<string> {
     // Filter out binary/corrupted lines before sanitization
     const lines = result.value.split('\n');
     const cleanLines = lines.map((line: string) => {
-      // Check if line is mostly printable
-      const printableCount = line.split('').filter((char: string) => {
+      // AGGRESSIVE: Remove ALL non-ASCII characters immediately
+      const asciiOnly = line.split('').filter((char: string) => {
         const code = char.charCodeAt(0);
         return code >= 32 && code <= 126;
-      }).length;
+      }).join('');
       
-      // If less than 70% printable, it's likely corrupted - return empty
-      if (line.length > 0 && printableCount / line.length < 0.7) {
+      // If less than 90% ASCII, it's likely corrupted - return empty
+      if (line.length > 0 && asciiOnly.length / line.length < 0.9) {
         return '';
       }
       
-      return line;
+      // Return only ASCII characters
+      return asciiOnly;
     }).filter(line => line.trim().length > 0);
     
     const filteredText = cleanLines.join('\n');
