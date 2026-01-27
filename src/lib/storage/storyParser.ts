@@ -240,6 +240,17 @@ export class StoryParser {
         continue;
       }
       
+      // Additional check: if the cleaned line is still mostly non-ASCII after cleaning, skip it
+      const asciiCount = line.split('').filter((char: string) => {
+        const code = char.charCodeAt(0);
+        return code >= 32 && code <= 126;
+      }).length;
+      
+      // Skip if less than 70% of characters are printable ASCII (likely still corrupted)
+      if (line.length > 0 && asciiCount / line.length < 0.7) {
+        continue;
+      }
+      
       // Check if this line is a chapter marker (test against cleaned line)
       // Only check if line looks like valid text (not binary)
       const isChapterStart = line.length >= 3 && 
@@ -280,38 +291,49 @@ export class StoryParser {
           .replace(/^\d+[\.\):]\s*/, '') // Remove leading numbers with punctuation
           .trim();
         
-        // Additional cleaning: remove any remaining non-printable characters
+        // Aggressive cleaning: remove ALL non-ASCII characters (keep only printable ASCII)
         cleanTitle = cleanTitle.split('').filter((char: string) => {
           const code = char.charCodeAt(0);
-          // Keep only printable ASCII (32-126) and common punctuation
-          return (code >= 32 && code <= 126) || code === 160; // 160 is non-breaking space
+          // Keep only printable ASCII (32-126) - no Unicode, no extended characters
+          return code >= 32 && code <= 126;
         }).join('');
         
-        // Validate title is readable (mostly ASCII printable characters)
+        // Remove any remaining non-ASCII characters using regex as fallback
+        cleanTitle = cleanTitle.replace(/[^\x20-\x7E]/g, '');
+        
+        cleanTitle = cleanTitle.trim();
+        
+        // Validate title is readable and meaningful
         const asciiCount = cleanTitle.split('').filter((char: string) => {
           const code = char.charCodeAt(0);
           return code >= 32 && code <= 126;
         }).length;
         
-        // Check for common binary/corruption patterns
-        const hasBinaryPattern = /[^\x20-\x7E\s]/.test(cleanTitle) && 
-                                 (cleanTitle.match(/[^\x20-\x7E\s]/g) || []).length / cleanTitle.length > 0.3;
+        // Check if title is mostly letters/numbers/spaces (meaningful text)
+        const letterNumberCount = cleanTitle.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return (code >= 48 && code <= 57) || // 0-9
+                 (code >= 65 && code <= 90) || // A-Z
+                 (code >= 97 && code <= 122) || // a-z
+                 code === 32; // space
+        }).length;
         
-        if (cleanTitle.length > 0) {
-          if (asciiCount / cleanTitle.length < 0.7 || hasBinaryPattern) {
-            // Title is mostly non-ASCII or contains binary patterns (corrupted), use default
-            console.warn(`Chapter title appears corrupted: "${cleanTitle.substring(0, 50)}...". Using default title.`);
-            cleanTitle = `Chapter ${chapters.length + 1}`;
-          } else if (cleanTitle.length > 200) {
-            // Title is suspiciously long (likely includes content), truncate
-            cleanTitle = cleanTitle.substring(0, 100).trim();
-          }
+        // If title is empty, too short, mostly non-ASCII, or doesn't contain enough letters/numbers, use default
+        if (!cleanTitle || 
+            cleanTitle.length === 0 || 
+            cleanTitle.length < 2 ||
+            (cleanTitle.length > 0 && asciiCount / cleanTitle.length < 0.9) ||
+            (cleanTitle.length > 0 && letterNumberCount / cleanTitle.length < 0.5) ||
+            this.isMostlyBinary(cleanTitle)) {
+          // Title is corrupted or meaningless, use default
+          cleanTitle = `Chapter ${chapters.length + 1}`;
+        } else if (cleanTitle.length > 200) {
+          // Title is suspiciously long (likely includes content), truncate
+          cleanTitle = cleanTitle.substring(0, 100).trim();
         }
         
-        cleanTitle = cleanTitle.trim();
-        
-        // Final safety check: if title is empty or still looks corrupted, use default
-        if (!cleanTitle || cleanTitle.length === 0 || this.isMostlyBinary(cleanTitle)) {
+        // Final safety check: ensure title is valid
+        if (!cleanTitle || cleanTitle.length === 0) {
           cleanTitle = `Chapter ${chapters.length + 1}`;
         }
         
