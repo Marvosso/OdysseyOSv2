@@ -1,8 +1,8 @@
 /**
  * Next.js Middleware
  * 
- * Global middleware for API routes
- * Handles rate limiting, CORS, and request logging
+ * Global middleware for API routes and auth redirects
+ * Handles rate limiting, CORS, request logging, and authenticated user redirects
  */
 
 import { NextResponse } from 'next/server';
@@ -44,12 +44,45 @@ function getRateLimitConfig(pathname: string) {
 }
 
 /**
+ * Check if user has an active Supabase session by checking cookies
+ */
+function hasSupabaseSession(request: NextRequest): boolean {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  if (!supabaseUrl) {
+    return false;
+  }
+
+  // Extract project ref from URL (e.g., https://xxx.supabase.co -> xxx)
+  const projectRefMatch = supabaseUrl.match(/https?:\/\/([^.]+)\.supabase\.co/);
+  if (!projectRefMatch) {
+    return false;
+  }
+
+  const projectRef = projectRefMatch[1];
+  const authCookieName = `sb-${projectRef}-auth-token`;
+
+  // Check if any auth token cookie exists
+  const cookies = request.cookies.getAll();
+  return cookies.some(cookie => cookie.name.startsWith(authCookieName));
+}
+
+/**
  * Main middleware function
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Only apply to API routes
+  // Check if authenticated user is trying to access auth page
+  if (pathname === '/auth' || pathname.startsWith('/auth/')) {
+    if (hasSupabaseSession(request)) {
+      // User is authenticated, redirect to dashboard
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    // Not authenticated, allow access to auth page
+    return NextResponse.next();
+  }
+
+  // Only apply rate limiting to API routes
   if (!isApiRoute(pathname)) {
     return NextResponse.next();
   }
@@ -108,8 +141,8 @@ export async function middleware(request: NextRequest) {
 
 /**
  * Middleware matcher
- * Only run middleware on API routes
+ * Run middleware on API routes and auth page
  */
 export const config = {
-  matcher: '/api/:path*',
+  matcher: ['/api/:path*', '/auth/:path*'],
 };

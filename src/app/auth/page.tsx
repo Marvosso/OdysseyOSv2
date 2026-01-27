@@ -59,7 +59,7 @@ export default function AuthPage() {
         if (session?.user) {
           // User is authenticated, redirect to dashboard
           setUser(session.user);
-          router.push('/dashboard');
+          router.replace('/dashboard');
           return;
         }
 
@@ -79,7 +79,7 @@ export default function AuthPage() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
-        router.push('/dashboard');
+        router.replace('/dashboard');
       } else {
         setUser(null);
       }
@@ -155,20 +155,17 @@ export default function AuthPage() {
         }
       }
 
-      // Success!
-      setSuccess(
-        'Account created successfully! ' +
-        (authData.session
-          ? 'You are now logged in.'
-          : 'Please check your email to confirm your account.')
-      );
-      setUser(authData.user);
-      setEmail('');
-      setPassword('');
-
-      // Redirect after successful signup if session exists
+      // Redirect immediately after successful signup if session exists
       if (authData.session) {
-        router.push('/dashboard');
+        router.replace('/dashboard');
+      } else {
+        // Show success message if email confirmation is required
+        setSuccess(
+          'Account created successfully! Please check your email to confirm your account.'
+        );
+        setUser(authData.user);
+        setEmail('');
+        setPassword('');
       }
     } catch (err) {
       // Step 3: Handle errors gracefully
@@ -229,14 +226,8 @@ export default function AuthPage() {
         throw new Error('Sign in failed: No user or session returned');
       }
 
-      // Success!
-      setSuccess('Successfully signed in!');
-      setUser(authData.user);
-      setEmail('');
-      setPassword('');
-
-      // Redirect after successful login
-      router.push('/dashboard');
+      // Redirect immediately after successful login
+      router.replace('/dashboard');
     } catch (err) {
       // Step 2: Handle errors gracefully
       const errorMessage =
