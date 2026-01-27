@@ -157,12 +157,14 @@ export class SearchIndex {
               relevance,
               text: scene.title,
             };
-          } else if (relevance > bestMatch.relevance) {
-            bestMatch = {
-              index: 0,
-              relevance,
-              text: scene.title,
-            };
+          } else {
+            if (relevance > bestMatch.relevance) {
+              bestMatch = {
+                index: 0,
+                relevance,
+                text: scene.title,
+              };
+            }
           }
           hasMatch = true;
         }
@@ -181,13 +183,15 @@ export class SearchIndex {
               relevance,
               text: context,
             };
-          } else if (relevance > bestMatch.relevance) {
-            const context = this.extractContext(scene.content, firstMatch.index);
-            bestMatch = {
-              index: firstMatch.index,
-              relevance,
-              text: context,
-            };
+          } else {
+            if (relevance > bestMatch.relevance) {
+              const context = this.extractContext(scene.content, firstMatch.index);
+              bestMatch = {
+                index: firstMatch.index,
+                relevance,
+                text: context,
+              };
+            }
           }
           hasMatch = true;
         }
@@ -245,12 +249,14 @@ export class SearchIndex {
               relevance,
               text: context,
             };
-          } else if (relevance > bestMatch.relevance) {
-            const context = this.extractContext(character.description, firstMatch.index);
-            bestMatch = {
-              relevance,
-              text: context,
-            };
+          } else {
+            if (relevance > bestMatch.relevance) {
+              const context = this.extractContext(character.description, firstMatch.index);
+              bestMatch = {
+                relevance,
+                text: context,
+              };
+            }
           }
           hasMatch = true;
         }
