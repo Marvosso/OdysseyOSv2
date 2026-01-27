@@ -225,10 +225,27 @@ export async function extractTextFromFile(file: File): Promise<ExtractedText> {
   
   if (hasNullBytes) {
     // Ultimate fallback: filter out any character with code 0
+    // Also filter out other problematic control characters except whitespace
     text = text.split('').filter(char => {
       const code = char.charCodeAt(0);
+      // Keep: printable chars (32-126), tab (9), newline (10), carriage return (13)
+      // Remove: null (0) and other control chars
       return code !== 0 && (code >= 32 || code === 9 || code === 10 || code === 13);
     }).join('');
+    
+    // Verify no null bytes remain
+    if (text.includes('\0') || text.split('').some(char => char.charCodeAt(0) === 0)) {
+      console.error('CRITICAL: Null bytes still present after all sanitization attempts');
+      // Last resort: replace all null bytes with empty string
+      text = text.replace(/\0/g, '').replace(/\u0000/g, '').replace(/\x00/g, '');
+    }
+  }
+  
+  // Final verification - if null bytes still exist, something is very wrong
+  // But we'll return the text anyway since we've done our best to clean it
+  const finalNullCheck = text.split('').some(char => char.charCodeAt(0) === 0);
+  if (finalNullCheck) {
+    console.warn('Warning: Some null bytes may still be present after sanitization');
   }
   
   return {
