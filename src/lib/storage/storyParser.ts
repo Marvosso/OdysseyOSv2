@@ -376,8 +376,26 @@ export class StoryParser {
              finalLetterNumberCount / cleanTitle.length < 0.3 ||
              this.isMostlyBinary(cleanTitle))) {
           // Skip this corrupted chapter marker - don't create a chapter
-          console.warn(`Skipping corrupted chapter marker: "${cleanTitle.substring(0, 50)}..."`);
+          console.warn(`Skipping corrupted chapter marker: "${cleanTitle.substring(0, 50)}..."`, {
+            originalLine: line.substring(0, 50),
+            cleanTitle,
+            asciiRatio: finalAsciiCount / cleanTitle.length,
+            letterRatio: finalLetterNumberCount / cleanTitle.length,
+            isBinary: this.isMostlyBinary(cleanTitle)
+          });
           continue; // Skip to next line
+        }
+        
+        // Final defensive check: ensure title contains NO non-ASCII characters
+        const hasNonAsciiInTitle = cleanTitle.split('').some((char: string) => {
+          const code = char.charCodeAt(0);
+          return code < 32 || code > 126;
+        });
+        
+        if (hasNonAsciiInTitle) {
+          console.error(`CRITICAL: Non-ASCII characters found in chapter title after all cleaning: "${cleanTitle}"`);
+          // Force skip this chapter marker
+          continue;
         }
         
         // Create new chapter
