@@ -234,11 +234,15 @@ export class StoryParser {
       // Remove zero-width characters and other hidden Unicode
       line = line.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
       
-      // Remove any remaining non-printable characters except whitespace
+      // CRITICAL: Remove ALL non-ASCII characters immediately (keep only 32-126 range)
+      // This must happen before any pattern matching to prevent corrupted text from getting through
       line = line.split('').filter((char: string) => {
         const code = char.charCodeAt(0);
         return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
       }).join('');
+      
+      // Defensive: Remove any remaining non-ASCII using regex
+      line = line.replace(/[^\x20-\x7E\t\n\r]/g, '');
       
       line = line.trim();
       
