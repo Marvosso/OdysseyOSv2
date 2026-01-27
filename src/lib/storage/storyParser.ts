@@ -93,6 +93,21 @@ export class StoryParser {
   ];
 
   /**
+   * Check if text is mostly binary/corrupted
+   */
+  private static isMostlyBinary(text: string): boolean {
+    if (!text || text.length === 0) return false;
+    
+    const nonPrintableCount = text.split('').filter(char => {
+      const code = char.charCodeAt(0);
+      return !(code >= 32 && code <= 126) && code !== 9 && code !== 10 && code !== 13;
+    }).length;
+    
+    const ratio = nonPrintableCount / text.length;
+    return ratio > 0.3; // More than 30% non-printable
+  }
+
+  /**
    * Normalize text before parsing:
    * - Strip null bytes and non-printable/binary characters
    * - Normalize line endings (\r\n → \n)
@@ -199,15 +214,43 @@ export class StoryParser {
     for (let i = 0; i < lines.length; i++) {
       // Clean line: remove hidden characters and normalize whitespace
       let line = lines[i];
+      
+      // Skip lines that are mostly binary/corrupted before processing
+      const nonPrintableCount = line.split('').filter(char => {
+        const code = char.charCodeAt(0);
+        return !(code >= 32 && code <= 126) && code !== 9 && code !== 10 && code !== 13;
+      }).length;
+      if (line.length > 0 && nonPrintableCount / line.length > 0.3) {
+        // Skip this line - it's mostly binary/corrupted
+        continue;
+      }
+      
       // Remove zero-width characters and other hidden Unicode
-      line = line.replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '');
+      line = line.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
+      
+      // Remove any remaining non-printable characters except whitespace
+      line = line.split('').filter(char => {
+        const code = char.charCodeAt(0);
+        return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
+      }).join('');
+      
       line = line.trim();
       
+      // Skip empty lines or lines that are too short to be chapter markers
+      if (line.length === 0 || line.length < 3) {
+        continue;
+      }
+      
       // Check if this line is a chapter marker (test against cleaned line)
-      const isChapterStart = this.CHAPTER_PATTERNS.some(pattern => pattern.test(line));
+      // Only check if line looks like valid text (not binary)
+      const isChapterStart = line.length >= 3 && 
+                             !this.isMostlyBinary(line) &&
+                             this.CHAPTER_PATTERNS.some(pattern => pattern.test(line));
       
       // Check if this line is a scene marker
-      const isSceneStart = this.SCENE_PATTERNS.some(pattern => pattern.test(line));
+      const isSceneStart = line.length >= 3 &&
+                           !this.isMostlyBinary(line) &&
+                           this.SCENE_PATTERNS.some(pattern => pattern.test(line));
       
       if (isChapterStart) {
         // Save previous scene if exists
@@ -231,13 +274,48 @@ export class StoryParser {
         }
         
         // Clean chapter title: remove markdown, bold, italic markers
-        const cleanTitle = line
+        let cleanTitle = line
           .replace(/^#{1,6}\s*/, '')  // Remove markdown headers
           .replace(/\*\*/g, '')        // Remove bold markers
           .replace(/\*/g, '')          // Remove italic markers
           .replace(/__/g, '')          // Remove underline markers
           .replace(/^\d+[\.\):]\s*/, '') // Remove leading numbers with punctuation
           .trim();
+        
+        // Additional cleaning: remove any remaining non-printable characters
+        cleanTitle = cleanTitle.split('').filter(char => {
+          const code = char.charCodeAt(0);
+          // Keep only printable ASCII (32-126) and common punctuation
+          return (code >= 32 && code <= 126) || code === 160; // 160 is non-breaking space
+        }).join('');
+        
+        // Validate title is readable (mostly ASCII printable characters)
+        const asciiCount = cleanTitle.split('').filter(char => {
+          const code = char.charCodeAt(0);
+          return code >= 32 && code <= 126;
+        }).length;
+        
+        // Check for common binary/corruption patterns
+        const hasBinaryPattern = /[^\x20-\x7E\s]/.test(cleanTitle) && 
+                                 (cleanTitle.match(/[^\x20-\x7E\s]/g) || []).length / cleanTitle.length > 0.3;
+        
+        if (cleanTitle.length > 0) {
+          if (asciiCount / cleanTitle.length < 0.7 || hasBinaryPattern) {
+            // Title is mostly non-ASCII or contains binary patterns (corrupted), use default
+            console.warn(`Chapter title appears corrupted: "${cleanTitle.substring(0, 50)}...". Using default title.`);
+            cleanTitle = `Chapter ${chapters.length + 1}`;
+          } else if (cleanTitle.length > 200) {
+            // Title is suspiciously long (likely includes content), truncate
+            cleanTitle = cleanTitle.substring(0, 100).trim();
+          }
+        }
+        
+        cleanTitle = cleanTitle.trim();
+        
+        // Final safety check: if title is empty or still looks corrupted, use default
+        if (!cleanTitle || cleanTitle.length === 0 || isMostlyBinary(cleanTitle)) {
+          cleanTitle = `Chapter ${chapters.length + 1}`;
+        }
         
         // Create new chapter
         const chapterId = `chapter-${chapters.length + 1}`;

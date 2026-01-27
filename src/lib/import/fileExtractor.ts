@@ -68,8 +68,26 @@ function normalizeText(text: string): string {
 }
 
 /**
+ * Check if a string contains mostly non-printable/binary characters
+ * Returns true if more than 30% of characters are non-printable
+ */
+function isMostlyBinary(text: string): boolean {
+  if (!text || text.length === 0) return false;
+  
+  const nonPrintableCount = text.split('').filter(char => {
+    const code = char.charCodeAt(0);
+    // Non-printable: not in range 32-126, and not common whitespace (9, 10, 13)
+    return !(code >= 32 && code <= 126) && code !== 9 && code !== 10 && code !== 13;
+  }).length;
+  
+  const ratio = nonPrintableCount / text.length;
+  return ratio > 0.3; // More than 30% non-printable
+}
+
+/**
  * Sanitize text by removing null bytes and other problematic characters
  * Null bytes can appear in extracted text from DOCX/PDF files as harmless artifacts
+ * Also filters out lines that are mostly binary/corrupted
  */
 function sanitizeExtractedText(text: string): string {
   if (!text || typeof text !== 'string') {
@@ -90,7 +108,22 @@ function sanitizeExtractedText(text: string): string {
   // Keep only printable characters and common whitespace
   sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
   
-  return sanitized;
+  // Filter out lines that are mostly binary/corrupted
+  const lines = sanitized.split('\n');
+  const cleanLines = lines.filter(line => {
+    // Skip lines that are mostly non-printable
+    if (isMostlyBinary(line)) {
+      return false;
+    }
+    // Skip lines that are mostly special characters (likely binary)
+    const specialCharCount = (line.match(/[^\w\s]/g) || []).length;
+    if (line.length > 0 && specialCharCount / line.length > 0.8) {
+      return false;
+    }
+    return true;
+  });
+  
+  return cleanLines.join('\n');
 }
 
 /**
@@ -122,10 +155,34 @@ async function extractPDFText(file: File): Promise<string> {
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
+      
+      // Extract text items and filter out binary/corrupted content
       const pageText = textContent.items
-        .map((item: any) => item.str)
+        .map((item: any) => {
+          if (!item.str || typeof item.str !== 'string') {
+            return '';
+          }
+          
+          // Filter out items that are mostly non-printable
+          const str = item.str;
+          const printableCount = str.split('').filter(char => {
+            const code = char.charCodeAt(0);
+            return code >= 32 && code <= 126;
+          }).length;
+          
+          // Skip if less than 70% printable (likely binary/corrupted)
+          if (str.length > 0 && printableCount / str.length < 0.7) {
+            return '';
+          }
+          
+          return str;
+        })
+        .filter(str => str.length > 0) // Remove empty strings
         .join(' ');
-      fullText += pageText + '\n';
+      
+      if (pageText.trim().length > 0) {
+        fullText += pageText + '\n';
+      }
     }
     
     // Sanitize extracted text (remove null bytes and control characters)
@@ -155,8 +212,27 @@ async function extractDOCXText(file: File): Promise<string> {
       console.warn('DOCX extraction warnings:', result.messages);
     }
     
+    // Filter out binary/corrupted lines before sanitization
+    const lines = result.value.split('\n');
+    const cleanLines = lines.map(line => {
+      // Check if line is mostly printable
+      const printableCount = line.split('').filter(char => {
+        const code = char.charCodeAt(0);
+        return code >= 32 && code <= 126;
+      }).length;
+      
+      // If less than 70% printable, it's likely corrupted - return empty
+      if (line.length > 0 && printableCount / line.length < 0.7) {
+        return '';
+      }
+      
+      return line;
+    }).filter(line => line.trim().length > 0);
+    
+    const filteredText = cleanLines.join('\n');
+    
     // Sanitize extracted text (remove null bytes and control characters)
-    const sanitized = sanitizeExtractedText(result.value);
+    const sanitized = sanitizeExtractedText(filteredText);
     
     // Trim and normalize line endings
     return normalizeText(sanitized);
