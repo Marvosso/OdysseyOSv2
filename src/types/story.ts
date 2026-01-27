@@ -32,6 +32,12 @@ export interface Story {
   updatedAt: Date;
 }
 
+export interface Chapter {
+  id: string;
+  title: string;
+  scenes: Scene[];
+}
+
 export type EmotionType =
   | 'joy'
   | 'sadness'
