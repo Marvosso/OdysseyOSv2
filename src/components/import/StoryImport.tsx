@@ -117,6 +117,7 @@ export default function StoryImport({ onImport }: StoryImportProps) {
       content: scene.content,
       position: parseInt(scene.id.split('-')[1]) || 0,
       emotion: scene.emotion as any,
+      status: 'draft' as const,
       createdAt: new Date(),
       updatedAt: new Date(),
     }));
