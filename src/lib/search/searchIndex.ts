@@ -158,7 +158,8 @@ export class SearchIndex {
               text: scene.title,
             };
           } else {
-            if (relevance > bestMatch.relevance) {
+            const currentBest = bestMatch;
+            if (relevance > currentBest.relevance) {
               bestMatch = {
                 index: 0,
                 relevance,
@@ -184,7 +185,8 @@ export class SearchIndex {
               text: context,
             };
           } else {
-            if (relevance > bestMatch.relevance) {
+            const currentBest = bestMatch;
+            if (relevance > currentBest.relevance) {
               const context = this.extractContext(scene.content, firstMatch.index);
               bestMatch = {
                 index: firstMatch.index,
@@ -250,7 +252,8 @@ export class SearchIndex {
               text: context,
             };
           } else {
-            if (relevance > bestMatch.relevance) {
+            const currentBest = bestMatch;
+            if (relevance > currentBest.relevance) {
               const context = this.extractContext(character.description, firstMatch.index);
               bestMatch = {
                 relevance,
