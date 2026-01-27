@@ -344,6 +344,31 @@ export class StoryParser {
           cleanTitle = `Chapter ${chapters.length + 1}`;
         }
         
+        // CRITICAL: Final validation - if title is still corrupted after all cleaning, skip this chapter marker
+        // This prevents corrupted text from becoming a chapter title
+        const finalAsciiCount = cleanTitle.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return code >= 32 && code <= 126;
+        }).length;
+        
+        const finalLetterNumberCount = cleanTitle.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return (code >= 48 && code <= 57) || // 0-9
+                 (code >= 65 && code <= 90) || // A-Z
+                 (code >= 97 && code <= 122) || // a-z
+                 code === 32; // space
+        }).length;
+        
+        // If title is still corrupted (not enough ASCII or meaningful text), skip this chapter marker entirely
+        if (cleanTitle.length > 0 && 
+            (finalAsciiCount / cleanTitle.length < 0.9 || 
+             finalLetterNumberCount / cleanTitle.length < 0.3 ||
+             this.isMostlyBinary(cleanTitle))) {
+          // Skip this corrupted chapter marker - don't create a chapter
+          console.warn(`Skipping corrupted chapter marker: "${cleanTitle.substring(0, 50)}..."`);
+          continue; // Skip to next line
+        }
+        
         // Create new chapter
         const chapterId = `chapter-${chapters.length + 1}`;
         currentChapter = {
