@@ -27,28 +27,14 @@ export default function StoryImport({ onImport }: StoryImportProps) {
     setIsProcessing(true);
 
     try {
-      // FIXED: Use safe text decoder instead of file.text()
-      // This prevents garbled text from encoding issues
-      const { BrowserTextDecoder } = await import('@/lib/import/textDecoder');
-      const decoded = await BrowserTextDecoder.decodeFile(file);
-      
-      // Validate decoded text
-      const validation = BrowserTextDecoder.validateDecodedText(decoded.text);
-      if (!validation.isValid) {
-        setError(`Encoding error: ${validation.errors.join(', ')}`);
-        setIsProcessing(false);
-        return;
-      }
-      
-      // Log warnings if any
-      if (validation.warnings.length > 0) {
-        console.warn('Text decoding warnings:', validation.warnings);
-      }
+      // Extract text from file (supports PDF, DOCX, TXT, MD)
+      const { extractTextFromFile } = await import('@/lib/import/fileExtractor');
+      const extracted = await extractTextFromFile(file);
       
       const title = file.name.replace(/\.[^/.]+$/, '');
       
-      // Parse the file with properly decoded text
-      const parsed = StoryParser.parseTextFile(decoded.text, title);
+      // Parse the extracted text
+      const parsed = StoryParser.parseTextFile(extracted.text, title);
       
       setParsedData(parsed);
       setSuccess(true);
@@ -179,7 +165,7 @@ export default function StoryImport({ onImport }: StoryImportProps) {
             >
               <input
                 type="file"
-                accept=".txt,.md"
+                accept=".txt,.md,.pdf,.docx"
                 onChange={handleFileSelect}
                 className="hidden"
                 id="file-upload"
@@ -193,7 +179,7 @@ export default function StoryImport({ onImport }: StoryImportProps) {
                   or click to browse
                 </p>
                 <p className="text-gray-500 text-xs">
-                  Supports .txt and .md files
+                  Supports .txt, .md, .pdf, .docx files
                 </p>
               </label>
             </div>
