@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, AlertCircle, CheckCircle, BookOpen, Trash2, Sparkles } from 'lucide-react';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 import { StoryParser, ParsedStory } from '@/lib/storage/storyParser';
-import type { Scene } from '@/types/story';
-import type { Chapter } from '@/types/outline';
+import type { Scene, Chapter } from '@/types/story';
 import StructureDetection from '@/components/ai/StructureDetection';
 import type { StructureDetection as StructureDetectionType } from '@/types/ai';
 
@@ -118,13 +117,21 @@ export default function StoryImport({ onImport }: StoryImportProps) {
       updatedAt: new Date(),
     }));
 
-    const chapters: Chapter[] = structure.chapters.map(chapter => ({
-      id: chapter.id,
-      title: chapter.title,
-      description: `Act: ${chapter.act}`,
-      points: [],
-      position: parseInt(chapter.id.split('-')[1]) || 0,
-    }));
+    // Group scenes by chapter and create chapters with their scenes
+    const chapters: Chapter[] = structure.chapters.map(chapter => {
+      // Find all scenes that belong to this chapter
+      const chapterScenes = scenes.filter(scene => {
+        // Check if scene's chapterId matches this chapter's id
+        const detectedScene = structure.scenes.find(s => s.id === scene.id);
+        return detectedScene?.chapterId === chapter.id;
+      });
+      
+      return {
+        id: chapter.id,
+        title: chapter.title,
+        scenes: chapterScenes,
+      };
+    });
 
     const finalParsed: ParsedStory = {
       title: parsedData.title,

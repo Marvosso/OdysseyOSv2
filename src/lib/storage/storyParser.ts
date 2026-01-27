@@ -1,7 +1,6 @@
 'use client';
 
-import { Scene } from '@/types/story';
-import { Chapter } from '@/types/outline';
+import { Scene, Chapter } from '@/types/story';
 import { computeWordCount } from '@/utils/wordCount';
 
 export interface ParsedStory {
@@ -263,8 +262,7 @@ export class StoryParser {
           scenes.push(scene);
           
           if (currentChapter) {
-            currentChapter.scenes = currentChapter.scenes || [];
-            currentChapter.scenes.push(scene.id);
+            currentChapter.scenes.push(scene);
           }
         }
         
@@ -322,9 +320,7 @@ export class StoryParser {
         currentChapter = {
           id: chapterId,
           title: cleanTitle || `Chapter ${chapters.length + 1}`,
-          description: `Chapter ${chapters.length + 1}`,
-          points: [],
-          position: chapters.length + 1,
+          scenes: [],
         };
         
         // Initialize content tracking for this chapter
@@ -341,8 +337,7 @@ export class StoryParser {
           scenes.push(scene);
           
           if (currentChapter) {
-            currentChapter.scenes = currentChapter.scenes || [];
-            currentChapter.scenes.push(scene.id);
+            currentChapter.scenes.push(scene);
           }
         }
         currentSceneContent = [];
@@ -357,8 +352,7 @@ export class StoryParser {
           scenes.push(scene);
           
           if (currentChapter) {
-            currentChapter.scenes = currentChapter.scenes || [];
-            currentChapter.scenes.push(scene.id);
+            currentChapter.scenes.push(scene);
           }
         }
         currentSceneContent = [];
@@ -385,8 +379,7 @@ export class StoryParser {
       scenes.push(scene);
       
       if (currentChapter) {
-        currentChapter.scenes = currentChapter.scenes || [];
-        currentChapter.scenes.push(scene.id);
+        currentChapter.scenes.push(scene);
       }
     }
     
@@ -428,8 +421,7 @@ export class StoryParser {
           );
           scenes.push(defaultScene);
           
-          chapter.scenes = chapter.scenes || [];
-          chapter.scenes.push(defaultScene.id);
+          chapter.scenes.push(defaultScene);
         }
         // Note: We don't warn about empty chapters here - warnings are handled elsewhere
         // Only warn if chapter is truly empty (no content at all)
@@ -441,10 +433,7 @@ export class StoryParser {
         const defaultChapter: Chapter = {
           id: 'chapter-1',
           title: 'Chapter 1',
-          description: 'Imported content',
-          points: [],
-          scenes: scenes.map(s => s.id),
-          position: 1,
+          scenes: scenes,
         };
         chapters.push(defaultChapter);
       }
