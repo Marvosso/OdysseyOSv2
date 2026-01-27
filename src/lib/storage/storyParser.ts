@@ -12,14 +12,45 @@ export interface ParsedStory {
 
 export class StoryParser {
   // Detect chapter markers in text - expanded patterns for various formats
+  // Includes Word/PDF export patterns with various formatting
   private static CHAPTER_PATTERNS = [
-    // Plain text formats
+    // Plain text formats - numbers
     /^chapter\s+\d+/i,
     /^chapter\s+[ivxlcdm]+/i,
     /^part\s+\d+/i,
     /^part\s+[ivxlcdm]+/i,
     /^act\s+\d+/i,
     /^act\s+[ivxlcdm]+/i,
+    // Plain text formats - written numbers (Word/PDF exports)
+    /^chapter\s+one$/i,
+    /^chapter\s+two$/i,
+    /^chapter\s+three$/i,
+    /^chapter\s+four$/i,
+    /^chapter\s+five$/i,
+    /^chapter\s+six$/i,
+    /^chapter\s+seven$/i,
+    /^chapter\s+eight$/i,
+    /^chapter\s+nine$/i,
+    /^chapter\s+ten$/i,
+    /^chapter\s+eleven$/i,
+    /^chapter\s+twelve$/i,
+    /^chapter\s+thirteen$/i,
+    /^chapter\s+fourteen$/i,
+    /^chapter\s+fifteen$/i,
+    /^chapter\s+sixteen$/i,
+    /^chapter\s+seventeen$/i,
+    /^chapter\s+eighteen$/i,
+    /^chapter\s+nineteen$/i,
+    /^chapter\s+twenty$/i,
+    // Uppercase formats (Word/PDF exports)
+    /^CHAPTER\s+\d+/i,
+    /^CHAPTER\s+ONE$/i,
+    /^CHAPTER\s+TWO$/i,
+    /^CHAPTER\s+THREE$/i,
+    /^CHAPTER\s+FOUR$/i,
+    /^CHAPTER\s+FIVE$/i,
+    /^PART\s+\d+/i,
+    /^ACT\s+\d+/i,
     // Markdown formats
     /^#{1,3}\s*chapter\s+\d+/i,
     /^#{1,3}\s*chapter\s+[ivxlcdm]+/i,
@@ -33,55 +64,129 @@ export class StoryParser {
     /^\*\*chapter\s+\d+\*\*$/i,
     /^\*chapter\s+\d+\*$/i,
     /^__chapter\s+\d+__$/i,
-    // Word/PDF export formats (may have extra whitespace or hidden chars)
+    // Word/PDF export formats (may have extra whitespace, punctuation, or hidden chars)
     /^chapter\s+\d+[\.\):]\s*/i,
     /^part\s+\d+[\.\):]\s*/i,
     /^act\s+\d+[\.\):]\s*/i,
+    /^chapter\s+\d+\s*[\.\):]/i,
+    /^part\s+\d+\s*[\.\):]/i,
+    /^act\s+\d+\s*[\.\):]/i,
   ];
 
-  // Scene detection patterns
+  // Scene detection patterns - includes headings and explicit scene markers
   private static SCENE_PATTERNS = [
+    // Explicit scene markers
     /^scene\s+\d+/i,
     /^scene\s+[ivxlcdm]+/i,
+    /^SCENE\s+\d+/i,
+    /^Scene\s+\d+/,
+    // Markdown scene headings
     /^#{4,6}\s*scene\s+\d+/i,
+    /^#{4,6}\s*scene\s+[ivxlcdm]+/i,
+    // Word/PDF export formats
+    /^scene\s+\d+[\.\):]\s*/i,
+    /^scene\s+\d+\s*[\.\):]/i,
+    // Heading-based scene detection (h4-h6 in markdown)
+    /^####\s+.+$/,
+    /^#####\s+.+$/,
+    /^######\s+.+$/,
   ];
 
   /**
    * Normalize text before parsing:
-   * - Strip non-printable/binary characters
+   * - Strip null bytes and non-printable/binary characters
    * - Normalize line endings (\r\n → \n)
+   * - Convert smart quotes and dashes to plain ASCII
    * - Remove hidden characters from Word/PDF exports
    */
   private static normalizeTextForParsing(text: string): string {
-    // Normalize line endings first
+    if (!text || typeof text !== 'string') {
+      return '';
+    }
+
+    // Step 1: Normalize line endings first
     let normalized = text
-      .replace(/\r\n/g, '\n')  // Windows line endings
-      .replace(/\r/g, '\n');    // Old Mac line endings
+      .replace(/\r\n/g, '\n')  // Windows line endings (\r\n → \n)
+      .replace(/\r/g, '\n');    // Old Mac line endings (\r → \n)
     
-    // Remove null bytes and other problematic control characters
+    // Step 2: Remove null bytes and other problematic control characters
     // Keep: printable chars (32-126), tab (9), newline (10), carriage return (13)
     normalized = normalized.split('').filter(char => {
       const code = char.charCodeAt(0);
-      return code === 0 || (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
+      return code !== 0 && ((code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13);
     }).join('');
     
-    // Remove null bytes explicitly (defensive)
+    // Step 3: Remove null bytes explicitly (defensive, multiple methods)
     normalized = normalized.replace(/\0/g, '').replace(/\u0000/g, '').replace(/\x00/g, '');
     
-    // Remove other non-printable characters except whitespace
+    // Step 4: Remove other non-printable characters except whitespace
     normalized = normalized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
     
-    // Normalize multiple consecutive newlines (max 2)
+    // Step 5: Convert smart quotes to plain ASCII
+    normalized = normalized
+      .replace(/[""]/g, '"')      // Left/right double quotes → straight quote
+      .replace(/['']/g, "'")      // Left/right single quotes → straight apostrophe
+      .replace(/['']/g, "'")      // Alternative single quotes → apostrophe
+      .replace(/[""]/g, '"');     // Alternative double quotes → straight quote
+    
+    // Step 6: Convert smart dashes to plain ASCII
+    normalized = normalized
+      .replace(/—/g, '--')        // Em dash (—) → double hyphen
+      .replace(/–/g, '-')         // En dash (–) → single hyphen
+      .replace(/―/g, '--');       // Horizontal bar (―) → double hyphen
+    
+    // Step 7: Remove zero-width characters and other hidden Unicode
+    normalized = normalized.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
+    
+    // Step 8: Normalize multiple consecutive newlines (max 2)
     normalized = normalized.replace(/\n{3,}/g, '\n\n');
+    
+    // Step 9: Remove trailing whitespace from each line (but preserve structure)
+    normalized = normalized.split('\n').map(line => line.trimEnd()).join('\n');
     
     return normalized;
   }
 
-  // Parse uploaded text into scenes and chapters
+  /**
+   * Parse uploaded text into scenes and chapters
+   * Handles Word (.docx) and PDF files with proper normalization
+   * 
+   * @param content - Raw text content from file
+   * @param title - Story title (defaults to filename)
+   * @returns Parsed story with chapters and scenes
+   * @throws Error if content is invalid or corrupted
+   */
   static parseTextFile(content: string, title: string = 'Imported Story'): ParsedStory {
-    // Normalize text before parsing
-    const normalizedContent = this.normalizeTextForParsing(content);
-    const lines = normalizedContent.split('\n');
+    // Validate input
+    if (!content || typeof content !== 'string') {
+      throw new Error('Invalid content: Content must be a non-empty string');
+    }
+
+    if (content.length === 0) {
+      throw new Error('Invalid content: Content is empty');
+    }
+
+    // Check for obvious corruption (excessive null bytes or control chars)
+    const nullByteCount = (content.match(/\0/g) || []).length;
+    const controlCharCount = (content.match(/[\x00-\x1F\x7F]/g) || []).length;
+    
+    if (nullByteCount > content.length * 0.1) {
+      throw new Error('File appears corrupted: Contains excessive null bytes. Please try re-exporting the file.');
+    }
+
+    if (controlCharCount > content.length * 0.2) {
+      console.warn('Warning: File contains many control characters. Attempting to clean...');
+    }
+
+    try {
+      // Normalize text before parsing
+      const normalizedContent = this.normalizeTextForParsing(content);
+      
+      if (!normalizedContent || normalizedContent.trim().length === 0) {
+        throw new Error('File appears to be empty or unreadable after normalization. Please check the file format.');
+      }
+
+      const lines = normalizedContent.split('\n');
     const chapters: Chapter[] = [];
     const scenes: Scene[] = [];
     
@@ -253,20 +358,34 @@ export class StoryParser {
       }
     }
 
-    // If no chapters detected, create one default chapter
-    if (chapters.length === 0 && scenes.length > 0) {
-      const defaultChapter: Chapter = {
-        id: 'chapter-1',
-        title: 'Chapter 1',
-        description: 'Imported content',
-        points: [],
-        scenes: scenes.map(s => s.id),
-        position: 1,
-      };
-      chapters.push(defaultChapter);
-    }
+      // If no chapters detected, create one default chapter
+      if (chapters.length === 0 && scenes.length > 0) {
+        const defaultChapter: Chapter = {
+          id: 'chapter-1',
+          title: 'Chapter 1',
+          description: 'Imported content',
+          points: [],
+          scenes: scenes.map(s => s.id),
+          position: 1,
+        };
+        chapters.push(defaultChapter);
+      }
 
-    return { title, chapters, scenes };
+      return { title, chapters, scenes };
+    } catch (error) {
+      // Provide clear error messages for common issues
+      if (error instanceof Error) {
+        // Re-throw our custom errors
+        if (error.message.includes('Invalid content') || 
+            error.message.includes('corrupted') || 
+            error.message.includes('empty')) {
+          throw error;
+        }
+        // Wrap unexpected errors with context
+        throw new Error(`Failed to parse story: ${error.message}. The file may be corrupted or in an unsupported format.`);
+      }
+      throw new Error('Failed to parse story: Unknown error. The file may be corrupted or in an unsupported format.');
+    }
   }
 
   // Detect scene breaks
@@ -282,10 +401,19 @@ export class StoryParser {
   ): Scene {
     const cleanContent = content.trim();
     
+    // Validate scene content
+    if (!cleanContent || cleanContent.length === 0) {
+      throw new Error(`Scene ${index + 1} is empty. Cannot create scene without content.`);
+    }
+    
     // Detect emotion from content (simple keyword-based)
     const emotion = this.detectEmotion(cleanContent);
     
+    // Calculate word count and character count
     const wordCount = computeWordCount(cleanContent);
+    const characterCount = cleanContent.length;
+    const characterCountNoSpaces = cleanContent.replace(/\s/g, '').length;
+    
     return {
       id: `scene-${index}`,
       title: `Scene ${index + 1}`,
