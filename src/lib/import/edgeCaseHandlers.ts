@@ -61,10 +61,10 @@ export class EdgeCaseHandlers {
       );
     }
 
-    // Check if file appears to be text
+    // Check if file is a supported format
     if (!this.isTextFile(file)) {
       errors.push(
-        'File does not appear to be a text file. Please import .txt or .md files only.'
+        'File format not supported. Please import .txt, .md, .pdf, or .docx files only.'
       );
       return { isValid: false, errors, warnings };
     }
@@ -76,25 +76,24 @@ export class EdgeCaseHandlers {
    * Check if file is a supported file (text, DOCX, or PDF)
    */
   private static isTextFile(file: File): boolean {
-    // Check MIME type
-    const textMimeTypes = [
-      'text/plain',
-      'text/markdown',
-      'text/markdown',
-      'application/json',
-      'application/pdf',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
-    ];
-    if (textMimeTypes.includes(file.type)) {
-      return true;
-    }
-
-    // Check extension - now includes DOCX and PDF
+    // Check extension first (more reliable than MIME type which can be empty)
     const supportedExtensions = ['.txt', '.md', '.markdown', '.text', '.mdwn', '.pdf', '.docx'];
     const extension = file.name
       .toLowerCase()
       .substring(file.name.lastIndexOf('.'));
     if (supportedExtensions.includes(extension)) {
+      return true;
+    }
+
+    // Check MIME type as fallback
+    const textMimeTypes = [
+      'text/plain',
+      'text/markdown',
+      'application/json',
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+    ];
+    if (file.type && textMimeTypes.includes(file.type)) {
       return true;
     }
 
