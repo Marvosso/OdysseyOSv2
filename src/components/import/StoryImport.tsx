@@ -46,21 +46,53 @@ export default function StoryImport({ onImport }: StoryImportProps) {
       const parsed = StoryParser.parseTextFile(cleanText, title);
       
       // Final defensive sanitization: ensure all chapter titles are ASCII-only
+      // This is the LAST line of defense before displaying in the UI
       const sanitizedParsed = {
         ...parsed,
-        chapters: parsed.chapters.map(chapter => {
-          // Remove ALL non-ASCII characters from chapter title as final safety check
-          const sanitizedTitle = chapter.title.split('').filter((char: string) => {
+        chapters: parsed.chapters.map((chapter, index) => {
+          // Step 1: Remove ALL non-ASCII characters from chapter title
+          let sanitizedTitle = chapter.title.split('').filter((char: string) => {
             const code = char.charCodeAt(0);
             return code >= 32 && code <= 126;
           }).join('').trim();
           
-          // If title is empty or corrupted after sanitization, use default
-          if (!sanitizedTitle || sanitizedTitle.length === 0) {
-            return {
-              ...chapter,
-              title: `Chapter ${parsed.chapters.indexOf(chapter) + 1}`
-            };
+          // Step 2: Remove any remaining non-ASCII using regex
+          sanitizedTitle = sanitizedTitle.replace(/[^\x20-\x7E]/g, '').trim();
+          
+          // Step 3: Validate that title is 100% ASCII
+          const asciiCount = sanitizedTitle.split('').filter((char: string) => {
+            const code = char.charCodeAt(0);
+            return code >= 32 && code <= 126;
+          }).length;
+          
+          // Step 4: Check for meaningful content (letters/numbers)
+          const letterNumberCount = sanitizedTitle.split('').filter((char: string) => {
+            const code = char.charCodeAt(0);
+            return (code >= 48 && code <= 57) || // 0-9
+                   (code >= 65 && code <= 90) || // A-Z
+                   (code >= 97 && code <= 122) || // a-z
+                   code === 32; // space
+          }).length;
+          
+          // Step 5: If title is empty, corrupted, or not meaningful, use default
+          if (!sanitizedTitle || 
+              sanitizedTitle.length === 0 || 
+              sanitizedTitle.length < 2 ||
+              (sanitizedTitle.length > 0 && asciiCount / sanitizedTitle.length < 1.0) ||
+              (sanitizedTitle.length > 0 && letterNumberCount / sanitizedTitle.length < 0.3)) {
+            console.warn(`[UI SANITIZATION] Chapter ${index + 1} title corrupted in UI, using default. Original: "${chapter.title.substring(0, 50)}"`);
+            sanitizedTitle = `Chapter ${index + 1}`;
+          }
+          
+          // Step 6: Final check - if title still has non-ASCII, force default
+          const hasNonAscii = sanitizedTitle.split('').some((char: string) => {
+            const code = char.charCodeAt(0);
+            return code < 32 || code > 126;
+          });
+          
+          if (hasNonAscii) {
+            console.error(`[UI SANITIZATION ERROR] Non-ASCII still present in title after all sanitization: "${sanitizedTitle}"`);
+            sanitizedTitle = `Chapter ${index + 1}`;
           }
           
           return {
@@ -143,7 +175,41 @@ export default function StoryImport({ onImport }: StoryImportProps) {
     }));
 
     // Group scenes by chapter and create chapters with their scenes
-    const chapters: Chapter[] = structure.chapters.map(chapter => {
+    // CRITICAL: Sanitize chapter titles from AI detection
+    const chapters: Chapter[] = structure.chapters.map((chapter, index) => {
+      // Sanitize chapter title from AI detection
+      let sanitizedTitle = chapter.title.split('').filter((char: string) => {
+        const code = char.charCodeAt(0);
+        return code >= 32 && code <= 126;
+      }).join('').trim();
+      
+      // Remove any remaining non-ASCII
+      sanitizedTitle = sanitizedTitle.replace(/[^\x20-\x7E]/g, '').trim();
+      
+      // Validate title
+      const asciiCount = sanitizedTitle.split('').filter((char: string) => {
+        const code = char.charCodeAt(0);
+        return code >= 32 && code <= 126;
+      }).length;
+      
+      const letterNumberCount = sanitizedTitle.split('').filter((char: string) => {
+        const code = char.charCodeAt(0);
+        return (code >= 48 && code <= 57) || // 0-9
+               (code >= 65 && code <= 90) || // A-Z
+               (code >= 97 && code <= 122) || // a-z
+               code === 32; // space
+      }).length;
+      
+      // If title is corrupted, use default
+      if (!sanitizedTitle || 
+          sanitizedTitle.length === 0 || 
+          sanitizedTitle.length < 2 ||
+          (sanitizedTitle.length > 0 && asciiCount / sanitizedTitle.length < 1.0) ||
+          (sanitizedTitle.length > 0 && letterNumberCount / sanitizedTitle.length < 0.3)) {
+        console.warn(`[AI CONFIRM SANITIZATION] Chapter ${index + 1} title corrupted from AI, using default. Original: "${chapter.title.substring(0, 50)}"`);
+        sanitizedTitle = `Chapter ${index + 1}`;
+      }
+      
       // Find all scenes that belong to this chapter
       const chapterScenes = scenes.filter(scene => {
         // Check if scene's chapterId matches this chapter's id
@@ -153,7 +219,7 @@ export default function StoryImport({ onImport }: StoryImportProps) {
       
       return {
         id: chapter.id,
-        title: chapter.title,
+        title: sanitizedTitle,
         scenes: chapterScenes,
       };
     });

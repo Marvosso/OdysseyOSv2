@@ -414,11 +414,37 @@ export class StoryParser {
           continue;
         }
         
+        // FINAL SANITIZATION: One more aggressive pass to ensure title is 100% clean
+        // This is the absolute last check before creating the chapter
+        let finalTitle = cleanTitle.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          // Keep ONLY printable ASCII (32-126) - nothing else
+          return code >= 32 && code <= 126;
+        }).join('').trim();
+        
+        // Remove any remaining non-ASCII using regex
+        finalTitle = finalTitle.replace(/[^\x20-\x7E]/g, '').trim();
+        
+        // Validate final title one more time
+        const finalAsciiCheck = finalTitle.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return code >= 32 && code <= 126;
+        }).length;
+        
+        // If title is still corrupted, use default
+        if (!finalTitle || 
+            finalTitle.length === 0 || 
+            finalTitle.length < 2 ||
+            (finalTitle.length > 0 && finalAsciiCheck / finalTitle.length < 1.0)) {
+          console.warn(`[FINAL SANITIZATION] Title still corrupted after all checks, using default. Original: "${cleanTitle.substring(0, 50)}"`);
+          finalTitle = `Chapter ${chapters.length + 1}`;
+        }
+        
         // Create new chapter
         const chapterId = `chapter-${chapters.length + 1}`;
         currentChapter = {
           id: chapterId,
-          title: cleanTitle || `Chapter ${chapters.length + 1}`,
+          title: finalTitle,
           scenes: [],
         };
         
@@ -537,7 +563,40 @@ export class StoryParser {
         chapters.push(defaultChapter);
       }
 
-      return { title, chapters, scenes };
+      // FINAL SANITIZATION PASS: Clean all chapter titles one more time before returning
+      // This is the absolute last line of defense against corrupted titles
+      const sanitizedChapters = chapters.map((chapter, index) => {
+        // Aggressive ASCII-only filtering
+        let cleanTitle = chapter.title.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return code >= 32 && code <= 126;
+        }).join('').trim();
+        
+        // Remove any remaining non-ASCII
+        cleanTitle = cleanTitle.replace(/[^\x20-\x7E]/g, '').trim();
+        
+        // Validate one final time
+        const asciiCount = cleanTitle.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return code >= 32 && code <= 126;
+        }).length;
+        
+        // If title is corrupted, use default
+        if (!cleanTitle || 
+            cleanTitle.length === 0 || 
+            cleanTitle.length < 2 ||
+            (cleanTitle.length > 0 && asciiCount / cleanTitle.length < 1.0)) {
+          console.warn(`[FINAL RETURN SANITIZATION] Chapter ${index + 1} title corrupted, using default. Original: "${chapter.title.substring(0, 50)}"`);
+          cleanTitle = `Chapter ${index + 1}`;
+        }
+        
+        return {
+          ...chapter,
+          title: cleanTitle
+        };
+      });
+      
+      return { title, chapters: sanitizedChapters, scenes };
     } catch (error) {
       // Provide clear error messages for common issues
       if (error instanceof Error) {
