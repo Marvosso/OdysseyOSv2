@@ -487,6 +487,9 @@ export class ChapterDetector {
       };
     });
     
+    // Sort by line index
+    const sorted: DetectedChapter[] = sanitizedDetected.sort((a, b) => a.lineIndex - b.lineIndex);
+    
     // AGGRESSIVE FALLBACK: If we found lines with "chapter" but detected fewer chapters than expected,
     // try a more flexible search that looks for "Chapter X" anywhere in lines
     if (chapterLines.length > sorted.length && sorted.length < 5) {
