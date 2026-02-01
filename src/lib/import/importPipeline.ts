@@ -826,19 +826,23 @@ export class CharacterDetector {
    * Common words to exclude from character detection
    */
   private static readonly EXCLUDED_WORDS = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-    'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-    'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
-    'could', 'should', 'may', 'might', 'must', 'can', 'this', 'that',
-    'these', 'those', 'he', 'she', 'it', 'they', 'we', 'you', 'i', 'me',
-    'him', 'her', 'us', 'them', 'his', 'hers', 'its', 'their', 'our',
-    'your', 'my', 'mine', 'yours', 'theirs', 'ours', 'said', 'says',
-    'say', 'asked', 'asks', 'ask', 'replied', 'replies', 'reply',
-    'thought', 'think', 'thinks', 'felt', 'feels', 'feel', 'looked',
-    'looks', 'look', 'saw', 'see', 'sees', 'went', 'go', 'goes', 'came',
-    'come', 'comes', 'got', 'get', 'gets', 'took', 'take', 'takes',
-    'made', 'make', 'makes', 'know', 'knows', 'knew', 'want', 'wants',
-    'wanted', 'need', 'needs', 'needed', 'like', 'likes', 'liked',
+    // Articles and conjunctions
+    'the', 'a', 'an', 'and', 'or', 'but', 'if', 'once', 'when', 'where', 'while', 'what', 'which', 'who', 'why', 'how',
+    // Prepositions
+    'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'into', 'onto', 'upon', 'over', 'under', 'through', 'during', 'before', 'after', 'since', 'until',
+    // Verbs (common forms)
+    'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can',
+    // Pronouns
+    'this', 'that', 'these', 'those', 'he', 'she', 'it', 'they', 'we', 'you', 'i', 'me', 'him', 'her', 'us', 'them', 'his', 'hers', 'its', 'their', 'our', 'your', 'my', 'mine', 'yours', 'theirs', 'ours',
+    // Dialogue verbs
+    'said', 'says', 'say', 'asked', 'asks', 'ask', 'replied', 'replies', 'reply', 'thought', 'think', 'thinks',
+    // Common action verbs
+    'felt', 'feels', 'feel', 'looked', 'looks', 'look', 'saw', 'see', 'sees', 'went', 'go', 'goes', 'came', 'come', 'comes', 'got', 'get', 'gets', 'took', 'take', 'takes',
+    'made', 'make', 'makes', 'know', 'knows', 'knew', 'want', 'wants', 'wanted', 'need', 'needs', 'needed', 'like', 'likes', 'liked',
+    // Time/place words
+    'then', 'there', 'here', 'now', 'today', 'yesterday', 'tomorrow', 'soon', 'later', 'always', 'never', 'sometimes', 'often',
+    // Other common sentence starters
+    'however', 'therefore', 'thus', 'hence', 'moreover', 'furthermore', 'nevertheless', 'nonetheless', 'meanwhile', 'besides',
   ]);
 
   /**
@@ -852,74 +856,134 @@ export class CharacterDetector {
       occurrences: number;
       firstSeen: number;
       contexts: string[];
+      contextTypes: Set<'dialogue' | 'action' | 'sentence-start'>;
     }>();
 
-    // Pattern 1: Capitalized words at start of sentences (likely names)
-    const sentenceStartPattern = /(?:^|\.\s+|!\s+|\?\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g;
-    let match;
-    let lineIndex = 0;
-    let charIndex = 0;
-
+    // First pass: Collect all candidates with context tracking
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const lineStart = charIndex;
       
-      // Check for dialogue patterns: "Name said" or 'Name said'
+      // Pattern 1: Dialogue patterns: "Name said" or 'Name said'
       const dialoguePattern = /["']([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)["']\s+(?:said|says|asked|asks|replied|replies|whispered|shouted|exclaimed)/gi;
       let dialogueMatch;
       while ((dialogueMatch = dialoguePattern.exec(line)) !== null) {
         const name = dialogueMatch[1].trim();
         if (this.isValidCharacterName(name)) {
-          this.addCandidate(candidates, name, i, line);
+          this.addCandidateWithContext(candidates, name, i, line, 'dialogue');
         }
       }
 
-      // Check for "Name said" pattern (without quotes)
+      // Pattern 2: "Name said" pattern (without quotes) - HIGH CONFIDENCE
       const saidPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:said|says|asked|asks|replied|replies|whispered|shouted|exclaimed|thought|thinks)/gi;
       let saidMatch;
       while ((saidMatch = saidPattern.exec(line)) !== null) {
         const name = saidMatch[1].trim();
         if (this.isValidCharacterName(name)) {
-          this.addCandidate(candidates, name, i, line);
+          this.addCandidateWithContext(candidates, name, i, line, 'action');
         }
       }
 
-      // Check for capitalized words at sentence start
+      // Pattern 3: Name followed by action verb (walked, looked, ran, etc.)
+      const actionPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:walked|ran|stood|sat|looked|glanced|stared|smiled|frowned|nodded|shook|turned|moved|went|came|entered|left|opened|closed|picked|put|threw|caught|grabbed|reached|pushed|pulled|stepped|jumped|fell|rose|woke|slept|ate|drank|spoke|whispered|shouted|laughed|cried|sighed|breathed|gasped|screamed|whispered|murmured|muttered|stammered|stuttered)/gi;
+      let actionMatch;
+      while ((actionMatch = actionPattern.exec(line)) !== null) {
+        const name = actionMatch[1].trim();
+        if (this.isValidCharacterName(name)) {
+          this.addCandidateWithContext(candidates, name, i, line, 'action');
+        }
+      }
+
+      // Pattern 4: Capitalized words at sentence start - LOW CONFIDENCE, only if not already found
+      // Only check if we haven't seen this word in dialogue/action contexts
+      const sentenceStartPattern = /(?:^|\.\s+|!\s+|\?\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g;
+      let match;
       while ((match = sentenceStartPattern.exec(line)) !== null) {
         const potentialName = match[1].trim();
-        if (this.isValidCharacterName(potentialName)) {
-          this.addCandidate(candidates, potentialName, i, line);
+        // Only add sentence-start candidates if they're not already in the map
+        // This prevents common words from being added just because they start sentences
+        if (this.isValidCharacterName(potentialName) && !candidates.has(potentialName)) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:892',message:'Testing sentence-start candidate (not in dialogue/action)',data:{lineIndex:i,potentialName:potentialName,length:potentialName.length,isExcluded:this.EXCLUDED_WORDS.has(potentialName.toLowerCase())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          this.addCandidateWithContext(candidates, potentialName, i, line, 'sentence-start');
         }
       }
+    }
 
-      charIndex += line.length + 1; // +1 for newline
+    // Second pass: Check if candidates appear in lowercase (common words do, names don't)
+    const lowerText = text.toLowerCase();
+    for (const [name, data] of candidates.entries()) {
+      const lowerName = name.toLowerCase();
+      const appearsInLowercase = lowerText.includes(lowerName) && 
+        !lowerText.includes(name); // Appears lowercase but not capitalized
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:910',message:'Checking if candidate appears in lowercase',data:{name:name,appearsInLowercase:appearsInLowercase,contextTypes:Array.from(data.contextTypes)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
+      // If it appears in lowercase, it's likely a common word, not a name
+      if (appearsInLowercase && !data.contextTypes.has('dialogue') && !data.contextTypes.has('action')) {
+        // Only remove if it doesn't appear in dialogue/action contexts
+        candidates.delete(name);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:916',message:'Removed candidate - appears in lowercase',data:{name:name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+      }
     }
 
     // Convert to DetectedCharacter array with confidence scores
     const detected: DetectedCharacter[] = [];
     
     for (const [name, data] of candidates.entries()) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:920',message:'Evaluating candidate',data:{name:name,occurrences:data.occurrences,contextTypes:Array.from(data.contextTypes),contexts:data.contexts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
       // Calculate confidence based on:
+      // - Context type (dialogue/action = high, sentence-start = low)
       // - Number of occurrences (more = higher confidence)
-      // - Context (dialogue patterns = higher confidence)
       // - Length (2-3 words typical for names)
       const wordCount = name.split(/\s+/).length;
       const occurrenceScore = Math.min(data.occurrences / 10, 1.0); // Cap at 10 occurrences
       const lengthScore = wordCount >= 1 && wordCount <= 3 ? 1.0 : 0.7;
-      const contextScore = data.contexts.some(ctx => 
-        /said|asked|replied|whispered|shouted/.test(ctx.toLowerCase())
-      ) ? 1.0 : 0.6;
-
-      const confidence = (occurrenceScore * 0.4 + lengthScore * 0.3 + contextScore * 0.3);
       
-      // Only include if confidence is above threshold and appears multiple times
-      if (confidence >= 0.4 && data.occurrences >= 2) {
+      // Context score: dialogue/action = high confidence, sentence-start only = low confidence
+      let contextScore = 0.3; // Default low for sentence-start only
+      if (data.contextTypes.has('dialogue')) {
+        contextScore = 1.0; // Highest confidence for dialogue
+      } else if (data.contextTypes.has('action')) {
+        contextScore = 0.9; // High confidence for action verbs
+      } else if (data.contextTypes.has('sentence-start')) {
+        contextScore = 0.2; // Very low confidence for sentence-start only
+      }
+
+      const confidence = (occurrenceScore * 0.3 + lengthScore * 0.2 + contextScore * 0.5);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:933',message:'Confidence calculated',data:{name:name,confidence:confidence,occurrenceScore:occurrenceScore,lengthScore:lengthScore,contextScore:contextScore,contextTypes:Array.from(data.contextTypes),meetsThreshold:confidence >= 0.5,meetsOccurrence:data.occurrences >= 2},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
+      // Stricter requirements:
+      // - Must have dialogue/action context OR appear 5+ times
+      // - Confidence must be >= 0.5 (raised from 0.4)
+      // - Must appear at least 2 times
+      const hasStrongContext = data.contextTypes.has('dialogue') || data.contextTypes.has('action');
+      const meetsOccurrenceThreshold = data.occurrences >= (hasStrongContext ? 2 : 5);
+      
+      if (confidence >= 0.5 && meetsOccurrenceThreshold) {
         detected.push({
           name,
           confidence,
           occurrences: data.occurrences,
           firstSeen: data.firstSeen,
         });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:943',message:'Character added to detected list',data:{name:name,confidence:confidence,occurrences:data.occurrences,hasStrongContext:hasStrongContext},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+      } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:949',message:'Character rejected',data:{name:name,confidence:confidence,occurrences:data.occurrences,reason:confidence < 0.5 ? 'Low confidence' : 'Too few occurrences',hasStrongContext:hasStrongContext},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
       }
     }
 
@@ -936,8 +1000,8 @@ export class CharacterDetector {
    * Check if a word/phrase is a valid character name candidate
    */
   private static isValidCharacterName(name: string): boolean {
-    // Must be 2-30 characters total
-    if (name.length < 2 || name.length > 30) {
+    // Must be at least 3 characters (filters out "If", "Or", "At", etc.)
+    if (name.length < 3 || name.length > 30) {
       return false;
     }
 
@@ -969,17 +1033,61 @@ export class CharacterDetector {
       return false;
     }
 
+    // Single-word names must be at least 4 characters (filters out "If", "Or", "But", etc.)
+    const words = name.split(/\s+/);
+    if (words.length === 1 && words[0].length < 4) {
+      return false;
+    }
+
     return true;
   }
 
   /**
-   * Add a candidate name to the map
+   * Get the reason why a candidate failed validation (for debugging)
    */
-  private static addCandidate(
-    candidates: Map<string, { occurrences: number; firstSeen: number; contexts: string[] }>,
+  private static getValidationFailureReason(name: string): string {
+    if (name.length < 3 || name.length > 30) {
+      return `Length ${name.length} outside range 3-30`;
+    }
+    if (!/^[A-Z]/.test(name)) {
+      return 'Does not start with capital letter';
+    }
+    if (name === name.toUpperCase() && name.length > 1) {
+      return 'All caps (likely acronym)';
+    }
+    const lowerName = name.toLowerCase();
+    if (this.EXCLUDED_WORDS.has(lowerName)) {
+      return `Excluded word: ${lowerName}`;
+    }
+    if (!/^[A-Za-z\s\-']+$/.test(name)) {
+      return 'Contains invalid characters';
+    }
+    const titles = ['mr', 'mrs', 'ms', 'dr', 'prof', 'sir', 'madam', 'lord', 'lady'];
+    const firstWord = lowerName.split(/\s+/)[0];
+    if (titles.includes(firstWord)) {
+      return `Common title: ${firstWord}`;
+    }
+    const words = name.split(/\s+/);
+    if (words.length === 1 && words[0].length < 4) {
+      return `Single word too short: ${words[0].length} < 4`;
+    }
+    return 'Unknown reason';
+  }
+
+  /**
+   * Add a candidate name to the map with context type tracking
+   */
+  private static addCandidateWithContext(
+    candidates: Map<string, { 
+      occurrences: number; 
+      firstSeen: number; 
+      contexts: string[];
+      contextTypes: Set<'dialogue' | 'action' | 'sentence-start'>;
+    }>,
     name: string,
     lineIndex: number,
-    line: string
+    line: string,
+    contextType: 'dialogue' | 'action' | 'sentence-start'
   ): void {
     const normalized = name.trim();
     if (!candidates.has(normalized)) {
@@ -987,11 +1095,13 @@ export class CharacterDetector {
         occurrences: 0,
         firstSeen: lineIndex,
         contexts: [],
+        contextTypes: new Set(),
       });
     }
     
     const candidate = candidates.get(normalized)!;
     candidate.occurrences++;
+    candidate.contextTypes.add(contextType);
     if (candidate.contexts.length < 3) {
       candidate.contexts.push(line.substring(0, 100));
     }
