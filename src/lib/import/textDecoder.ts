@@ -231,6 +231,11 @@ export class BrowserTextDecoder {
     let sanitized = text.replace(/\0/g, '').replace(/\u0000/g, '').replace(/\x00/g, '');
     // Filter by character code as ultimate fallback
     sanitized = sanitized.split('').filter(char => char.charCodeAt(0) !== 0).join('');
+    
+    // Also remove other control characters except common whitespace (\n, \r, \t)
+    // This prevents control characters from causing issues downstream
+    sanitized = sanitized.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    
     return sanitized;
   }
 
@@ -280,9 +285,22 @@ export class BrowserTextDecoder {
     const controlCharPattern = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
     const controlChars = text.match(controlCharPattern);
     if (controlChars && controlChars.length > 10) {
-      warnings.push(
-        `Unusual control characters detected: ${controlChars.length} occurrences`
-      );
+      if (options?.autoSanitize) {
+        // Auto-sanitize control characters if not already sanitized
+        if (!sanitizedText) {
+          sanitizedText = this.sanitizeText(text);
+        } else {
+          // Re-sanitize to ensure control characters are removed
+          sanitizedText = this.sanitizeText(sanitizedText);
+        }
+        warnings.push(
+          `Unusual control characters detected: ${controlChars.length} occurrences - automatically sanitized`
+        );
+      } else {
+        warnings.push(
+          `Unusual control characters detected: ${controlChars.length} occurrences`
+        );
+      }
     }
     
     return {
