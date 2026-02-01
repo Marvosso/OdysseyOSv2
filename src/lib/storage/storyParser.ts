@@ -221,64 +221,59 @@ export class StoryParser {
       // Clean line: remove hidden characters and normalize whitespace
       let line = lines[i];
       
-      // Skip lines that are mostly binary/corrupted before processing
-      const nonPrintableCount = line.split('').filter((char: string) => {
-        const code = char.charCodeAt(0);
-        return !(code >= 32 && code <= 126) && code !== 9 && code !== 10 && code !== 13;
-      }).length;
-      if (line.length > 0 && nonPrintableCount / line.length > 0.3) {
-        // Skip this line - it's mostly binary/corrupted
-        continue;
-      }
-      
       // Remove zero-width characters and other hidden Unicode
       line = line.replace(/[\u200B-\u200D\uFEFF\u00AD\u2060]/g, '');
       
-      // CRITICAL: Remove ALL non-ASCII characters immediately (keep only 32-126 range)
-      // This must happen before any pattern matching to prevent corrupted text from getting through
-      line = line.split('').filter((char: string) => {
-        const code = char.charCodeAt(0);
-        return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
-      }).join('');
+      // Only skip lines that are TRULY corrupted (mostly null bytes or control chars)
+      // Don't skip lines just because they have some non-ASCII - those might be valid content
+      const nullByteCount = line.split('').filter((char: string) => {
+        return char.charCodeAt(0) === 0;
+      }).length;
       
-      // Defensive: Remove any remaining non-ASCII using regex
-      line = line.replace(/[^\x20-\x7E\t\n\r]/g, '');
+      const controlCharCount = line.split('').filter((char: string) => {
+        const code = char.charCodeAt(0);
+        // Count control chars except common whitespace
+        return code < 32 && code !== 9 && code !== 10 && code !== 13;
+      }).length;
+      
+      // Only skip if line has significant null bytes or control characters (likely corrupted)
+      if (line.length > 0 && (nullByteCount / line.length > 0.1 || controlCharCount / line.length > 0.3)) {
+        // Skip this line - it's likely corrupted binary data
+        continue;
+      }
+      
+      // Remove null bytes and problematic control characters, but keep the line for content
+      line = line.replace(/\0/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
       
       line = line.trim();
       
       // Skip empty lines or lines that are too short to be chapter markers
       if (line.length === 0 || line.length < 3) {
+        // But don't skip if it's just whitespace - add it to scene content
+        if (line.length === 0 && currentSceneContent.length > 0) {
+          currentSceneContent.push('');
+        }
         continue;
       }
       
-      // Additional check: if the cleaned line is still mostly non-ASCII after cleaning, skip it
-      const asciiCount = line.split('').filter((char: string) => {
+      // Check if this line is a chapter marker
+      // CRITICAL: Create a cleaned version for pattern matching, but don't modify the original line
+      // This allows us to detect chapters even if they have some non-ASCII, while preserving content
+      const cleanedForPatternMatch = line.split('').filter((char: string) => {
         const code = char.charCodeAt(0);
-        return code >= 32 && code <= 126;
-      }).length;
+        // Keep printable ASCII and common whitespace for pattern matching
+        return (code >= 32 && code <= 126) || code === 9 || code === 10 || code === 13;
+      }).join('').trim();
       
-      // CRITICAL: Skip if less than 90% of characters are printable ASCII (likely still corrupted)
-      // Also check if ANY non-ASCII characters remain (should be impossible after filtering, but defensive)
-      const hasNonAscii = line.split('').some((char: string) => {
-        const code = char.charCodeAt(0);
-        return code < 32 || code > 126;
-      });
+      // Only check if cleaned line looks like valid text (not binary)
+      const isChapterStart = cleanedForPatternMatch.length >= 3 && 
+                             !this.isMostlyBinary(cleanedForPatternMatch) &&
+                             this.CHAPTER_PATTERNS.some(pattern => pattern.test(cleanedForPatternMatch));
       
-      if (line.length > 0 && (asciiCount / line.length < 0.9 || hasNonAscii)) {
-        // Line is still corrupted - skip it entirely
-        continue;
-      }
-      
-      // Check if this line is a chapter marker (test against cleaned line)
-      // Only check if line looks like valid text (not binary)
-      const isChapterStart = line.length >= 3 && 
-                             !this.isMostlyBinary(line) &&
-                             this.CHAPTER_PATTERNS.some(pattern => pattern.test(line));
-      
-      // Check if this line is a scene marker
-      const isSceneStart = line.length >= 3 &&
-                           !this.isMostlyBinary(line) &&
-                           this.SCENE_PATTERNS.some(pattern => pattern.test(line));
+      // Check if this line is a scene marker (use cleaned version for pattern matching)
+      const isSceneStart = cleanedForPatternMatch.length >= 3 &&
+                           !this.isMostlyBinary(cleanedForPatternMatch) &&
+                           this.SCENE_PATTERNS.some(pattern => pattern.test(cleanedForPatternMatch));
       
       if (isChapterStart) {
         // Save previous scene if exists
@@ -302,9 +297,11 @@ export class StoryParser {
         
         // DEBUG: Log original line before processing
         console.log('[Chapter Title Extraction] Original line:', line.substring(0, 100));
+        console.log('[Chapter Title Extraction] Cleaned for pattern match:', cleanedForPatternMatch.substring(0, 100));
         
         // Clean chapter title: remove markdown, bold, italic markers
-        let cleanTitle = line
+        // Use the cleaned version for title extraction to ensure no corrupted text
+        let cleanTitle = cleanedForPatternMatch
           .replace(/^#{1,6}\s*/, '')  // Remove markdown headers
           .replace(/\*\*/g, '')        // Remove bold markers
           .replace(/\*/g, '')          // Remove italic markers
@@ -482,13 +479,18 @@ export class StoryParser {
         }
         currentSceneContent = [];
       } else {
-        // Regular content - use original line (before trimming) to preserve formatting
+        // Regular content - sanitize to remove null bytes and control chars, but preserve content
         const originalLine = lines[i];
-        currentSceneContent.push(originalLine);
+        // Remove only truly problematic characters (null bytes, control chars) but keep the content
+        const sanitizedContent = originalLine
+          .replace(/\0/g, '')  // Remove null bytes
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // Remove control chars except \t, \n, \r
+        
+        currentSceneContent.push(sanitizedContent);
         // Also track content for current chapter (for default scene creation)
         if (currentChapter) {
           const chapterContent = chapterContentMap.get(currentChapter.id) || [];
-          chapterContent.push(originalLine);
+          chapterContent.push(sanitizedContent);
           chapterContentMap.set(currentChapter.id, chapterContent);
         }
       }
