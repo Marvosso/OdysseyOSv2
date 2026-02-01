@@ -331,6 +331,8 @@ export class ChapterDetector {
     // High confidence patterns
     { pattern: /^#{1,3}\s+chapter\s+\d+\s*$/i, weight: 1.0, name: 'Markdown header with number' },
     { pattern: /^chapter\s+\d+\s*$/i, weight: 0.95, name: 'Plain "Chapter N"' },
+    { pattern: /^chapter\s+\d+\s+.+$/i, weight: 0.9, name: 'Chapter N followed by text (same line)' },
+    { pattern: /^chapter\s+\d+[:.]\s*.+$/i, weight: 0.9, name: 'Chapter N: Title or Chapter N. Title' },
     { pattern: /^chapter\s+[ivxlcdm]+\s*$/i, weight: 0.95, name: 'Chapter with Roman numeral' },
     { pattern: /^part\s+\d+\s*$/i, weight: 0.9, name: 'Part N' },
     { pattern: /^part\s+[ivxlcdm]+\s*$/i, weight: 0.9, name: 'Part with Roman numeral' },
@@ -354,6 +356,29 @@ export class ChapterDetector {
   static detectChapters(lines: readonly string[]): readonly DetectedChapter[] {
     const detected: DetectedChapter[] = [];
     
+    console.log('[ChapterDetector.detectChapters] Starting detection. Total lines:', lines.length);
+    
+    // Show first 20 lines to understand structure
+    console.log('[ChapterDetector] First 20 lines:');
+    for (let i = 0; i < Math.min(20, lines.length); i++) {
+      const trimmed = lines[i].trim();
+      console.log(`  Line ${i}: "${trimmed.substring(0, 80)}${trimmed.length > 80 ? '...' : ''}"`);
+    }
+    
+    // First, find all lines that contain "chapter" to see what we're working with
+    const chapterLines = lines
+      .map((line, idx) => ({ line: line.trim(), index: idx }))
+      .filter(({ line }) => /chapter/i.test(line));
+    console.log('[ChapterDetector] Lines containing "chapter" (total:', chapterLines.length, '):');
+    if (chapterLines.length === 0) {
+      console.warn('[ChapterDetector] WARNING: No lines found containing "chapter"!');
+      console.warn('[ChapterDetector] This might mean chapters are formatted differently or on same line as content.');
+    } else {
+      chapterLines.forEach(({ line, index }) => {
+        console.log(`  Line ${index}: "${line.substring(0, 100)}"`);
+      });
+    }
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       
@@ -362,15 +387,26 @@ export class ChapterDetector {
         continue;
       }
       
+      // Log lines that start with "Chapter" for debugging
+      if (/^chapter\s+\d+/i.test(line)) {
+        console.log(`[ChapterDetector] Testing line ${i} that starts with "Chapter X":`, line.substring(0, 100));
+      }
+      
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:351',message:'Testing line against chapter patterns',data:{lineIndex:i,line:line.substring(0,100),lineLength:line.length,hasNonAscii:line.split('').some(ch=>ch.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
       
       // Test against all patterns
+      let matched = false;
       for (const { pattern, weight, name } of this.PATTERNS) {
-        if (pattern.test(line)) {
+        const testResult = pattern.test(line);
+        if (testResult) {
+          console.log(`[ChapterDetector] Pattern "${name}" matched line ${i}:`, line.substring(0, 100));
+          matched = true;
           // Calculate confidence based on context
           const confidence = this.calculateConfidence(line, i, lines, weight);
+          
+          console.log(`[ChapterDetector] Confidence calculated: ${confidence} (threshold: 0.3)`);
           
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:355',message:'Pattern matched',data:{lineIndex:i,matchedPattern:name,confidence:confidence,line:line.substring(0,100),hasNonAscii:line.split('').some(ch=>ch.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
@@ -380,6 +416,8 @@ export class ChapterDetector {
           if (confidence >= 0.3) {
             console.log('[detectChapters] Pattern matched, cleaning title. Line:', line.substring(0, 100));
             const cleanedTitle = this.cleanChapterTitle(line);
+            
+            console.log('[detectChapters] Cleaned title:', cleanedTitle);
             
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:361',message:'Creating detected chapter',data:{lineIndex:i,originalLine:line.substring(0,100),cleanedTitle:cleanedTitle,cleanedTitleLength:cleanedTitle.length,hasNonAscii:cleanedTitle.split('').some(ch=>ch.charCodeAt(0)>126),confidence:confidence},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
@@ -404,8 +442,28 @@ export class ChapterDetector {
               matchedPattern: name,
             });
             break; // Only match first pattern
+          } else {
+            console.log(`[ChapterDetector] Confidence too low (${confidence} < 0.3), skipping`);
           }
         }
+      }
+      
+      // Log if line looks like a chapter but didn't match
+      if (!matched && /chapter\s+\d+/i.test(line)) {
+        console.log(`[ChapterDetector] WARNING: Line ${i} contains "Chapter X" but didn't match any pattern:`, line);
+        console.log(`[ChapterDetector] Line details:`, {
+          line,
+          trimmed: line.trim(),
+          length: line.length,
+          startsWithChapter: /^chapter/i.test(line.trim()),
+          matchesPattern1: /^chapter\s+\d+\s*$/i.test(line.trim()),
+          matchesPattern2: /^chapter\s+\d+[:.]\s*.+$/i.test(line.trim()),
+        });
+      }
+      
+      // Also log lines that start with "Chapter" to see what we're missing
+      if (/^chapter/i.test(line.trim())) {
+        console.log(`[ChapterDetector] Line ${i} starts with "Chapter":`, line);
       }
     }
     
@@ -429,8 +487,73 @@ export class ChapterDetector {
       };
     });
     
-    // Sort by line index
-    return sanitizedDetected.sort((a, b) => a.lineIndex - b.lineIndex);
+    // AGGRESSIVE FALLBACK: If we found lines with "chapter" but detected fewer chapters than expected,
+    // try a more flexible search that looks for "Chapter X" anywhere in lines
+    if (chapterLines.length > sorted.length && sorted.length < 5) {
+      console.log(`[ChapterDetector] Fallback: Found ${chapterLines.length} lines with "chapter" but only ${sorted.length} detected. Trying flexible search...`);
+      
+      // Look for "Chapter X" pattern anywhere in lines (not just at start)
+      const chapterNumberPattern = /chapter\s+(\d+)/gi;
+      const foundNumbers = new Set<number>();
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.length === 0) continue;
+        
+        // Find all "Chapter X" matches in this line
+        let match;
+        while ((match = chapterNumberPattern.exec(line)) !== null) {
+          const chapterNum = parseInt(match[1], 10);
+          if (!foundNumbers.has(chapterNum)) {
+            foundNumbers.add(chapterNum);
+            console.log(`[ChapterDetector] Fallback: Found "Chapter ${chapterNum}" in line ${i}:`, line.substring(0, 100));
+            
+            // Try to extract a clean title
+            let title = `Chapter ${chapterNum}`;
+            // If there's text after "Chapter X", try to extract it
+            const afterMatch = line.substring(match.index + match[0].length).trim();
+            if (afterMatch.length > 0 && afterMatch.length < 100) {
+              // Use the text after "Chapter X" as part of title if it's short
+              title = `Chapter ${chapterNum}${afterMatch.charAt(0).match(/[:.]/) ? '' : ' '}${afterMatch.substring(0, 50).trim()}`;
+            }
+            
+            // Clean the title
+            title = this.cleanChapterTitle(title);
+            if (title && title.length > 0) {
+              // Check if we already have this chapter
+              const existing = sorted.find(c => c.title.includes(`Chapter ${chapterNum}`) || c.lineIndex === i);
+              if (!existing) {
+                console.log(`[ChapterDetector] Fallback: Adding chapter from line ${i}:`, title);
+                sorted.push({
+                  lineIndex: i,
+                  title: title,
+                  originalLine: line,
+                  confidence: 0.7, // Lower confidence for fallback detection
+                  matchedPattern: 'Fallback: Chapter X anywhere in line',
+                });
+              }
+            }
+          }
+        }
+        // Reset regex lastIndex for next iteration
+        chapterNumberPattern.lastIndex = 0;
+      }
+      
+      // Re-sort after adding fallback chapters
+      sorted.sort((a, b) => a.lineIndex - b.lineIndex);
+    }
+    
+    console.log(`[ChapterDetector.detectChapters] Detection complete. Found ${sorted.length} chapters:`);
+    sorted.forEach((c, idx) => {
+      console.log(`  Chapter ${idx + 1}: Line ${c.lineIndex}, Title: "${c.title}", Confidence: ${c.confidence}`);
+    });
+    
+    if (sorted.length === 0 && chapterLines.length > 0) {
+      console.warn(`[ChapterDetector] WARNING: Found ${chapterLines.length} lines with "chapter" but detected 0 chapters!`);
+      console.warn(`[ChapterDetector] This suggests the patterns aren't matching. Check the patterns above.`);
+    }
+    
+    return sorted;
   }
 
   /**
