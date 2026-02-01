@@ -299,9 +299,12 @@ async function extractTextFile(file: File): Promise<string> {
       throw new Error(`Encoding error: ${validation.errors.join(', ')}`);
     }
     
-    // Log warnings if any
+    // Log warnings if any (expand array for visibility)
     if (validation.warnings.length > 0) {
       console.warn('Text decoding warnings:', validation.warnings);
+      validation.warnings.forEach((warning, i) => {
+        console.warn(`  Warning ${i + 1}:`, warning);
+      });
     }
     
     return normalizeText(textToUse);

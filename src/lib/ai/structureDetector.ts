@@ -52,7 +52,54 @@ export class AIStructureDetector {
       }
 
       if (isChapterStart) {
-        const title = line.trim().replace(/^#+\s*/, '');
+        // Extract and sanitize title: remove markdown, then filter to ASCII-only
+        let title = line.trim().replace(/^#+\s*/, '');
+        
+        // Remove markdown formatting
+        title = title
+          .replace(/\*\*/g, '')        // Remove bold markers
+          .replace(/\*/g, '')          // Remove italic markers
+          .replace(/__/g, '')          // Remove underline markers
+          .replace(/^\d+[\.\):]\s*/, '') // Remove leading numbers with punctuation
+          .trim();
+        
+        // Aggressive cleaning: remove ALL non-ASCII characters (keep only printable ASCII)
+        title = title.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          // Keep only printable ASCII (32-126) - no Unicode, no extended characters
+          return code >= 32 && code <= 126;
+        }).join('');
+        
+        // Remove any remaining non-ASCII characters using regex as fallback
+        title = title.replace(/[^\x20-\x7E]/g, '').trim();
+        
+        // Validate title is readable and meaningful
+        const asciiCount = title.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return code >= 32 && code <= 126;
+        }).length;
+        
+        const letterNumberCount = title.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return (code >= 48 && code <= 57) || // 0-9
+                 (code >= 65 && code <= 90) || // A-Z
+                 (code >= 97 && code <= 122) || // a-z
+                 code === 32; // space
+        }).length;
+        
+        // If title is empty, too short, mostly non-ASCII, or doesn't contain enough letters/numbers, use default
+        if (!title || 
+            title.length === 0 || 
+            title.length < 2 ||
+            (title.length > 0 && asciiCount / title.length < 0.9) ||
+            (title.length > 0 && letterNumberCount / title.length < 0.3)) {
+          // Title is corrupted or meaningless, use default
+          title = `Chapter ${chapters.length + 1}`;
+        } else if (title.length > 200) {
+          // Title is suspiciously long (likely includes content), truncate
+          title = title.substring(0, 100).trim();
+        }
+        
         currentChapter = {
           id: `chapter-${chapters.length + 1}`,
           title,

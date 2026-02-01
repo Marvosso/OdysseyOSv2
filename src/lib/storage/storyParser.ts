@@ -300,6 +300,9 @@ export class StoryParser {
           chapters.push(currentChapter);
         }
         
+        // DEBUG: Log original line before processing
+        console.log('[Chapter Title Extraction] Original line:', line.substring(0, 100));
+        
         // Clean chapter title: remove markdown, bold, italic markers
         let cleanTitle = line
           .replace(/^#{1,6}\s*/, '')  // Remove markdown headers
@@ -308,6 +311,8 @@ export class StoryParser {
           .replace(/__/g, '')          // Remove underline markers
           .replace(/^\d+[\.\):]\s*/, '') // Remove leading numbers with punctuation
           .trim();
+        
+        console.log('[Chapter Title Extraction] After markdown removal:', cleanTitle.substring(0, 100));
         
         // Aggressive cleaning: remove ALL non-ASCII characters (keep only printable ASCII)
         cleanTitle = cleanTitle.split('').filter((char: string) => {
@@ -320,6 +325,8 @@ export class StoryParser {
         cleanTitle = cleanTitle.replace(/[^\x20-\x7E]/g, '');
         
         cleanTitle = cleanTitle.trim();
+        
+        console.log('[Chapter Title Extraction] After ASCII filtering:', cleanTitle);
         
         // Validate title is readable and meaningful
         const asciiCount = cleanTitle.split('').filter((char: string) => {
@@ -344,11 +351,20 @@ export class StoryParser {
             (cleanTitle.length > 0 && letterNumberCount / cleanTitle.length < 0.5) ||
             this.isMostlyBinary(cleanTitle)) {
           // Title is corrupted or meaningless, use default
+          console.log('[Chapter Title Extraction] Title failed validation, using default:', {
+            cleanTitle,
+            length: cleanTitle.length,
+            asciiRatio: cleanTitle.length > 0 ? asciiCount / cleanTitle.length : 0,
+            letterRatio: cleanTitle.length > 0 ? letterNumberCount / cleanTitle.length : 0,
+            isBinary: this.isMostlyBinary(cleanTitle)
+          });
           cleanTitle = `Chapter ${chapters.length + 1}`;
         } else if (cleanTitle.length > 200) {
           // Title is suspiciously long (likely includes content), truncate
           cleanTitle = cleanTitle.substring(0, 100).trim();
         }
+        
+        console.log('[Chapter Title Extraction] Final title before final validation:', cleanTitle);
         
         // Final safety check: ensure title is valid
         if (!cleanTitle || cleanTitle.length === 0) {
