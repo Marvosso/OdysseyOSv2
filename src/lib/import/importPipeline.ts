@@ -172,12 +172,27 @@ export class FileReaderStage {
    * Read file and normalize to UTF-8
    * Handles various encodings and ensures UTF-8 output
    * 
-   * FIXED: Now uses proper encoding detection and decoding
-   * instead of assuming UTF-8, preventing garbled text
+   * UPDATED: Now supports DOCX and PDF files using fileExtractor
+   * For text files, uses BrowserTextDecoder for encoding detection
    */
   static async readFile(file: File): Promise<{ text: string; encoding: string }> {
     try {
-      // Use safe text decoder that handles encoding detection
+      const fileName = file.name.toLowerCase();
+      const isPDF = fileName.endsWith('.pdf');
+      const isDOCX = fileName.endsWith('.docx');
+      
+      // For DOCX and PDF files, use fileExtractor which properly handles these formats
+      if (isPDF || isDOCX) {
+        const { extractTextFromFile } = await import('@/lib/import/fileExtractor');
+        const extracted = await extractTextFromFile(file);
+        
+        return {
+          text: extracted.text,
+          encoding: `${extracted.fileType.toUpperCase()} (extracted)`,
+        };
+      }
+      
+      // For text files (.txt, .md), use BrowserTextDecoder for encoding detection
       const decoded = await BrowserTextDecoder.decodeFile(file);
       
       // Validate decoded text with auto-sanitize enabled
