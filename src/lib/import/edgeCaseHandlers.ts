@@ -96,8 +96,10 @@ export class EdgeCaseHandlers {
       return true;
     }
 
-    // Default to true - let decoder handle it
-    return true;
+    // CRITICAL FIX: Default to false - only allow known text file extensions
+    // This prevents DOCX/PDF files from being processed as text, which causes corrupted chapter titles
+    // DOCX/PDF files should use fileExtractor.ts instead of ImportPipeline
+    return false;
   }
 
   /**

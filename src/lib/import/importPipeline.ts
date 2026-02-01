@@ -347,17 +347,43 @@ export class ChapterDetector {
         continue;
       }
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:351',message:'Testing line against chapter patterns',data:{lineIndex:i,line:line.substring(0,100),lineLength:line.length,hasNonAscii:line.split('').some(ch=>ch.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       // Test against all patterns
       for (const { pattern, weight, name } of this.PATTERNS) {
         if (pattern.test(line)) {
           // Calculate confidence based on context
           const confidence = this.calculateConfidence(line, i, lines, weight);
           
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:355',message:'Pattern matched',data:{lineIndex:i,matchedPattern:name,confidence:confidence,line:line.substring(0,100),hasNonAscii:line.split('').some(ch=>ch.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          
           // Only add if confidence is above threshold
           if (confidence >= 0.3) {
+            console.log('[detectChapters] Pattern matched, cleaning title. Line:', line.substring(0, 100));
+            const cleanedTitle = this.cleanChapterTitle(line);
+            
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:361',message:'Creating detected chapter',data:{lineIndex:i,originalLine:line.substring(0,100),cleanedTitle:cleanedTitle,cleanedTitleLength:cleanedTitle.length,hasNonAscii:cleanedTitle.split('').some(ch=>ch.charCodeAt(0)>126),confidence:confidence},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            
+            // Skip if cleaned title is empty or corrupted
+            if (!cleanedTitle || cleanedTitle.length === 0) {
+              console.log('[detectChapters] SKIPPING - cleaned title is empty. Original:', line.substring(0, 100));
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:370',message:'Skipping chapter - cleaned title is empty',data:{lineIndex:i,originalLine:line.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+              // #endregion
+              break; // Skip this match
+            }
+            
+            console.log('[detectChapters] ADDING chapter:', { lineIndex: i, title: cleanedTitle, confidence });
+            
             detected.push({
               lineIndex: i,
-              title: this.cleanChapterTitle(line),
+              title: cleanedTitle,
               originalLine: line,
               confidence,
               matchedPattern: name,
@@ -368,8 +394,28 @@ export class ChapterDetector {
       }
     }
     
+    // CRITICAL: Final sanitization pass - ensure all chapter titles are ASCII-only
+    // This is a defensive measure in case corrupted text somehow gets through
+    const sanitizedDetected = detected.map((chapter, index) => {
+      let cleanTitle = chapter.title.split('').filter((char: string) => {
+        const code = char.charCodeAt(0);
+        return code >= 32 && code <= 126;
+      }).join('').trim();
+      cleanTitle = cleanTitle.replace(/[^\x20-\x7E]/g, '').trim();
+      
+      // If title is empty or corrupted, use default
+      if (!cleanTitle || cleanTitle.length === 0 || cleanTitle.length < 2) {
+        cleanTitle = `Chapter ${index + 1}`;
+      }
+      
+      return {
+        ...chapter,
+        title: cleanTitle
+      };
+    });
+    
     // Sort by line index
-    return detected.sort((a, b) => a.lineIndex - b.lineIndex);
+    return sanitizedDetected.sort((a, b) => a.lineIndex - b.lineIndex);
   }
 
   /**
@@ -411,14 +457,70 @@ export class ChapterDetector {
   }
 
   /**
-   * Clean chapter title (remove markdown, extra whitespace)
+   * Clean chapter title (remove markdown, extra whitespace, and sanitize non-ASCII)
    */
   private static cleanChapterTitle(line: string): string {
-    return line
+    console.log('[cleanChapterTitle] INPUT:', line.substring(0, 100));
+    
+    let cleaned = line
       .replace(/^#+\s*/, '') // Remove markdown headers
       .replace(/\*\*/g, '') // Remove bold markers
       .replace(/^\s+|\s+$/g, '') // Trim whitespace
       .replace(/\s+/g, ' '); // Normalize internal whitespace
+    
+    console.log('[cleanChapterTitle] After markdown removal:', cleaned.substring(0, 100));
+    
+    // CRITICAL: Remove ALL non-ASCII characters to prevent corrupted titles
+    cleaned = cleaned.split('').filter((char: string) => {
+      const code = char.charCodeAt(0);
+      // Keep only printable ASCII (32-126)
+      return code >= 32 && code <= 126;
+    }).join('');
+    
+    // Remove any remaining non-ASCII using regex as fallback
+    cleaned = cleaned.replace(/[^\x20-\x7E]/g, '').trim();
+    
+    console.log('[cleanChapterTitle] After ASCII filtering:', cleaned);
+    
+    // Validate title is meaningful
+    const asciiCount = cleaned.split('').filter((char: string) => {
+      const code = char.charCodeAt(0);
+      return code >= 32 && code <= 126;
+    }).length;
+    
+    const letterNumberCount = cleaned.split('').filter((char: string) => {
+      const code = char.charCodeAt(0);
+      return (code >= 48 && code <= 57) || // 0-9
+             (code >= 65 && code <= 90) || // A-Z
+             (code >= 97 && code <= 122) || // a-z
+             code === 32; // space
+    }).length;
+    
+    const asciiRatio = cleaned.length > 0 ? asciiCount / cleaned.length : 0;
+    const letterRatio = cleaned.length > 0 ? letterNumberCount / cleaned.length : 0;
+    
+    console.log('[cleanChapterTitle] Validation:', {
+      cleaned,
+      length: cleaned.length,
+      asciiCount,
+      asciiRatio,
+      letterNumberCount,
+      letterRatio
+    });
+    
+    // If title is empty or corrupted after sanitization, return empty (will be handled by caller)
+    if (!cleaned || 
+        cleaned.length === 0 || 
+        cleaned.length < 2 ||
+        (cleaned.length > 0 && asciiRatio < 1.0) ||
+        (cleaned.length > 0 && letterRatio < 0.3)) {
+      console.log('[cleanChapterTitle] REJECTED - returning empty string');
+      // Return empty string - the caller should handle this
+      return '';
+    }
+    
+    console.log('[cleanChapterTitle] ACCEPTED:', cleaned);
+    return cleaned;
   }
 }
 
@@ -871,9 +973,18 @@ export class PreviewGenerator {
       .replace(/\n/g, ' ')
       .trim();
     
+    // CRITICAL: Sanitize chapter titles in preview to prevent corrupted text from appearing
     const chapterTitles = result.detectedChapters
       .slice(0, 10)
-      .map(c => c.title);
+      .map(c => {
+        // Final sanitization pass for preview
+        let cleanTitle = c.title.split('').filter((char: string) => {
+          const code = char.charCodeAt(0);
+          return code >= 32 && code <= 126;
+        }).join('').trim();
+        cleanTitle = cleanTitle.replace(/[^\x20-\x7E]/g, '').trim();
+        return cleanTitle || `Chapter ${result.detectedChapters.indexOf(c) + 1}`;
+      });
     
     // Estimate reading time (200 words per minute)
     const estimatedReadingTime = Math.ceil(
@@ -904,8 +1015,15 @@ export class ImportPipeline {
    */
   static async execute(file: File, title?: string): Promise<ImportResult> {
     try {
+      // #region agent log
+      console.log('[ImportPipeline.execute] File validation check. File:', file.name, 'Type:', file.type, 'Extension:', file.name.substring(file.name.lastIndexOf('.')));
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:987',message:'File validation',data:{fileName:file.name,fileType:file.type,extension:file.name.substring(file.name.lastIndexOf('.'))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       // Pre-validation: Check file before processing
       const fileValidation = EdgeCaseHandlers.validateFile(file);
+      
+      console.log('[ImportPipeline.execute] Validation result:', fileValidation.isValid, 'Errors:', fileValidation.errors);
       
       if (!fileValidation.isValid) {
         throw new ImportError(
@@ -914,14 +1032,37 @@ export class ImportPipeline {
         );
       }
       
+      // #region agent log
+      console.log('[ImportPipeline.execute] Starting import for file:', file.name, 'Type:', file.type, 'Size:', file.size);
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:1000',message:'Starting import pipeline',data:{fileName:file.name,fileType:file.type,fileSize:file.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       // Stage 1: File read + UTF-8 normalization
       const { text: rawText, encoding } = await FileReaderStage.readFile(file);
+      
+      // #region agent log
+      console.log('[ImportPipeline.execute] File read complete. Text length:', rawText.length, 'Sample:', rawText.substring(0, 200));
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:1003',message:'File read complete',data:{textLength:rawText.length,textSample:rawText.substring(0,200),hasNonAscii:rawText.substring(0,200).split('').some(c=>c.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       
       // Stage 2: Line ending normalization
       const normalizedText = LineEndingNormalizer.normalize(rawText);
       
+      // #region agent log
+      console.log('[ImportPipeline.execute] Starting chapter detection. Lines:', normalizedText.lines.length);
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:982',message:'Before chapter detection',data:{lineCount:normalizedText.lines.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       // Stage 3: Chapter detection
       const detectedChapters = ChapterDetector.detectChapters(normalizedText.lines);
+      
+      // #region agent log
+      console.log('[ImportPipeline.execute] Chapter detection complete. Detected:', detectedChapters.length, 'chapters');
+      detectedChapters.forEach((ch, idx) => {
+        console.log(`[ImportPipeline.execute] Chapter ${idx}:`, ch.title, 'Confidence:', ch.confidence, 'Has non-ASCII:', ch.title.split('').some(c=>c.charCodeAt(0)>126));
+      });
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:985',message:'After chapter detection',data:{chapterCount:detectedChapters.length,chapters:detectedChapters.map(c=>({title:c.title,confidence:c.confidence,hasNonAscii:c.title.split('').some(ch=>ch.charCodeAt(0)>126)}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       
       // Stage 4: Scene detection
       const detectedScenes = SceneDetector.detectScenes(
