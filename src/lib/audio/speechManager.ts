@@ -213,6 +213,8 @@ export class SpeechManager {
     // Clear queue
     this.queue.forEach(item => item.reject(new Error('Speech canceled')));
     this.queue = [];
+    // Force reset the global lock to ensure it's released
+    GlobalSpeechLock.forceReset();
   }
 
   /**
