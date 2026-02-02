@@ -493,6 +493,7 @@ export default function MigrationWizard({
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full p-6"
+          onClick={(e) => e.stopPropagation()}
         >
           {renderStepContent()}
           <div className="mt-6 flex justify-center">
@@ -511,11 +512,19 @@ export default function MigrationWizard({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div 
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && onCancel) {
+          onCancel();
+        }
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="p-6 border-b border-gray-700 flex items-center justify-between">
