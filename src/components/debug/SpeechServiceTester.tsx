@@ -13,7 +13,7 @@ import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
 export default function SpeechServiceTester() {
   const [testResult, setTestResult] = useState<string>('');
   const [isTesting, setIsTesting] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false); // Hidden by default
 
   // Always show for now (can be toggled off)
   // if (process.env.NODE_ENV !== 'development' && !(typeof window !== 'undefined' && (window as any).__ENABLE_SPEECH_TEST__)) {
