@@ -145,6 +145,10 @@ export class AudioGenerator {
 
   /**
    * Generate full audiobook
+   * 
+   * NOTE: SpeechSynthesis API doesn't output to Web Audio API, so direct recording isn't possible.
+   * This implementation plays the audio sequentially. Users can use system audio recording
+   * software to capture it, or we generate a text file for use with external TTS services.
    */
   async generateFullAudiobook(
     storyId: string,
@@ -162,130 +166,116 @@ export class AudioGenerator {
     this.isPaused = false;
     this.isCancelled = false;
 
-    // Initialize audio context
-    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    this.mediaStreamDestination = this.audioContext.createMediaStreamDestination();
-    this.recordedChunks = [];
+    // Play audio sequentially and generate text file
+    // Since we can't record SpeechSynthesis directly, we'll play it and provide text
+    try {
+      // Play the audio (user can record with external software)
+      await this.playAudiobookSequentially(story, scenes, options);
+      
+      // Also generate a text file for use with external TTS services
+      return this.generateTextInstructions(story, scenes, options);
+    } catch (error) {
+      // If playback fails, still generate text file
+      console.error('Audio playback error:', error);
+      return this.generateTextInstructions(story, scenes, options);
+    }
+  }
 
-    // Create MediaRecorder
-    const stream = this.mediaStreamDestination.stream;
-    this.mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'audio/webm;codecs=opus',
-    });
+  /**
+   * Play audiobook sequentially (for user to record externally)
+   */
+  private async playAudiobookSequentially(
+    story: any,
+    scenes: any[],
+    options: AudioGenerationOptions
+  ): Promise<void> {
+    // Speak story title
+    if (options.addChapterMarkers) {
+      await this.speakTextAsync(`Chapter: ${story.title}`, options.narratorVoice);
+    }
 
-    return new Promise(async (resolve, reject) => {
-      if (!this.mediaRecorder) {
-        reject(new Error('MediaRecorder not initialized'));
+    // Process each scene
+    for (let i = 0; i < scenes.length; i++) {
+      if (this.isCancelled) {
         return;
       }
 
-      this.mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          this.recordedChunks.push(event.data);
-        }
-      };
-
-      this.mediaRecorder.onstop = async () => {
-        try {
-          const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
-          // Convert to WAV
-          const wavBlob = await this.convertToWAV(blob);
-          resolve(wavBlob);
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      this.mediaRecorder.onerror = (error) => {
-        reject(error);
-      };
-
-      // Start recording
-      this.mediaRecorder.start();
-
-      try {
-        // Speak story title
-        if (options.addChapterMarkers) {
-          await this.speakTextAsync(`Chapter: ${story.title}`, options.narratorVoice);
-        }
-
-        // Process each scene
-        for (let i = 0; i < scenes.length; i++) {
-          if (this.isCancelled) {
-            if (this.mediaRecorder) {
-              this.mediaRecorder.stop();
-            }
-            reject(new Error('Generation cancelled'));
-            return;
-          }
-
-          // Wait if paused
-          while (this.isPaused && !this.isCancelled) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-
-          if (this.isCancelled) {
-            if (this.mediaRecorder) {
-              this.mediaRecorder.stop();
-            }
-            reject(new Error('Generation cancelled'));
-            return;
-          }
-
-          const scene = scenes[i];
-          
-          // Update progress
-          if (this.progressCallback) {
-            this.progressCallback({
-              currentScene: i + 1,
-              totalScenes: scenes.length,
-              currentSceneTitle: scene.title,
-              percentage: ((i + 1) / scenes.length) * 100,
-              isPaused: this.isPaused,
-              isCancelled: this.isCancelled,
-            });
-          }
-
-          // Determine voice for this scene
-          let voiceSettings = options.narratorVoice;
-          if (scene.povCharacter) {
-            const characterVoice = options.voices.find(
-              (v) => v.characterId === scene.povCharacter || v.characterName === scene.povCharacter
-            );
-            if (characterVoice) {
-              voiceSettings = characterVoice.voiceSettings;
-            }
-          }
-
-          // Add scene marker
-          if (options.addChapterMarkers && scene.title) {
-            await this.speakTextAsync(`Scene: ${scene.title}`, options.narratorVoice);
-            await this.delay(300);
-          }
-
-          // Speak scene content
-          const sceneText = this.prepareSceneText(scene.content, options.voices);
-          await this.speakTextAsync(sceneText, voiceSettings);
-
-          // Add pause between scenes
-          if (i < scenes.length - 1) {
-            await this.delay(500);
-          }
-        }
-
-        // Stop recording after a delay
-        setTimeout(() => {
-          if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-            this.mediaRecorder.stop();
-          }
-        }, 1000);
-      } catch (error) {
-        if (this.mediaRecorder) {
-          this.mediaRecorder.stop();
-        }
-        reject(error);
+      // Wait if paused
+      while (this.isPaused && !this.isCancelled) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
+
+      if (this.isCancelled) {
+        return;
+      }
+
+      const scene = scenes[i];
+      
+      // Update progress
+      if (this.progressCallback) {
+        this.progressCallback({
+          currentScene: i + 1,
+          totalScenes: scenes.length,
+          currentSceneTitle: scene.title,
+          percentage: ((i + 1) / scenes.length) * 100,
+          isPaused: this.isPaused,
+          isCancelled: this.isCancelled,
+        });
+      }
+
+      // Determine voice for this scene
+      let voiceSettings = options.narratorVoice;
+      if (scene.povCharacter) {
+        const characterVoice = options.voices.find(
+          (v) => v.characterId === scene.povCharacter || v.characterName === scene.povCharacter
+        );
+        if (characterVoice) {
+          voiceSettings = characterVoice.voiceSettings;
+        }
+      }
+
+      // Add scene marker
+      if (options.addChapterMarkers && scene.title) {
+        await this.speakTextAsync(`Scene: ${scene.title}`, options.narratorVoice);
+        await this.delay(300);
+      }
+
+      // Speak scene content
+      const sceneText = this.prepareSceneText(scene.content, options.voices);
+      await this.speakTextAsync(sceneText, voiceSettings);
+
+      // Add pause between scenes
+      if (i < scenes.length - 1) {
+        await this.delay(500);
+      }
+    }
+  }
+
+  /**
+   * Generate a text file with instructions and story content
+   */
+  private generateTextInstructions(
+    story: any,
+    scenes: any[],
+    options: AudioGenerationOptions
+  ): Promise<Blob> {
+    let content = `AUDIOBOOK TEXT FOR: ${story.title}\n\n`;
+    content += `Generated: ${new Date().toLocaleString()}\n\n`;
+    content += `=== INSTRUCTIONS ===\n`;
+    content += `This text file contains your story formatted for use with:\n`;
+    content += `- External TTS services (Google Cloud TTS, Amazon Polly, etc.)\n`;
+    content += `- Text-to-speech software\n`;
+    content += `- Online TTS tools\n\n`;
+    content += `The audio is currently playing through your speakers.\n`;
+    content += `You can use system audio recording software to capture it.\n\n`;
+    content += `=== STORY TITLE ===\n${story.title}\n\n`;
+
+    scenes.forEach((scene, index) => {
+      content += `=== SCENE ${index + 1}: ${scene.title || 'Untitled'} ===\n`;
+      content += `${scene.content}\n\n`;
     });
+
+    return Promise.resolve(new Blob([content], { type: 'text/plain' }));
   }
 
   /**

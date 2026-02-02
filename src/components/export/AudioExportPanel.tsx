@@ -47,6 +47,7 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [audioGenerator, setAudioGenerator] = useState<AudioGenerator | null>(null);
 
   // Load available voices
@@ -146,7 +147,23 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
     };
 
     try {
-      const audioBlob = await generator.generateFullAudiobook(
+      // Show info about audio playback
+      const confirmed = window.confirm(
+        'Audio Export Information:\n\n' +
+        'Due to browser limitations, SpeechSynthesis cannot be directly recorded.\n\n' +
+        'The audio will play through your speakers, and a text file will be downloaded.\n\n' +
+        'To record the audio:\n' +
+        '1. Use system audio recording software (OBS, Audacity, etc.)\n' +
+        '2. Or use the text file with external TTS services\n\n' +
+        'Click OK to start playback and download the text file.'
+      );
+
+      if (!confirmed) {
+        setIsGenerating(false);
+        return;
+      }
+
+      const textBlob = await generator.generateFullAudiobook(
         story.id,
         options,
         (progress) => {
@@ -154,11 +171,11 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
         }
       );
 
-      // Download the audio file
-      const url = URL.createObjectURL(audioBlob);
+      // Download the text file
+      const url = URL.createObjectURL(textBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${story.title.replace(/\s+/g, '_')}_audiobook_${new Date().toISOString().split('T')[0]}.webm`;
+      a.download = `${story.title.replace(/\s+/g, '_')}_audiobook_text_${new Date().toISOString().split('T')[0]}.txt`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -166,6 +183,9 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
 
       setIsGenerating(false);
       generator.cleanup();
+      
+      setError(null);
+      setSuccess('Audio playback started! A text file has been downloaded. Use system recording software to capture the audio.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate audio');
       setIsGenerating(false);
@@ -216,6 +236,16 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
           <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-red-200 text-sm">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Success Display */}
+      {success && (
+        <div className="p-4 bg-green-900/20 border border-green-500/30 rounded-lg flex items-start gap-3">
+          <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-green-200 text-sm">{success}</p>
           </div>
         </div>
       )}
