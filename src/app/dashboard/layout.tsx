@@ -86,6 +86,28 @@ export default function DashboardLayout({
   }, []);
 
   /**
+   * Install speech error interceptor on mount
+   */
+  useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/layout.tsx:88',message:'Installing speech error interceptor in dashboard',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'P'})}).catch(()=>{});
+    // #endregion
+    
+    installSpeechErrorInterceptor();
+    
+    // Clean up on unmount
+    return () => {
+      // Cancel any ongoing speech
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/layout.tsx:98',message:'Dashboard unmount - cancelling speech',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'P'})}).catch(()=>{});
+        // #endregion
+      }
+    };
+  }, []);
+
+  /**
    * Check authentication and redirect if not authenticated
    */
   useEffect(() => {
