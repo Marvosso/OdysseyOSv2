@@ -41,8 +41,8 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
-  const [chunksRef, setChunksRef] = useState<string[]>([]);
+  const currentChunkIndexRef = React.useRef(0);
+  const chunksRef = React.useRef<string[]>([]);
   
   const speechServiceRef = React.useRef(SafeSpeechService.getInstance());
 
@@ -128,18 +128,18 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
       // Chunk the text
       const chunks = TextChunker.chunkText(storyText, 200);
       const totalChunks = chunks.length;
-      setChunksRef(chunks);
-      setCurrentChunkIndex(0);
+      chunksRef.current = chunks;
+      currentChunkIndexRef.current = 0;
 
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:150',message:'Starting to speak chunks',data:{totalChunks:totalChunks,storyTextLength:storyText.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
 
       // Speak each chunk starting from current index
-      for (let i = currentChunkIndex; i < chunks.length; i++) {
+      for (let i = currentChunkIndexRef.current; i < chunks.length; i++) {
         if (!isSpeaking && !isPaused) break; // Check if stopped
         
-        setCurrentChunkIndex(i);
+        currentChunkIndexRef.current = i;
         await speechServiceRef.current.speak(chunks[i], { 
           rate, 
           voice: selectedVoice 
@@ -184,26 +184,27 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
 
   // Resume generation
   const handleResume = async () => {
-    if (isPaused && chunksRef.length > 0) {
+    if (isPaused && chunksRef.current.length > 0) {
       setIsPaused(false);
+      setIsSpeaking(true);
       
       // Continue from current chunk index
-      const totalChunks = chunksRef.length;
-      for (let i = currentChunkIndex; i < chunksRef.length; i++) {
+      const totalChunks = chunksRef.current.length;
+      for (let i = currentChunkIndexRef.current; i < chunksRef.current.length; i++) {
         if (!isSpeaking && !isPaused) break;
         
-        setCurrentChunkIndex(i);
-        await speechServiceRef.current.speak(chunksRef[i], { 
+        currentChunkIndexRef.current = i;
+        await speechServiceRef.current.speak(chunksRef.current[i], { 
           rate, 
           voice: selectedVoice 
         });
         setProgress(((i + 1) / totalChunks) * 100);
       }
       
-      if (currentChunkIndex >= chunksRef.length) {
+      if (currentChunkIndexRef.current >= chunksRef.current.length) {
         setIsSpeaking(false);
         setProgress(100);
-        setSuccess('Audio playback completed!');
+        setSuccess('Audio playback completed! Use system recording software to capture the audio.');
       }
     }
   };
