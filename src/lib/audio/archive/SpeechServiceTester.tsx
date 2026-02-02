@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react';
-import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
+import { SafeSpeechService } from './safeSpeechService';
 
 export default function SpeechServiceTester() {
   const [testResult, setTestResult] = useState<string>('');
