@@ -131,9 +131,12 @@ export class SpeechManager {
         this.processQueue();
       };
 
-      utterance.onerror = (event) => {
+      utterance.onerror = async (event) => {
         const errorType = event.error;
         console.log('[SpeechManager] Utterance error', { errorType, errorName: event.name });
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechManager.ts:134',message:'Utterance error',data:{errorType:errorType,errorName:event.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+        // #endregion
         
         this.isSpeaking = false;
         this.currentUtterance = null;
@@ -142,11 +145,17 @@ export class SpeechManager {
         // Don't treat "interrupted" or "canceled" as errors
         if (errorType === 'interrupted' || errorType === 'canceled') {
           console.log('[SpeechManager] Ignoring interrupted/canceled error');
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechManager.ts:145',message:'Ignoring interrupted/canceled',data:{errorType:errorType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+          // #endregion
           resolve(); // Resolve instead of reject
           this.processQueue();
         } else {
           const error = new Error(`Speech synthesis error: ${errorType}`);
           console.error('[SpeechManager] Speech error:', error);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechManager.ts:151',message:'Speech error occurred',data:{errorType:errorType,errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+          // #endregion
           reject(error);
           this.processQueue();
         }
