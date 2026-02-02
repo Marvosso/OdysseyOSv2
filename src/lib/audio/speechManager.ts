@@ -42,7 +42,7 @@ export class SpeechManager {
       }
 
       // Start speaking immediately
-      this.processUtterance(text, voice, rate, resolve, reject);
+      this.processUtterance(text, rate, resolve, reject, voice);
     });
   }
 
@@ -51,10 +51,10 @@ export class SpeechManager {
    */
   private processUtterance(
     text: string,
-    voice?: string,
     rate: number,
     resolve: () => void,
-    reject: (error: Error) => void
+    reject: (error: Error) => void,
+    voice?: string
   ): void {
     console.log('[SpeechManager] Processing utterance', { textLength: text.length, voice, rate });
     
@@ -149,7 +149,7 @@ export class SpeechManager {
     
     if (next) {
       console.log('[SpeechManager] Processing queued utterance');
-      this.processUtterance(next.text, next.voice, next.rate, next.resolve, next.reject);
+      this.processUtterance(next.text, next.rate, next.resolve, next.reject, next.voice);
     }
     
     this.processingQueue = false;
