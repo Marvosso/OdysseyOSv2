@@ -13,11 +13,12 @@ import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
 export default function SpeechServiceTester() {
   const [testResult, setTestResult] = useState<string>('');
   const [isTesting, setIsTesting] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
 
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development' && !(typeof window !== 'undefined' && (window as any).__ENABLE_SPEECH_TEST__)) {
-    return null;
-  }
+  // Always show for now (can be toggled off)
+  // if (process.env.NODE_ENV !== 'development' && !(typeof window !== 'undefined' && (window as any).__ENABLE_SPEECH_TEST__)) {
+  //   return null;
+  // }
 
   const runTest = async () => {
     setIsTesting(true);
@@ -123,9 +124,29 @@ export default function SpeechServiceTester() {
     // #endregion
   };
 
+  if (!isVisible) {
+    return (
+      <button
+        onClick={() => setIsVisible(true)}
+        className="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg z-50 shadow-xl"
+      >
+        Show Speech Tester
+      </button>
+    );
+  }
+
   return (
-    <div className="fixed bottom-4 right-4 bg-gray-800 border border-gray-700 rounded-lg p-4 max-w-md z-50 shadow-xl">
-      <h3 className="text-white font-semibold mb-3">Speech Service Tester</h3>
+    <div className="fixed bottom-4 right-4 bg-gray-800 border border-gray-700 rounded-lg p-4 max-w-md z-[9999] shadow-xl">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-white font-semibold">Speech Service Tester</h3>
+        <button
+          onClick={() => setIsVisible(false)}
+          className="text-gray-400 hover:text-white text-xl leading-none"
+          title="Hide"
+        >
+          ×
+        </button>
+      </div>
       
       <div className="space-y-2 mb-3">
         <button
