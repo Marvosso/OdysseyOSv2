@@ -152,6 +152,7 @@ export default function DashboardLayout({
 
   /**
    * Handle keyboard shortcut for search (Cmd/Ctrl + K)
+   * Also handle Escape to close modals
    */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -159,17 +160,29 @@ export default function DashboardLayout({
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setIsSearchOpen((prev) => !prev);
+        return;
       }
       
-      // Close search on Escape
-      if (e.key === 'Escape' && isSearchOpen) {
-        setIsSearchOpen(false);
+      // Close modals/search on Escape
+      if (e.key === 'Escape') {
+        if (isSearchOpen) {
+          setIsSearchOpen(false);
+          e.preventDefault();
+        }
+        if (showGuestModal) {
+          setShowGuestModal(false);
+          e.preventDefault();
+        }
+        if (showMigrationWizard) {
+          setShowMigrationWizard(false);
+          e.preventDefault();
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchOpen]);
+  }, [isSearchOpen, showGuestModal, showMigrationWizard]);
 
   /**
    * Listen for migration wizard open event

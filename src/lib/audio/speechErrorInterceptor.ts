@@ -7,8 +7,19 @@
  * - speechSynthesis.speak monkey-patch
  */
 
+let isInstalled = false;
+let originalConsoleError: typeof console.error | null = null;
+let originalWindowError: typeof window.onerror | null = null;
+let originalSpeak: typeof SpeechSynthesis['speak'] | null = null;
+
 export function installSpeechErrorInterceptor() {
   if (typeof window === 'undefined') {
+    return;
+  }
+  
+  // Prevent multiple installations
+  if (isInstalled) {
+    console.log('[SpeechInterceptor] Already installed, skipping');
     return;
   }
   
@@ -17,9 +28,10 @@ export function installSpeechErrorInterceptor() {
   // #endregion
   
   console.log('[SpeechInterceptor] Installing...');
+  isInstalled = true;
   
   // 1. Intercept console.error for speech errors
-  const originalConsoleError = console.error;
+  originalConsoleError = console.error;
   console.error = function(...args: any[]) {
     const message = args[0]?.toString() || '';
     if (message.includes('speech synthesis') || message.includes('interrupted')) {
@@ -33,7 +45,7 @@ export function installSpeechErrorInterceptor() {
   };
   
   // 2. Wrap window.onerror
-  const originalWindowError = window.onerror;
+  originalWindowError = window.onerror;
   window.onerror = function(message, source, lineno, colno, error) {
     const messageStr = typeof message === 'string' ? message : String(message);
     
@@ -52,8 +64,8 @@ export function installSpeechErrorInterceptor() {
   };
   
   // 3. Monkey-patch speechSynthesis.speak
-  if (window.speechSynthesis) {
-    const originalSpeak = window.speechSynthesis.speak;
+  if (window.speechSynthesis && !originalSpeak) {
+    originalSpeak = window.speechSynthesis.speak;
     let isInSpeak = false;
     
     window.speechSynthesis.speak = function(utterance: SpeechSynthesisUtterance) {
@@ -67,7 +79,7 @@ export function installSpeechErrorInterceptor() {
         fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechErrorInterceptor.ts:54',message:'Speak called while already in speak, cancelling',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'N'})}).catch(()=>{});
         // #endregion
         window.speechSynthesis.cancel();
-        setTimeout(() => originalSpeak.call(this, utterance), 100);
+        setTimeout(() => originalSpeak!.call(this, utterance), 100);
         return;
       }
       
@@ -114,7 +126,7 @@ export function installSpeechErrorInterceptor() {
           originalSpeak.call(this, utterance);
         }, 100);
       } else {
-        originalSpeak.call(this, utterance);
+        originalSpeak!.call(this, utterance);
       }
     };
   }
