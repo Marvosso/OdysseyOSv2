@@ -29,6 +29,7 @@ export class SpeechManager {
 
   /**
    * Speak text with optional voice and rate
+   * Returns a promise that resolves when speech completes
    */
   speak(text: string, voice?: string, rate = 1): Promise<void> {
     console.log('[SpeechManager] speak() called', { textLength: text.length, voice, rate });
@@ -42,6 +43,7 @@ export class SpeechManager {
       }
 
       // Start speaking immediately
+      this.processingQueue = true;
       this.processUtterance(text, rate, resolve, reject, voice);
     });
   }
@@ -88,42 +90,45 @@ export class SpeechManager {
       }
     }
 
-    // Event handlers
-    utterance.onstart = () => {
-      console.log('[SpeechManager] Utterance started');
-      this.isSpeaking = true;
-      this.currentUtterance = utterance;
-    };
+      // Event handlers
+      utterance.onstart = () => {
+        console.log('[SpeechManager] Utterance started');
+        this.isSpeaking = true;
+        this.currentUtterance = utterance;
+        this.processingQueue = false; // Allow queue processing
+      };
 
-    utterance.onend = () => {
-      console.log('[SpeechManager] Utterance ended');
-      this.isSpeaking = false;
-      this.currentUtterance = null;
-      resolve();
-      
-      // Process next in queue
-      this.processQueue();
-    };
+      utterance.onend = () => {
+        console.log('[SpeechManager] Utterance ended');
+        this.isSpeaking = false;
+        this.currentUtterance = null;
+        this.processingQueue = false;
+        resolve();
+        
+        // Process next in queue
+        this.processQueue();
+      };
 
-    utterance.onerror = (event) => {
-      const errorType = event.error;
-      console.log('[SpeechManager] Utterance error', { errorType, errorName: event.name });
-      
-      this.isSpeaking = false;
-      this.currentUtterance = null;
-      
-      // Don't treat "interrupted" or "canceled" as errors
-      if (errorType === 'interrupted' || errorType === 'canceled') {
-        console.log('[SpeechManager] Ignoring interrupted/canceled error');
-        resolve(); // Resolve instead of reject
-        this.processQueue();
-      } else {
-        const error = new Error(`Speech synthesis error: ${errorType}`);
-        console.error('[SpeechManager] Speech error:', error);
-        reject(error);
-        this.processQueue();
-      }
-    };
+      utterance.onerror = (event) => {
+        const errorType = event.error;
+        console.log('[SpeechManager] Utterance error', { errorType, errorName: event.name });
+        
+        this.isSpeaking = false;
+        this.currentUtterance = null;
+        this.processingQueue = false;
+        
+        // Don't treat "interrupted" or "canceled" as errors
+        if (errorType === 'interrupted' || errorType === 'canceled') {
+          console.log('[SpeechManager] Ignoring interrupted/canceled error');
+          resolve(); // Resolve instead of reject
+          this.processQueue();
+        } else {
+          const error = new Error(`Speech synthesis error: ${errorType}`);
+          console.error('[SpeechManager] Speech error:', error);
+          reject(error);
+          this.processQueue();
+        }
+      };
 
     // Start speaking
     try {
@@ -140,19 +145,17 @@ export class SpeechManager {
    * Process the next item in the queue
    */
   private processQueue(): void {
-    if (this.processingQueue || this.queue.length === 0) {
+    if (this.processingQueue || this.isSpeaking || this.queue.length === 0) {
       return;
     }
 
-    this.processingQueue = true;
     const next = this.queue.shift();
     
     if (next) {
       console.log('[SpeechManager] Processing queued utterance');
+      this.processingQueue = true;
       this.processUtterance(next.text, next.rate, next.resolve, next.reject, next.voice);
     }
-    
-    this.processingQueue = false;
   }
 
   /**
