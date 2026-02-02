@@ -6,7 +6,7 @@
  * Interface for generating audiobook exports with voice assignment
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Volume2,
@@ -22,7 +22,9 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import { AudioGenerator, type VoiceSettings, type CharacterVoice, type AudioGenerationOptions, type GenerationProgress } from '@/lib/export/audioGenerator';
+import { SpeechManager } from '@/lib/audio/speechManager';
+import { VoiceLoader } from '@/lib/audio/voiceLoader';
+import { TextChunker } from '@/lib/audio/textChunker';
 import type { Story, Character } from '@/types/story';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 
@@ -32,156 +34,116 @@ interface AudioExportPanelProps {
 
 export default function AudioExportPanel({ story }: AudioExportPanelProps) {
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [narratorVoice, setNarratorVoice] = useState<VoiceSettings>({
-    voiceName: '',
-    pitch: 1,
-    rate: 1,
-    volume: 1,
-  });
-  const [characterVoices, setCharacterVoices] = useState<CharacterVoice[]>([]);
-  const [speed, setSpeed] = useState(1);
-  const [addChapterMarkers, setAddChapterMarkers] = useState(true);
-  const [backgroundMusic, setBackgroundMusic] = useState(false);
-  const [musicVolume, setMusicVolume] = useState(0.3);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState<string>('');
+  const [rate, setRate] = useState(1);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [progress, setProgress] = useState<GenerationProgress | null>(null);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [audioGenerator, setAudioGenerator] = useState<AudioGenerator | null>(null);
+  
+  const speechManagerRef = React.useRef(SpeechManager.getInstance());
 
   // Load available voices
   useEffect(() => {
     const loadVoices = async () => {
-      const voices = await AudioGenerator.waitForVoices();
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:54',message:'Loading voices',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
+      const voices = await VoiceLoader.getVoices();
       setAvailableVoices(voices);
       
-      // Set default narrator voice (first English voice or first available)
-      const englishVoice = voices.find((v) => v.lang.startsWith('en')) || voices[0];
-      if (englishVoice) {
-        setNarratorVoice({
-          voiceName: englishVoice.name,
-          pitch: 1,
-          rate: 1,
-          volume: 1,
-        });
+      // Set default voice (prefer natural-sounding English voices)
+      const preferred = voices.find((v) => 
+        v.lang.includes('en') && 
+        !v.name.includes('Google') && 
+        !v.name.includes('Microsoft')
+      ) || voices.find((v) => v.lang.startsWith('en')) || voices[0];
+      
+      if (preferred) {
+        setSelectedVoice(preferred.name);
       }
     };
 
     loadVoices();
+    
+    // Cleanup on unmount
+    return () => {
+      speechManagerRef.current.stop();
+    };
   }, []);
 
-  // Initialize character voices
-  useEffect(() => {
-    const characters = StoryStorage.loadCharacters();
-    const initialCharacterVoices: CharacterVoice[] = characters.map((char) => ({
-      characterId: char.id,
-      characterName: char.name,
-      voiceSettings: {
-        voiceName: narratorVoice.voiceName || availableVoices[0]?.name || '',
-        pitch: 1,
-        rate: 1,
-        volume: 1,
-      },
-    }));
-    setCharacterVoices(initialCharacterVoices);
-  }, [story.characters, availableVoices, narratorVoice.voiceName]);
 
-  // Update character voice
-  const updateCharacterVoice = (characterId: string, settings: Partial<VoiceSettings>) => {
-    setCharacterVoices((prev) =>
-      prev.map((cv) =>
-        cv.characterId === characterId
-          ? {
-              ...cv,
-              voiceSettings: { ...cv.voiceSettings, ...settings },
-            }
-          : cv
-      )
-    );
-  };
 
   // Preview voice
-  const previewVoice = (text: string, voiceSettings: VoiceSettings) => {
+  const previewVoice = async (text: string) => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:104',message:'previewVoice called',data:{textLength:text.length,voiceName:voiceSettings.voiceName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:90',message:'previewVoice called',data:{textLength:text.length,voiceName:selectedVoice},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
     // #endregion
     
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      alert('Speech synthesis not available in this browser');
-      return;
+    try {
+      await VoiceLoader.waitForVoices();
+      await speechManagerRef.current.speak(text, selectedVoice, rate);
+    } catch (err) {
+      console.error('[AudioExportPanel] Preview error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to preview voice');
     }
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voice = availableVoices.find((v) => v.name === voiceSettings.voiceName);
-    if (voice) {
-      utterance.voice = voice;
-    }
-    utterance.pitch = voiceSettings.pitch;
-    utterance.rate = voiceSettings.rate;
-    utterance.volume = voiceSettings.volume;
-    
-    utterance.onerror = (error) => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:122',message:'previewVoice onerror',data:{errorType:error.error,errorName:error.name,errorCharIndex:error.charIndex,errorElapsedTime:error.elapsedTime},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-    };
-
-    window.speechSynthesis.speak(utterance);
   };
 
   // Generate audiobook
   const handleGenerate = async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:126',message:'handleGenerate called',data:{storyId:story.id,scenesCount:story.scenes.length,selectedVoice:selectedVoice,rate:rate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    
     if (!story || story.scenes.length === 0) {
       setError('No scenes to generate audio from');
       return;
     }
 
-    setIsGenerating(true);
+    setIsSpeaking(true);
     setError(null);
-    setProgress(null);
-
-    const generator = new AudioGenerator();
-    setAudioGenerator(generator);
-
-    const options: AudioGenerationOptions = {
-      voices: characterVoices,
-      narratorVoice: {
-        ...narratorVoice,
-        rate: narratorVoice.rate * speed,
-      },
-      speed,
-      addChapterMarkers,
-      backgroundMusic,
-      musicVolume,
-    };
+    setSuccess(null);
+    setProgress(0);
 
     try {
-      // Show info about audio playback
-      const confirmed = window.confirm(
-        'Audio Export Information:\n\n' +
-        'Due to browser limitations, SpeechSynthesis cannot be directly recorded.\n\n' +
-        'The audio will play through your speakers, and a text file will be downloaded.\n\n' +
-        'To record the audio:\n' +
-        '1. Use system audio recording software (OBS, Audacity, etc.)\n' +
-        '2. Or use the text file with external TTS services\n\n' +
-        'Click OK to start playback and download the text file.'
-      );
+      await VoiceLoader.waitForVoices();
+      
+      // Combine all scene content
+      const storyText = story.scenes.map((scene, index) => {
+        let text = '';
+        if (index === 0 || scene.title) {
+          text += `\n\n--- ${scene.title || `Scene ${index + 1}`} ---\n\n`;
+        }
+        text += scene.content;
+        return text;
+      }).join('\n\n');
 
-      if (!confirmed) {
-        setIsGenerating(false);
-        return;
+      // Chunk the text
+      const chunks = TextChunker.chunkText(storyText, 200);
+      const totalChunks = chunks.length;
+      let completed = 0;
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:150',message:'Starting to speak chunks',data:{totalChunks:totalChunks,storyTextLength:storyText.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+
+      // Speak each chunk
+      for (const chunk of chunks) {
+        if (!isSpeaking && !isPaused) break; // Check if stopped
+        
+        await speechManagerRef.current.speak(chunk, selectedVoice, rate);
+        completed++;
+        setProgress((completed / totalChunks) * 100);
       }
 
-      const textBlob = await generator.generateFullAudiobook(
-        story.id,
-        options,
-        (progress) => {
-          setProgress(progress);
-        }
-      );
+      setIsSpeaking(false);
+      setProgress(100);
+      setSuccess('Audio playback completed! Use system recording software to capture the audio.');
 
-      // Download the text file
+      // Also download text file
+      const textBlob = new Blob([storyText], { type: 'text/plain' });
       const url = URL.createObjectURL(textBlob);
       const a = document.createElement('a');
       a.href = url;
@@ -190,45 +152,40 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-
-      setIsGenerating(false);
-      generator.cleanup();
-      
-      setError(null);
-      setSuccess('Audio playback started! A text file has been downloaded. Use system recording software to capture the audio.');
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:170',message:'Audio generation failed',data:{error:err instanceof Error ? err.message : 'Unknown error'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
       setError(err instanceof Error ? err.message : 'Failed to generate audio');
-      setIsGenerating(false);
-      generator.cleanup();
+      setIsSpeaking(false);
+      setIsPaused(false);
+      setProgress(0);
     }
   };
 
   // Pause generation
   const handlePause = () => {
-    if (audioGenerator) {
-      audioGenerator.pause();
+    if (isSpeaking && !isPaused) {
+      speechManagerRef.current.pause();
       setIsPaused(true);
     }
   };
 
   // Resume generation
   const handleResume = () => {
-    if (audioGenerator) {
-      audioGenerator.resume();
+    if (isPaused) {
+      speechManagerRef.current.resume();
       setIsPaused(false);
     }
   };
 
-  // Cancel generation
-  const handleCancel = () => {
-    if (audioGenerator) {
-      audioGenerator.cancel();
-      audioGenerator.cleanup();
-      setAudioGenerator(null);
-      setIsGenerating(false);
-      setIsPaused(false);
-      setProgress(null);
-    }
+  // Stop generation
+  const handleStop = () => {
+    speechManagerRef.current.stop();
+    setIsSpeaking(false);
+    setIsPaused(false);
+    setProgress(0);
   };
 
   return (
@@ -260,21 +217,20 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
         </div>
       )}
 
-      {/* Narrator Voice Settings */}
+      {/* Voice Settings */}
       <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg space-y-4">
         <h4 className="text-white font-semibold flex items-center gap-2">
           <User className="w-5 h-5 text-purple-400" />
-          Narrator Voice
+          Voice Settings
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-gray-400 mb-2">Voice</label>
             <select
-              value={narratorVoice.voiceName}
-              onChange={(e) =>
-                setNarratorVoice({ ...narratorVoice, voiceName: e.target.value })
-              }
+              value={selectedVoice}
+              onChange={(e) => setSelectedVoice(e.target.value)}
               className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              disabled={isSpeaking}
             >
               {availableVoices.map((voice) => (
                 <option key={voice.name} value={voice.name}>
@@ -285,227 +241,50 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => previewVoice('This is a preview of the narrator voice.', narratorVoice)}
-              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
+              onClick={() => previewVoice('This is a preview of the selected voice.')}
+              disabled={isSpeaking}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
             >
               <Play className="w-4 h-4" />
               Preview
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Pitch: {narratorVoice.pitch.toFixed(1)}
-            </label>
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.1"
-              value={narratorVoice.pitch}
-              onChange={(e) =>
-                setNarratorVoice({ ...narratorVoice, pitch: parseFloat(e.target.value) })
-              }
-              className="w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Rate: {narratorVoice.rate.toFixed(1)}x
-            </label>
-            <input
-              type="range"
-              min="0.5"
-              max="2"
-              step="0.1"
-              value={narratorVoice.rate}
-              onChange={(e) =>
-                setNarratorVoice({ ...narratorVoice, rate: parseFloat(e.target.value) })
-              }
-              className="w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Volume: {Math.round(narratorVoice.volume * 100)}%
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={narratorVoice.volume}
-              onChange={(e) =>
-                setNarratorVoice({ ...narratorVoice, volume: parseFloat(e.target.value) })
-              }
-              className="w-full"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Character Voices */}
-      {characterVoices.length > 0 && (
-        <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg space-y-4">
-          <h4 className="text-white font-semibold flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-400" />
-            Character Voices
-          </h4>
-          <div className="space-y-3 max-h-64 overflow-y-auto">
-            {characterVoices.map((cv) => (
-              <div key={cv.characterId} className="p-3 bg-gray-900/50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">{cv.characterName}</span>
-                  <button
-                    onClick={() => previewVoice(`${cv.characterName} speaking.`, cv.voiceSettings)}
-                    className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs flex items-center gap-1"
-                  >
-                    <Play className="w-3 h-3" />
-                    Preview
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Voice</label>
-                    <select
-                      value={cv.voiceSettings.voiceName}
-                      onChange={(e) =>
-                        updateCharacterVoice(cv.characterId, { voiceName: e.target.value })
-                      }
-                      className="w-full px-2 py-1 bg-gray-700 text-white rounded text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
-                    >
-                      {availableVoices.map((voice) => (
-                        <option key={voice.name} value={voice.name}>
-                          {voice.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">
-                      Pitch: {cv.voiceSettings.pitch.toFixed(1)}
-                    </label>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="2"
-                      step="0.1"
-                      value={cv.voiceSettings.pitch}
-                      onChange={(e) =>
-                        updateCharacterVoice(cv.characterId, {
-                          pitch: parseFloat(e.target.value),
-                        })
-                      }
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">
-                      Rate: {cv.voiceSettings.rate.toFixed(1)}x
-                    </label>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="2"
-                      step="0.1"
-                      value={cv.voiceSettings.rate}
-                      onChange={(e) =>
-                        updateCharacterVoice(cv.characterId, {
-                          rate: parseFloat(e.target.value),
-                        })
-                      }
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Export Options */}
-      <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg space-y-4">
-        <h4 className="text-white font-semibold flex items-center gap-2">
-          <Settings className="w-5 h-5 text-green-400" />
-          Export Options
-        </h4>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-300">Overall Speed</label>
-            <span className="text-sm text-gray-400">{speed.toFixed(1)}x</span>
-          </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-2">
+            Speed: {rate.toFixed(1)}x
+          </label>
           <input
             type="range"
             min="0.5"
             max="2"
             step="0.1"
-            value={speed}
-            onChange={(e) => setSpeed(parseFloat(e.target.value))}
+            value={rate}
+            onChange={(e) => setRate(parseFloat(e.target.value))}
             className="w-full"
+            disabled={isSpeaking}
           />
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={addChapterMarkers}
-              onChange={(e) => setAddChapterMarkers(e.target.checked)}
-              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-            />
-            <span className="text-sm text-gray-300 flex items-center gap-2">
-              <BookOpen className="w-4 h-4" />
-              Add Chapter/Scene Markers
-            </span>
-          </label>
-
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={backgroundMusic}
-              onChange={(e) => setBackgroundMusic(e.target.checked)}
-              className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
-            />
-            <span className="text-sm text-gray-300 flex items-center gap-2">
-              <Music className="w-4 h-4" />
-              Background Music (Coming Soon)
-            </span>
-          </label>
-
-          {backgroundMusic && (
-            <div className="ml-7">
-              <label className="block text-sm text-gray-400 mb-2">
-                Music Volume: {Math.round(musicVolume * 100)}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={musicVolume}
-                onChange={(e) => setMusicVolume(parseFloat(e.target.value))}
-                className="w-full"
-              />
-            </div>
-          )}
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>Slower</span>
+            <span>Normal</span>
+            <span>Faster</span>
+          </div>
         </div>
       </div>
 
       {/* Progress */}
-      {progress && (
+      {isSpeaking && (
         <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-300">
-              {progress.currentSceneTitle || `Scene ${progress.currentScene}`}
-            </span>
+            <span className="text-sm text-gray-300">Generating audiobook...</span>
             <span className="text-sm text-gray-400">
-              {progress.currentScene} / {progress.totalScenes} ({Math.round(progress.percentage)}%)
+              {Math.round(progress)}% complete
             </span>
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+          <div className="w-full bg-gray-700 rounded-full h-2">
             <div
               className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress.percentage}%` }}
+              style={{ width: `${progress}%` }}
             />
           </div>
         </div>
@@ -513,7 +292,7 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
 
       {/* Control Buttons */}
       <div className="flex items-center gap-3">
-        {!isGenerating ? (
+        {!isSpeaking ? (
           <button
             onClick={handleGenerate}
             disabled={story.scenes.length === 0}
@@ -542,11 +321,11 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
               </button>
             )}
             <button
-              onClick={handleCancel}
+              onClick={handleStop}
               className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
             >
               <Square className="w-5 h-5" />
-              Cancel
+              Stop
             </button>
           </>
         )}
