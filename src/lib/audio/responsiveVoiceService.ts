@@ -171,12 +171,26 @@ export class ResponsiveVoiceService {
 
   /**
    * Get available voices
+   * Note: ResponsiveVoice doesn't expose getVoices() in the free API
+   * We return a list of known ResponsiveVoice voices
    */
   getVoices(): string[] {
-    if (!this.isAvailable()) {
-      return [];
-    }
-    return window.responsiveVoice!.getVoices() || [];
+    // ResponsiveVoice free API doesn't expose getVoices()
+    // Return known available voices
+    return [
+      'UK English Female',
+      'US English Female',
+      'UK English Male',
+      'US English Male',
+      'Australian Female',
+      'Australian Male',
+      'Irish Female',
+      'Irish Male',
+      'South African English Female',
+      'South African English Male',
+      'Indian English Female',
+      'Indian English Male',
+    ];
   }
 
   /**
