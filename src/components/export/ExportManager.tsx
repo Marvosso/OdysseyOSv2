@@ -292,7 +292,12 @@ export default function ExportManager({ story }: ExportManagerProps) {
       {/* Tab Selection */}
       <div className="flex items-center gap-2 border-b border-gray-700 pb-2 overflow-x-auto">
         <button
-          onClick={() => setActiveTab('text')}
+          onClick={() => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ExportManager.tsx:295',message:'text tab clicked',data:{currentTab:activeTab},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+            // #endregion
+            setActiveTab('text');
+          }}
           className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
             activeTab === 'text'
               ? 'text-purple-400 border-purple-400'
@@ -303,7 +308,12 @@ export default function ExportManager({ story }: ExportManagerProps) {
           Text Export
         </button>
         <button
-          onClick={() => setActiveTab('audio')}
+          onClick={() => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ExportManager.tsx:306',message:'audio tab clicked',data:{currentTab:activeTab},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+            // #endregion
+            setActiveTab('audio');
+          }}
           className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
             activeTab === 'audio'
               ? 'text-purple-400 border-purple-400'
@@ -350,7 +360,15 @@ export default function ExportManager({ story }: ExportManagerProps) {
 
       {/* Audio Export Tab */}
       {activeTab === 'audio' && (
-        <AudioExportPanel story={actualStory} />
+        <>
+          {/* #region agent log */}
+          {(() => {
+            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ExportManager.tsx:352',message:'rendering audio tab',data:{activeTab:activeTab,storyId:actualStory.id,storyTitle:actualStory.title,scenesCount:actualStory.scenes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+            return null;
+          })()}
+          {/* #endregion */}
+          <AudioExportPanel story={actualStory} />
+        </>
       )}
 
       {/* Social Media Export Tab */}

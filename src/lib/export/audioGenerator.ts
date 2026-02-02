@@ -292,17 +292,29 @@ export class AudioGenerator {
    */
   private speakTextAsync(text: string, voiceSettings: VoiceSettings): Promise<void> {
     return new Promise((resolve, reject) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:303',message:'speakTextAsync entry',data:{textLength:text.length,voiceName:voiceSettings.voiceName,isPaused:this.isPaused,wasSpeaking:typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.speaking : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       if (typeof window === 'undefined' || !window.speechSynthesis) {
         reject(new Error('SpeechSynthesis not available'));
         return;
       }
 
       // Cancel any ongoing speech before starting new one
-      if (window.speechSynthesis.speaking) {
+      const wasSpeaking = window.speechSynthesis.speaking;
+      if (wasSpeaking) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:312',message:'canceling previous speech',data:{wasSpeaking:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         window.speechSynthesis.cancel();
       }
 
       const utterance = new SpeechSynthesisUtterance(text);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:318',message:'utterance created',data:{textLength:text.length,currentUtterance:this.currentUtterance !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       
       // Set voice
       const voices = window.speechSynthesis.getVoices();
@@ -317,14 +329,26 @@ export class AudioGenerator {
       utterance.volume = voiceSettings.volume;
 
       utterance.onend = () => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:332',message:'utterance onend',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         this.currentUtterance = null;
         resolve();
       };
       
       utterance.onerror = (error) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:339',message:'utterance onerror',data:{errorType:error.error,errorName:error.name,errorCharIndex:error.charIndex,errorElapsedTime:error.elapsedTime,hasErrorProperty:'error' in error,errorKeys:Object.keys(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
         this.currentUtterance = null;
         // Handle "interrupted" errors gracefully - they're not real errors
-        if (error.error === 'interrupted' || error.error === 'canceled') {
+        const errorType = error.error || error.type || (error as any).code;
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:345',message:'error type check',data:{errorType:errorType,isInterrupted:errorType === 'interrupted',isCanceled:errorType === 'canceled',willResolve:errorType === 'interrupted' || errorType === 'canceled'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        
+        if (errorType === 'interrupted' || errorType === 'canceled') {
           // Interruption is expected when canceling or pausing
           resolve();
         } else {
@@ -335,6 +359,9 @@ export class AudioGenerator {
       };
 
       this.currentUtterance = utterance;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:358',message:'calling speechSynthesis.speak',data:{textLength:text.length,queueLength:window.speechSynthesis.speaking ? 1 : 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       window.speechSynthesis.speak(utterance);
     });
   }
@@ -403,6 +430,10 @@ export class AudioGenerator {
    * Pause generation
    */
   pause(): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:445',message:'pause called',data:{wasSpeaking:typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.speaking : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     this.isPaused = true;
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       if (window.speechSynthesis.speaking) {
@@ -415,6 +446,10 @@ export class AudioGenerator {
    * Resume generation
    */
   resume(): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:456',message:'resume called',data:{wasPaused:typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.paused : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     this.isPaused = false;
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       if (window.speechSynthesis.paused) {
@@ -427,6 +462,10 @@ export class AudioGenerator {
    * Cancel generation
    */
   cancel(): void {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:430',message:'cancel called',data:{wasSpeaking:typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.speaking : false,wasPaused:this.isPaused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     this.isCancelled = true;
     this.isPaused = false;
     if (typeof window !== 'undefined' && window.speechSynthesis) {

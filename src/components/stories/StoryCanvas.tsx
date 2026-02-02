@@ -231,7 +231,13 @@ export default function StoryCanvas({
           {story.scenes.length > 0 && (
             <button
               onClick={() => {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StoryCanvas.tsx:233',message:'narrate story button clicked',data:{scenesCount:story.scenes.length,currentExpanded:expandedNarration},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
                 const allText = story.scenes.map(s => s.content).join('\n\n');
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StoryCanvas.tsx:236',message:'allText computed',data:{allTextLength:allText.length,allTextTrimmed:allText.trim().length,willExpand:allText.trim().length > 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
                 if (allText.trim()) {
                   setExpandedNarration('story');
                 }
@@ -254,6 +260,13 @@ export default function StoryCanvas({
           exit={{ opacity: 0, height: 0 }}
           className="mb-6"
         >
+          {/* #region agent log */}
+          {(() => {
+            const narrationText = story.scenes.map(s => s.content).join('\n\n');
+            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StoryCanvas.tsx:257',message:'rendering NarrationControls',data:{expandedNarration:expandedNarration,narrationTextLength:narrationText.length,narrationTextTrimmed:narrationText.trim().length,scenesCount:story.scenes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            return null;
+          })()}
+          {/* #endregion */}
           <NarrationControls
             text={story.scenes.map(s => s.content).join('\n\n')}
             onHighlightChange={(html) => {

@@ -103,6 +103,10 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
 
   // Preview voice
   const previewVoice = (text: string, voiceSettings: VoiceSettings) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:104',message:'previewVoice called',data:{textLength:text.length,voiceName:voiceSettings.voiceName},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+    
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       alert('Speech synthesis not available in this browser');
       return;
@@ -116,6 +120,12 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
     utterance.pitch = voiceSettings.pitch;
     utterance.rate = voiceSettings.rate;
     utterance.volume = voiceSettings.volume;
+    
+    utterance.onerror = (error) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:122',message:'previewVoice onerror',data:{errorType:error.error,errorName:error.name,errorCharIndex:error.charIndex,errorElapsedTime:error.elapsedTime},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+    };
 
     window.speechSynthesis.speak(utterance);
   };

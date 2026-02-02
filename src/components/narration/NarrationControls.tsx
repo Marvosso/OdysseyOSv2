@@ -86,7 +86,13 @@ export default function NarrationControls({
         }
       },
       onError: (error: Error) => {
-        console.error('Speech synthesis error:', error);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:88',message:'onError callback called',data:{errorMessage:error.message,errorName:error.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] onError callback:', error.message);});
+        // #endregion
+        // Only log non-interrupted errors
+        if (!error.message.includes('interrupted') && !error.message.includes('canceled')) {
+          console.error('Speech synthesis error:', error);
+        }
         setIsPlaying(false);
         setIsPaused(false);
         setCurrentWordIndex(-1);
@@ -115,11 +121,17 @@ export default function NarrationControls({
     speechControllerRef.current = new SpeechController(options, callbacks);
 
     return () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:123',message:'useEffect cleanup',data:{hasController:!!speechControllerRef.current,isPlaying:isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] useEffect cleanup');});
+      // #endregion
       if (speechControllerRef.current) {
-        speechControllerRef.current.stop();
+        // Only stop if actually playing to avoid interrupting speech
+        if (isPlaying) {
+          speechControllerRef.current.stop();
+        }
       }
     };
-  }, [isSupported, selectedVoice, rate, onHighlightChange]);
+  }, [isSupported, selectedVoice, rate, onHighlightChange, isPlaying]);
 
   // Update speech controller when options change
   useEffect(() => {
@@ -143,14 +155,29 @@ export default function NarrationControls({
   }, [currentWordIndex, onHighlightChange, isPlaying]);
 
   const handlePlay = useCallback(() => {
-    if (!speechControllerRef.current || !text.trim()) return;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:145',message:'handlePlay called',data:{hasController:!!speechControllerRef.current,textLength:text.length,textTrimmed:text.trim().length,isPaused:isPaused,isPlaying:isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    if (!speechControllerRef.current || !text.trim()) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:149',message:'handlePlay early return',data:{hasController:!!speechControllerRef.current,textTrimmed:text.trim().length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
 
     if (isPaused) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:153',message:'resuming speech',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       speechControllerRef.current.resume();
     } else {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:156',message:'calling speak',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       speechControllerRef.current.speak(text);
     }
-  }, [text, isPaused]);
+  }, [text, isPaused, isPlaying]);
 
   const handlePause = useCallback(() => {
     if (speechControllerRef.current) {
