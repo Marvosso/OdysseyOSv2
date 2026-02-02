@@ -118,18 +118,28 @@ export default function NarrationControls({
       },
     };
 
-    speechControllerRef.current = new SpeechController(options, callbacks);
+    // Create controller only once, or update if it doesn't exist
+    if (!speechControllerRef.current) {
+      speechControllerRef.current = new SpeechController(options, callbacks);
+    } else {
+      // Update existing controller instead of recreating
+      speechControllerRef.current.updateOptions(options);
+      speechControllerRef.current.updateCallbacks(callbacks);
+    }
 
     return () => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:123',message:'useEffect cleanup',data:{hasController:!!speechControllerRef.current,isPlaying:isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] useEffect cleanup, isPlaying:', isPlaying);});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:133',message:'useEffect cleanup - component unmounting',data:{hasController:!!speechControllerRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] useEffect cleanup - unmounting');});
       // #endregion
-      // Don't stop in cleanup - this causes interruptions when component re-renders
-      // The controller will be cleaned up when component unmounts
+      // Only stop when component is actually unmounting (not just re-rendering)
+      // This prevents interrupting speech when dependencies change
+      if (speechControllerRef.current) {
+        speechControllerRef.current.stop();
+      }
     };
-  }, [isSupported]); // Only recreate if support changes
+  }, [isSupported]); // Only recreate if support changes - this prevents unnecessary recreations
 
-  // Update controller when options change (without recreating)
+  // Update controller options when they change (without recreating the controller)
   useEffect(() => {
     if (speechControllerRef.current) {
       speechControllerRef.current.updateOptions({
