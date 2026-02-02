@@ -6,7 +6,15 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   runtimeCaching: [
     {
-      urlPattern: /^https?.*/,
+      // Exclude root page and redirects from caching
+      urlPattern: ({ url }) => {
+        // Don't cache the root page (it redirects)
+        if (url.pathname === '/' || url.pathname === '') {
+          return false;
+        }
+        // Don't cache redirect responses
+        return true;
+      },
       handler: 'NetworkFirst',
       options: {
         cacheName: 'offlineCache',
@@ -15,6 +23,10 @@ const withPWA = require('next-pwa')({
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
         },
         networkTimeoutSeconds: 10,
+        // Follow redirects
+        fetchOptions: {
+          redirect: 'follow',
+        },
       },
     },
     {
@@ -27,6 +39,9 @@ const withPWA = require('next-pwa')({
           maxAgeSeconds: 5 * 60, // 5 minutes
         },
         networkTimeoutSeconds: 5,
+        fetchOptions: {
+          redirect: 'follow',
+        },
       },
     },
     {
@@ -38,12 +53,17 @@ const withPWA = require('next-pwa')({
           maxEntries: 100,
           maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
         },
+        fetchOptions: {
+          redirect: 'follow',
+        },
       },
     },
   ],
   fallbacks: {
     document: '/offline',
   },
+  // Exclude root page from precaching
+  publicExcludes: ['/'],
 });
 
 const nextConfig = {

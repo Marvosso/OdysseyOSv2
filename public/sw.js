@@ -18,10 +18,9 @@ self.addEventListener('install', (event) => {
   
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
+      // Don't cache root page - it redirects
       return cache.addAll([
-        '/',
         '/offline',
-        '/dashboard',
         '/manifest.json',
       ]);
     })
@@ -59,6 +58,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip root page - it redirects and shouldn't be cached
+  const url = new URL(event.request.url);
+  if (url.pathname === '/' || url.pathname === '') {
+    // Let the browser handle the redirect naturally
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       // Return cached version if available
@@ -66,11 +72,13 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
 
-      // Try network, fallback to offline page for navigation
-      return fetch(event.request)
+      // Try network with redirect following
+      return fetch(event.request, {
+        redirect: 'follow',
+      })
         .then((response) => {
-          // Don't cache non-successful responses
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+          // Don't cache redirects or non-successful responses
+          if (!response || response.status !== 200 || response.type !== 'basic' || response.redirected) {
             return response;
           }
 
