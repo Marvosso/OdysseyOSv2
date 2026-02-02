@@ -208,9 +208,9 @@ export class SpeechController {
       this.callbacks.onBoundary?.(event);
     };
 
-    // Speak
+    // Speak immediately - don't use setTimeout as it can cause issues
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:175',message:'calling speechSynthesis.speak',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:201',message:'calling speechSynthesis.speak',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceText:this.utterance.text.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] calling speechSynthesis.speak:', {textLength: text.length, wasSpeaking: speechSynthesis.speaking});});
     // #endregion
     speechSynthesis.speak(this.utterance);
   }

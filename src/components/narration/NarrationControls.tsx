@@ -122,16 +122,22 @@ export default function NarrationControls({
 
     return () => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:123',message:'useEffect cleanup',data:{hasController:!!speechControllerRef.current,isPlaying:isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] useEffect cleanup');});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:123',message:'useEffect cleanup',data:{hasController:!!speechControllerRef.current,isPlaying:isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] useEffect cleanup, isPlaying:', isPlaying);});
       // #endregion
-      if (speechControllerRef.current) {
-        // Only stop if actually playing to avoid interrupting speech
-        if (isPlaying) {
-          speechControllerRef.current.stop();
-        }
-      }
+      // Don't stop in cleanup - this causes interruptions when component re-renders
+      // The controller will be cleaned up when component unmounts
     };
-  }, [isSupported, selectedVoice, rate, onHighlightChange, isPlaying]);
+  }, [isSupported]); // Only recreate if support changes
+
+  // Update controller when options change (without recreating)
+  useEffect(() => {
+    if (speechControllerRef.current) {
+      speechControllerRef.current.updateOptions({
+        voice: selectedVoice || undefined,
+        rate,
+      });
+    }
+  }, [selectedVoice, rate]);
 
   // Update speech controller when options change
   useEffect(() => {
