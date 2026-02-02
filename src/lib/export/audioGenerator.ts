@@ -300,15 +300,9 @@ export class AudioGenerator {
     fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:303',message:'speakTextAsync entry',data:{textLength:text.length,voiceName:voiceSettings.voiceName,isPaused:this.isPaused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
     
-    const speechService = SafeSpeechService.getInstance();
-    
-    try {
-      await speechService.speak(text, {
-        rate: voiceSettings.rate * (this.isPaused ? 0 : 1),
-        pitch: voiceSettings.pitch,
-        volume: voiceSettings.volume,
-        voice: voiceSettings.voiceName
-      });
+    // SafeSpeechService removed - this method is deprecated
+    console.warn('[AudioGenerator] speakTextAsync is deprecated. Use ResponsiveVoiceService instead.');
+    throw new Error('AudioGenerator is deprecated. Use ResponsiveVoiceService instead.');
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:315',message:'speakTextAsync completed',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
@@ -325,20 +319,9 @@ export class AudioGenerator {
    * Speak text (callback version) using SafeSpeechService
    */
   private speakText(text: string, voiceSettings: VoiceSettings, onComplete: () => void): void {
-    const speechService = SafeSpeechService.getInstance();
-    
-    speechService.speak(text, {
-      rate: voiceSettings.rate,
-      pitch: voiceSettings.pitch,
-      volume: voiceSettings.volume,
-      voice: voiceSettings.voiceName
-    }).then(() => {
-      onComplete();
-    }).catch((error) => {
-      // SafeSpeechService handles "interrupted" gracefully
-      console.warn('[AudioGenerator] Speech error:', error);
-      onComplete();
-    });
+    // SafeSpeechService removed - this method is deprecated
+    console.warn('[AudioGenerator] speakText is deprecated. Use ResponsiveVoiceService instead.');
+    onComplete(); // Complete immediately to not block
   }
 
   /**
