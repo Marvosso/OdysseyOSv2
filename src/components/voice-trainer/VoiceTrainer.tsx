@@ -150,10 +150,16 @@ export default function VoiceTrainer({
     }, 500);
   };
 
-  const speakText = (text: string) => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      window.speechSynthesis.speak(utterance);
+  const speakText = async (text: string) => {
+    try {
+      const { SpeechManager } = await import('@/lib/audio/speechManager');
+      const { VoiceLoader } = await import('@/lib/audio/voiceLoader');
+      
+      await VoiceLoader.waitForVoices();
+      const speechManager = SpeechManager.getInstance();
+      await speechManager.speak(text);
+    } catch (error) {
+      console.error('[VoiceTrainer] Speech error:', error);
     }
   };
 

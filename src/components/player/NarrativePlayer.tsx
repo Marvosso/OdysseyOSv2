@@ -13,6 +13,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import type { Scene } from '@/types/story';
+import { SpeechManager } from '@/lib/audio/speechManager';
+import { VoiceLoader } from '@/lib/audio/voiceLoader';
 
 interface NarrativePlayerProps {
   scenes: Scene[];
@@ -45,7 +47,7 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const speechManagerRef = useRef(SpeechManager.getInstance());
   const currentScene = scenes[currentSceneIndex];
 
   const handleNext = useCallback(() => {
@@ -63,51 +65,53 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
   useEffect(() => {
     if (!isPlaying || !currentScene) return;
     
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      
-      const utterance = new SpeechSynthesisUtterance(currentScene.content);
-      utteranceRef.current = utterance;
-      
-      utterance.rate = speed;
-      utterance.volume = isMuted ? 0 : volume;
-      
-      const voices = window.speechSynthesis.getVoices();
-      const selectedVoiceObj = voices.find(
-        (v) => v.lang.includes('en') && 
-        (selectedVoice === 'default' || 
-         (selectedVoice === 'en-US-female' && v.lang === 'en-US') ||
-         (selectedVoice === 'en-US-male' && v.lang === 'en-US') ||
-         (selectedVoice === 'en-GB-female' && v.lang === 'en-GB') ||
-         (selectedVoice === 'en-GB-male' && v.lang === 'en-GB'))
-      );
-      
-      if (selectedVoiceObj) {
-        utterance.voice = selectedVoiceObj;
-      }
-      
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrativePlayer.tsx:63',message:'Starting narration',data:{sceneIndex:currentSceneIndex,sceneTitle:currentScene.title,contentLength:currentScene.content.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
+    // #endregion
+    
+    const speakScene = async () => {
+      try {
+        await VoiceLoader.waitForVoices();
+        
+        // Find voice based on selection
+        const voices = await VoiceLoader.getVoices();
+        let voiceName: string | undefined;
+        
+        if (selectedVoice !== 'default') {
+          const selectedVoiceObj = voices.find(
+            (v) => v.lang.includes('en') && 
+            ((selectedVoice === 'en-US-female' && v.lang === 'en-US' && v.name.toLowerCase().includes('female')) ||
+             (selectedVoice === 'en-US-male' && v.lang === 'en-US' && v.name.toLowerCase().includes('male')) ||
+             (selectedVoice === 'en-GB-female' && v.lang === 'en-GB' && v.name.toLowerCase().includes('female')) ||
+             (selectedVoice === 'en-GB-male' && v.lang === 'en-GB' && v.name.toLowerCase().includes('male')))
+          );
+          voiceName = selectedVoiceObj?.name;
+        }
+        
+        // Adjust rate based on volume/mute (SpeechManager doesn't support volume, so we'll skip that)
+        const adjustedRate = isMuted ? 0 : speed;
+        
+        setIsSpeaking(true);
+        await speechManagerRef.current.speak(currentScene.content, voiceName, adjustedRate);
         setIsSpeaking(false);
+        
+        // Move to next scene if still playing
         if (isPlaying && currentSceneIndex < scenes.length - 1) {
           handleNext();
         } else {
           setIsPlaying(false);
         }
-      };
-      
-      utterance.onerror = () => {
+      } catch (error) {
+        console.error('[NarrativePlayer] Speech error:', error);
         setIsSpeaking(false);
         setIsPlaying(false);
-      };
-      
-      window.speechSynthesis.speak(utterance);
-    }
+      }
+    };
+    
+    speakScene();
 
     return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      speechManagerRef.current.stop();
     };
   }, [isPlaying, currentScene, speed, volume, isMuted, selectedVoice, currentSceneIndex, scenes.length, handleNext]);
 
@@ -115,7 +119,7 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
     if (!isPlaying && scenes.length === 0) return;
     
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      speechManagerRef.current.stop();
       setIsSpeaking(false);
     }
     setIsPlaying(!isPlaying);
