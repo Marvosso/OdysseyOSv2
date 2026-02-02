@@ -307,6 +307,11 @@ export class AudioGenerator {
         return;
       }
 
+      // Cancel any ongoing speech before starting new one
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+      }
+
       const utterance = new SpeechSynthesisUtterance(text);
       
       // Set voice
@@ -321,8 +326,23 @@ export class AudioGenerator {
       utterance.rate = voiceSettings.rate * (this.isPaused ? 0 : 1);
       utterance.volume = voiceSettings.volume;
 
-      utterance.onend = () => resolve();
-      utterance.onerror = (error) => reject(error);
+      utterance.onend = () => {
+        this.currentUtterance = null;
+        resolve();
+      };
+      
+      utterance.onerror = (error) => {
+        this.currentUtterance = null;
+        // Handle "interrupted" errors gracefully - they're not real errors
+        if (error.error === 'interrupted' || error.error === 'canceled') {
+          // Interruption is expected when canceling or pausing
+          resolve();
+        } else {
+          // Log other errors but don't fail the generation
+          console.warn('Speech synthesis error:', error);
+          resolve();
+        }
+      };
 
       this.currentUtterance = utterance;
       window.speechSynthesis.speak(utterance);
@@ -336,6 +356,11 @@ export class AudioGenerator {
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       onComplete();
       return;
+    }
+
+    // Cancel any ongoing speech before starting new one
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -352,8 +377,23 @@ export class AudioGenerator {
     utterance.rate = voiceSettings.rate;
     utterance.volume = voiceSettings.volume;
 
-    utterance.onend = onComplete;
-    utterance.onerror = () => onComplete();
+    utterance.onend = () => {
+      this.currentUtterance = null;
+      onComplete();
+    };
+    
+    utterance.onerror = (error) => {
+      this.currentUtterance = null;
+      // Handle interruptions gracefully
+      if (error.error === 'interrupted' || error.error === 'canceled') {
+        // Interruption is expected, just complete
+        onComplete();
+      } else {
+        // Log other errors but still complete
+        console.warn('Speech synthesis error:', error);
+        onComplete();
+      }
+    };
 
     this.currentUtterance = utterance;
     window.speechSynthesis.speak(utterance);
@@ -375,7 +415,9 @@ export class AudioGenerator {
   pause(): void {
     this.isPaused = true;
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.pause();
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+      }
     }
   }
 
@@ -385,7 +427,9 @@ export class AudioGenerator {
   resume(): void {
     this.isPaused = false;
     if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.resume();
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      }
     }
   }
 
@@ -396,7 +440,10 @@ export class AudioGenerator {
     this.isCancelled = true;
     this.isPaused = false;
     if (typeof window !== 'undefined' && window.speechSynthesis) {
+      // Cancel all speech synthesis
       window.speechSynthesis.cancel();
+      // Clear current utterance reference
+      this.currentUtterance = null;
     }
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
