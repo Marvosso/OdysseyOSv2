@@ -13,8 +13,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import type { Scene } from '@/types/story';
-import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
-import { VoiceLoader } from '@/lib/audio/voiceLoader';
+import { ResponsiveVoiceService } from '@/lib/audio/responsiveVoiceService';
 
 interface NarrativePlayerProps {
   scenes: Scene[];
@@ -22,11 +21,10 @@ interface NarrativePlayerProps {
 }
 
 const VOICE_OPTIONS = [
-  { label: 'Default', value: 'default' },
-  { label: 'US English (Female)', value: 'en-US-female' },
-  { label: 'US English (Male)', value: 'en-US-male' },
-  { label: 'UK English (Female)', value: 'en-GB-female' },
-  { label: 'UK English (Male)', value: 'en-GB-male' },
+  { label: 'UK English Female', value: 'UK English Female' },
+  { label: 'US English Female', value: 'US English Female' },
+  { label: 'UK English Male', value: 'UK English Male' },
+  { label: 'US English Male', value: 'US English Male' },
 ];
 
 const SPEED_OPTIONS = [
@@ -43,12 +41,22 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [speed, setSpeed] = useState(1);
-  const [selectedVoice, setSelectedVoice] = useState('default');
+  const [selectedVoice, setSelectedVoice] = useState('UK English Female');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   
-  const speechServiceRef = useRef(SafeSpeechService.getInstance());
+  const voiceServiceRef = useRef(ResponsiveVoiceService.getInstance());
   const currentScene = scenes[currentSceneIndex];
+
+  // Check if ResponsiveVoice is ready
+  useEffect(() => {
+    const checkReady = async () => {
+      await voiceServiceRef.current.waitForResponsiveVoice();
+      setIsReady(voiceServiceRef.current.isAvailable());
+    };
+    checkReady();
+  }, []);
 
   const handleNext = useCallback(() => {
     const newIndex = Math.min(scenes.length - 1, currentSceneIndex + 1);
@@ -63,47 +71,38 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
   }, [currentSceneIndex, scenes, onSceneSelect]);
 
   useEffect(() => {
-    if (!isPlaying || !currentScene) return;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrativePlayer.tsx:63',message:'Starting narration',data:{sceneIndex:currentSceneIndex,sceneTitle:currentScene.title,contentLength:currentScene.content.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'G'})}).catch(()=>{});
-    // #endregion
+    if (!isPlaying || !currentScene || !isReady) return;
     
     const speakScene = async () => {
       try {
-        await VoiceLoader.waitForVoices();
-        
-        // Find voice based on selection
-        const voices = await VoiceLoader.getVoices();
-        let voiceName: string | undefined;
-        
-        if (selectedVoice !== 'default') {
-          const selectedVoiceObj = voices.find(
-            (v) => v.lang.includes('en') && 
-            ((selectedVoice === 'en-US-female' && v.lang === 'en-US' && v.name.toLowerCase().includes('female')) ||
-             (selectedVoice === 'en-US-male' && v.lang === 'en-US' && v.name.toLowerCase().includes('male')) ||
-             (selectedVoice === 'en-GB-female' && v.lang === 'en-GB' && v.name.toLowerCase().includes('female')) ||
-             (selectedVoice === 'en-GB-male' && v.lang === 'en-GB' && v.name.toLowerCase().includes('male')))
-          );
-          voiceName = selectedVoiceObj?.name;
-        }
-        
-        // Adjust rate based on volume/mute (SpeechManager doesn't support volume, so we'll skip that)
-        const adjustedRate = isMuted ? 0 : speed;
+        // Map rate from 0.5-2.0 to 0.1-1.0 for ResponsiveVoice
+        const rvRate = Math.max(0.1, Math.min(1.0, speed / 2.0));
+        const rvVolume = isMuted ? 0 : volume;
         
         setIsSpeaking(true);
-        await speechServiceRef.current.speak(currentScene.content, { 
-          rate: adjustedRate,
-          voice: voiceName 
+        await voiceServiceRef.current.speak(currentScene.content, selectedVoice, {
+          rate: rvRate,
+          pitch: 1,
+          volume: rvVolume,
+          onstart: () => {
+            setIsSpeaking(true);
+          },
+          onend: () => {
+            setIsSpeaking(false);
+            
+            // Move to next scene if still playing
+            if (isPlaying && currentSceneIndex < scenes.length - 1) {
+              handleNext();
+            } else {
+              setIsPlaying(false);
+            }
+          },
+          onerror: (error) => {
+            console.error('[NarrativePlayer] Speech error:', error);
+            setIsSpeaking(false);
+            setIsPlaying(false);
+          },
         });
-        setIsSpeaking(false);
-        
-        // Move to next scene if still playing
-        if (isPlaying && currentSceneIndex < scenes.length - 1) {
-          handleNext();
-        } else {
-          setIsPlaying(false);
-        }
       } catch (error) {
         console.error('[NarrativePlayer] Speech error:', error);
         setIsSpeaking(false);
@@ -114,15 +113,15 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
     speakScene();
 
     return () => {
-      speechServiceRef.current.cancel();
+      voiceServiceRef.current.cancel();
     };
-  }, [isPlaying, currentScene, speed, volume, isMuted, selectedVoice, currentSceneIndex, scenes.length, handleNext]);
+  }, [isPlaying, currentScene, speed, volume, isMuted, selectedVoice, currentSceneIndex, scenes.length, handleNext, isReady]);
 
   const handleTogglePlay = () => {
     if (!isPlaying && scenes.length === 0) return;
     
     if (isSpeaking) {
-      speechServiceRef.current.cancel();
+      voiceServiceRef.current.cancel();
       setIsSpeaking(false);
     }
     setIsPlaying(!isPlaying);
@@ -131,6 +130,12 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
   const handleSceneClick = (index: number) => {
     setCurrentSceneIndex(index);
     onSceneSelect(scenes[index].id);
+    // If playing, restart speech for the new scene
+    if (isPlaying) {
+      voiceServiceRef.current.cancel();
+      setIsPlaying(false);
+      setTimeout(() => setIsPlaying(true), 50);
+    }
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,7 +215,7 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
           <button
             onClick={handleTogglePlay}
             className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={scenes.length === 0}
+            disabled={scenes.length === 0 || !isReady}
           >
             {isPlaying ? <Pause size={24} /> : <Play size={24} className="ml-0.5" />}
           </button>

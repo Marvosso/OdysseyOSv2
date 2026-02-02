@@ -3,7 +3,7 @@
 /**
  * Audio Export Panel
  * 
- * Interface for generating audiobook exports with voice assignment
+ * Interface for generating audiobook exports with voice assignment using ResponsiveVoice
  */
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -22,9 +22,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
-import { VoiceLoader } from '@/lib/audio/voiceLoader';
-import { TextChunker } from '@/lib/audio/textChunker';
+import { ResponsiveVoiceService } from '@/lib/audio/responsiveVoiceService';
 import type { Story, Character } from '@/types/story';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 
@@ -32,63 +30,48 @@ interface AudioExportPanelProps {
   story: Story;
 }
 
+const RESPONSIVE_VOICE_OPTIONS = [
+  { name: 'UK English Female', label: 'British Female' },
+  { name: 'US English Female', label: 'American Female' },
+  { name: 'UK English Male', label: 'British Male' },
+  { name: 'US English Male', label: 'American Male' },
+];
+
 export default function AudioExportPanel({ story }: AudioExportPanelProps) {
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>('');
+  const [selectedVoice, setSelectedVoice] = useState<string>('UK English Female');
   const [rate, setRate] = useState(1);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const currentChunkIndexRef = React.useRef(0);
   const chunksRef = React.useRef<string[]>([]);
   
-  const speechServiceRef = React.useRef(SafeSpeechService.getInstance());
+  const voiceServiceRef = React.useRef(ResponsiveVoiceService.getInstance());
 
-  // Load available voices
+  // Check if ResponsiveVoice is ready
   useEffect(() => {
-    const loadVoices = async () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:54',message:'Loading voices',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-      
-      const voices = await VoiceLoader.getVoices();
-      setAvailableVoices(voices);
-      
-      // Set default voice (prefer natural-sounding English voices)
-      const preferred = voices.find((v) => 
-        v.lang.includes('en') && 
-        !v.name.includes('Google') && 
-        !v.name.includes('Microsoft')
-      ) || voices.find((v) => v.lang.startsWith('en')) || voices[0];
-      
-      if (preferred) {
-        setSelectedVoice(preferred.name);
-      }
+    const checkReady = async () => {
+      await voiceServiceRef.current.waitForResponsiveVoice();
+      setIsReady(voiceServiceRef.current.isAvailable());
     };
-
-    loadVoices();
-    
-    // Cleanup on unmount
-    return () => {
-      speechServiceRef.current.cancel();
-    };
+    checkReady();
   }, []);
-
-
 
   // Preview voice
   const previewVoice = async (text: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:90',message:'previewVoice called',data:{textLength:text.length,voiceName:selectedVoice},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
+    if (!isReady || !text.trim()) return;
     
     try {
-      await VoiceLoader.waitForVoices();
-      await speechServiceRef.current.speak(text, { 
-        rate, 
-        voice: selectedVoice 
+      // Map rate from 0.5-2.0 to 0.1-1.0 for ResponsiveVoice
+      const rvRate = Math.max(0.1, Math.min(1.0, rate / 2.0));
+      
+      await voiceServiceRef.current.speak(text, selectedVoice, {
+        rate: rvRate,
+        pitch: 1,
+        volume: 1,
       });
     } catch (err) {
       console.error('[AudioExportPanel] Preview error:', err);
@@ -98,12 +81,13 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
 
   // Generate audiobook
   const handleGenerate = async () => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:126',message:'handleGenerate called',data:{storyId:story.id,scenesCount:story.scenes.length,selectedVoice:selectedVoice,rate:rate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
-    
     if (!story || story.scenes.length === 0) {
       setError('No scenes to generate audio from');
+      return;
+    }
+
+    if (!isReady) {
+      setError('ResponsiveVoice is not ready. Please wait a moment and try again.');
       return;
     }
 
@@ -113,8 +97,6 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
     setProgress(0);
 
     try {
-      await VoiceLoader.waitForVoices();
-      
       // Combine all scene content
       const storyText = story.scenes.map((scene, index) => {
         let text = '';
@@ -125,24 +107,38 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
         return text;
       }).join('\n\n');
 
-      // Chunk the text
-      const chunks = TextChunker.chunkText(storyText, 200);
+      // Chunk the text (ResponsiveVoice can handle longer text, but chunking helps with progress tracking)
+      const chunkSize = 500;
+      const chunks: string[] = [];
+      const sentences = storyText.split(/(?<=[.!?])\s+/);
+      let currentChunk = '';
+
+      for (const sentence of sentences) {
+        if ((currentChunk + sentence).length <= chunkSize) {
+          currentChunk += (currentChunk ? ' ' : '') + sentence;
+        } else {
+          if (currentChunk) chunks.push(currentChunk);
+          currentChunk = sentence;
+        }
+      }
+      if (currentChunk) chunks.push(currentChunk);
+
       const totalChunks = chunks.length;
       chunksRef.current = chunks;
       currentChunkIndexRef.current = 0;
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:150',message:'Starting to speak chunks',data:{totalChunks:totalChunks,storyTextLength:storyText.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
+      // Map rate from 0.5-2.0 to 0.1-1.0 for ResponsiveVoice
+      const rvRate = Math.max(0.1, Math.min(1.0, rate / 2.0));
 
-      // Speak each chunk starting from current index
-      for (let i = currentChunkIndexRef.current; i < chunks.length; i++) {
-        if (!isSpeaking && !isPaused) break; // Check if stopped
+      // Speak each chunk
+      for (let i = 0; i < chunks.length; i++) {
+        if (!isSpeaking && !isPaused) break;
         
         currentChunkIndexRef.current = i;
-        await speechServiceRef.current.speak(chunks[i], { 
-          rate, 
-          voice: selectedVoice 
+        await voiceServiceRef.current.speak(chunks[i], selectedVoice, {
+          rate: rvRate,
+          pitch: 1,
+          volume: 1,
         });
         setProgress(((i + 1) / totalChunks) * 100);
       }
@@ -162,10 +158,6 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:170',message:'Audio generation failed',data:{error:err instanceof Error ? err.message : 'Unknown error'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-      
       setError(err instanceof Error ? err.message : 'Failed to generate audio');
       setIsSpeaking(false);
       setIsPaused(false);
@@ -176,8 +168,7 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
   // Pause generation
   const handlePause = () => {
     if (isSpeaking && !isPaused) {
-      // SafeSpeechService doesn't have pause/resume, so we cancel and will resume by re-speaking
-      speechServiceRef.current.cancel();
+      voiceServiceRef.current.cancel();
       setIsPaused(true);
     }
   };
@@ -188,15 +179,18 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
       setIsPaused(false);
       setIsSpeaking(true);
       
-      // Continue from current chunk index
       const totalChunks = chunksRef.current.length;
+      const rvRate = Math.max(0.1, Math.min(1.0, rate / 2.0));
+
+      // Continue from current chunk index
       for (let i = currentChunkIndexRef.current; i < chunksRef.current.length; i++) {
         if (!isSpeaking && !isPaused) break;
         
         currentChunkIndexRef.current = i;
-        await speechServiceRef.current.speak(chunksRef.current[i], { 
-          rate, 
-          voice: selectedVoice 
+        await voiceServiceRef.current.speak(chunksRef.current[i], selectedVoice, {
+          rate: rvRate,
+          pitch: 1,
+          volume: 1,
         });
         setProgress(((i + 1) / totalChunks) * 100);
       }
@@ -211,10 +205,12 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
 
   // Stop generation
   const handleStop = () => {
-    speechServiceRef.current.cancel();
+    voiceServiceRef.current.cancel();
     setIsSpeaking(false);
     setIsPaused(false);
     setProgress(0);
+    currentChunkIndexRef.current = 0;
+    chunksRef.current = [];
   };
 
   return (
@@ -261,9 +257,9 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
               className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               disabled={isSpeaking}
             >
-              {availableVoices.map((voice) => (
+              {RESPONSIVE_VOICE_OPTIONS.map((voice) => (
                 <option key={voice.name} value={voice.name}>
-                  {voice.name} ({voice.lang})
+                  {voice.label}
                 </option>
               ))}
             </select>
@@ -271,7 +267,7 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={() => previewVoice('This is a preview of the selected voice.')}
-              disabled={isSpeaking}
+              disabled={isSpeaking || !isReady}
               className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
             >
               <Play className="w-4 h-4" />
@@ -299,6 +295,11 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
             <span>Faster</span>
           </div>
         </div>
+        {!isReady && (
+          <div className="text-xs text-yellow-400">
+            Loading ResponsiveVoice...
+          </div>
+        )}
       </div>
 
       {/* Progress */}
@@ -324,7 +325,7 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
         {!isSpeaking ? (
           <button
             onClick={handleGenerate}
-            disabled={story.scenes.length === 0}
+            disabled={story.scenes.length === 0 || !isReady}
             className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-400 text-white rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
           >
             <Volume2 className="w-5 h-5" />

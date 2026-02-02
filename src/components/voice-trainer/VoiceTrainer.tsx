@@ -152,12 +152,20 @@ export default function VoiceTrainer({
 
   const speakText = async (text: string) => {
     try {
-      const { SafeSpeechService } = await import('@/lib/audio/safeSpeechService');
-      const { VoiceLoader } = await import('@/lib/audio/voiceLoader');
+      const { ResponsiveVoiceService } = await import('@/lib/audio/responsiveVoiceService');
+      const voiceService = ResponsiveVoiceService.getInstance();
+      await voiceService.waitForResponsiveVoice();
       
-      await VoiceLoader.waitForVoices();
-      const speechService = SafeSpeechService.getInstance();
-      await speechService.speak(text);
+      if (!voiceService.isAvailable()) {
+        console.error('[VoiceTrainer] ResponsiveVoice is not available');
+        return;
+      }
+      
+      await voiceService.speak(text, 'UK English Female', {
+        rate: 0.9,
+        pitch: 1,
+        volume: 1,
+      });
     } catch (error) {
       console.error('[VoiceTrainer] Speech error:', error);
     }
