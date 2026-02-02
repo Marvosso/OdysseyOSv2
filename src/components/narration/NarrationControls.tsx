@@ -3,12 +3,12 @@
 /**
  * Narration Controls Component
  * 
- * Provides UI for controlling text-to-speech narration
+ * Provides UI for controlling text-to-speech narration using ResponsiveVoice
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, Square, Volume2, Gauge } from 'lucide-react';
-import { SpeechController, type SpeechControllerOptions } from '@/lib/narration/speechController';
+import { ResponsiveVoiceService, ResponsiveVoiceOptions } from '@/lib/audio/responsiveVoiceService';
 import { findWordIndexFromCharPosition, createHighlightedHTML } from '@/lib/narration/textHighlighter';
 
 export interface NarrationControlsProps {
@@ -17,147 +17,186 @@ export interface NarrationControlsProps {
   className?: string;
 }
 
+// ResponsiveVoice voice names (common ones)
+const RESPONSIVE_VOICE_OPTIONS = [
+  { name: 'UK English Female', value: 'UK English Female' },
+  { name: 'US English Female', value: 'US English Female' },
+  { name: 'UK English Male', value: 'UK English Male' },
+  { name: 'US English Male', value: 'US English Male' },
+  { name: 'Australian Female', value: 'Australian Female' },
+  { name: 'Australian Male', value: 'Australian Male' },
+];
+
 export default function NarrationControls({
   text,
   onHighlightChange,
   className = '',
 }: NarrationControlsProps) {
   const [isSupported, setIsSupported] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [selectedVoice, setSelectedVoice] = useState('UK English Female');
   const [rate, setRate] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   
-  const speechControllerRef = useRef<SpeechController | null>(null);
+  const voiceServiceRef = useRef(ResponsiveVoiceService.getInstance());
   const textRef = useRef(text);
+  const wordHighlightIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update text ref when text changes
   useEffect(() => {
     textRef.current = text;
   }, [text]);
 
-  // Check support and load voices
+  // Check if ResponsiveVoice is available
   useEffect(() => {
     const checkSupport = async () => {
-      const supported = SpeechController.isSupported();
-      setIsSupported(supported);
-
-      if (supported) {
-        const loadedVoices = await SpeechController.loadVoices();
-        setVoices(loadedVoices);
-        
-        // Set default voice
-        const defaultVoice = SpeechController.getDefaultVoice();
-        if (defaultVoice) {
-          setSelectedVoice(defaultVoice);
-        }
-      }
+      await voiceServiceRef.current.waitForResponsiveVoice();
+      const available = voiceServiceRef.current.isAvailable();
+      setIsSupported(available);
     };
 
     checkSupport();
   }, []);
 
-  // Initialize speech controller
-  useEffect(() => {
-    if (!isSupported) return;
-
-    const options: SpeechControllerOptions = {
-      voice: selectedVoice || undefined,
-      rate,
-      pitch: 1,
-      volume: 1,
-    };
-
-    const callbacks = {
-      onStart: () => {
-        setIsPlaying(true);
-        setIsPaused(false);
-        setCurrentWordIndex(0);
-      },
-      onEnd: () => {
-        setIsPlaying(false);
-        setIsPaused(false);
-        setCurrentWordIndex(-1);
-        // Clear highlight when narration ends
-        if (onHighlightChange) {
-          onHighlightChange(textRef.current);
-        }
-      },
-      onError: (error: Error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:88',message:'onError callback called',data:{errorMessage:error.message,errorName:error.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] onError callback:', error.message);});
-        // #endregion
-        // Only log non-interrupted errors
-        if (!error.message.includes('interrupted') && !error.message.includes('canceled')) {
-          console.error('Speech synthesis error:', error);
-        }
-        setIsPlaying(false);
-        setIsPaused(false);
-        setCurrentWordIndex(-1);
-      },
-      onPause: () => {
-        setIsPaused(true);
-      },
-      onResume: () => {
-        setIsPaused(false);
-      },
-      onBoundary: (event: SpeechSynthesisEvent) => {
-        if (event.type === 'boundary' && event.charIndex !== undefined && event.charLength !== undefined) {
-          // Find the word that contains this character position
-          const wordIndex = findWordIndexFromCharPosition(textRef.current, event.charIndex);
-          setCurrentWordIndex(wordIndex);
-          
-          // Update highlighted HTML
-          if (onHighlightChange) {
-            const highlighted = createHighlightedHTML(textRef.current, wordIndex);
-            onHighlightChange(highlighted);
-          }
-        }
-      },
-    };
-
-    // Create controller only once, or update if it doesn't exist
-    if (!speechControllerRef.current) {
-      speechControllerRef.current = new SpeechController(options, callbacks);
-    } else {
-      // Update existing controller instead of recreating
-      speechControllerRef.current.updateOptions(options);
-      speechControllerRef.current.updateCallbacks(callbacks);
+  // Simulate word-by-word highlighting (ResponsiveVoice doesn't provide boundary events)
+  const startWordHighlighting = useCallback(() => {
+    if (wordHighlightIntervalRef.current) {
+      clearInterval(wordHighlightIntervalRef.current);
     }
 
+    const words = textRef.current.split(/\s+/);
+    let currentIndex = 0;
+    
+    // Estimate time per word (rough calculation: ~150 words per minute at 1x speed)
+    const wordsPerMinute = 150 * rate;
+    const msPerWord = (60 / wordsPerMinute) * 1000;
+
+    wordHighlightIntervalRef.current = setInterval(() => {
+      if (currentIndex < words.length && isPlaying && !isPaused) {
+        setCurrentWordIndex(currentIndex);
+        
+        if (onHighlightChange) {
+          const highlighted = createHighlightedHTML(textRef.current, currentIndex);
+          onHighlightChange(highlighted);
+        }
+        
+        currentIndex++;
+      } else {
+        if (wordHighlightIntervalRef.current) {
+          clearInterval(wordHighlightIntervalRef.current);
+          wordHighlightIntervalRef.current = null;
+        }
+      }
+    }, msPerWord);
+  }, [rate, isPlaying, isPaused, onHighlightChange]);
+
+  // Cleanup interval on unmount or when stopping
+  useEffect(() => {
     return () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:133',message:'useEffect cleanup - component unmounting',data:{hasController:!!speechControllerRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] useEffect cleanup - unmounting');});
-      // #endregion
-      // Only stop when component is actually unmounting (not just re-rendering)
-      // This prevents interrupting speech when dependencies change
-      if (speechControllerRef.current) {
-        speechControllerRef.current.stop();
+      if (wordHighlightIntervalRef.current) {
+        clearInterval(wordHighlightIntervalRef.current);
       }
     };
-  }, [isSupported]); // Only recreate if support changes - this prevents unnecessary recreations
+  }, []);
 
-  // Update controller options when they change (without recreating the controller)
-  useEffect(() => {
-    if (speechControllerRef.current) {
-      speechControllerRef.current.updateOptions({
-        voice: selectedVoice || undefined,
-        rate,
-      });
-    }
-  }, [selectedVoice, rate]);
+  const handlePlay = useCallback(async () => {
+    if (!text.trim() || !isSupported) return;
 
-  // Update speech controller when options change
-  useEffect(() => {
-    if (speechControllerRef.current) {
-      speechControllerRef.current.updateOptions({
-        voice: selectedVoice || undefined,
-        rate,
-      });
+    try {
+      setIsPlaying(true);
+      setIsPaused(false);
+      setCurrentWordIndex(0);
+
+      // Start word highlighting
+      startWordHighlighting();
+
+      const options: ResponsiveVoiceOptions = {
+        rate: rate, // ResponsiveVoice rate is 0.1 to 1.0, so we map 0.5-2.0 to 0.1-1.0
+        pitch: 1,
+        volume: 1,
+        onstart: () => {
+          setIsPlaying(true);
+          setIsPaused(false);
+          setCurrentWordIndex(0);
+        },
+        onend: () => {
+          setIsPlaying(false);
+          setIsPaused(false);
+          setCurrentWordIndex(-1);
+          
+          if (wordHighlightIntervalRef.current) {
+            clearInterval(wordHighlightIntervalRef.current);
+            wordHighlightIntervalRef.current = null;
+          }
+          
+          // Clear highlight when narration ends
+          if (onHighlightChange) {
+            onHighlightChange(textRef.current);
+          }
+        },
+        onerror: (error) => {
+          console.error('[NarrationControls] ResponsiveVoice error:', error);
+          setIsPlaying(false);
+          setIsPaused(false);
+          setCurrentWordIndex(-1);
+          
+          if (wordHighlightIntervalRef.current) {
+            clearInterval(wordHighlightIntervalRef.current);
+            wordHighlightIntervalRef.current = null;
+          }
+        },
+      };
+
+      // Map rate from 0.5-2.0 to 0.1-1.0 for ResponsiveVoice
+      const rvRate = Math.max(0.1, Math.min(1.0, rate / 2.0));
+      options.rate = rvRate;
+
+      await voiceServiceRef.current.speak(text, selectedVoice, options);
+    } catch (error) {
+      console.error('[NarrationControls] Error speaking:', error);
+      setIsPlaying(false);
+      setIsPaused(false);
+      setCurrentWordIndex(-1);
     }
-  }, [selectedVoice, rate]);
+  }, [text, selectedVoice, rate, isSupported, onHighlightChange, startWordHighlighting]);
+
+  const handlePause = useCallback(() => {
+    // ResponsiveVoice doesn't have pause, so we cancel
+    voiceServiceRef.current.cancel();
+    setIsPlaying(false);
+    setIsPaused(true);
+    
+    if (wordHighlightIntervalRef.current) {
+      clearInterval(wordHighlightIntervalRef.current);
+      wordHighlightIntervalRef.current = null;
+    }
+  }, []);
+
+  const handleStop = useCallback(() => {
+    voiceServiceRef.current.cancel();
+    setIsPlaying(false);
+    setIsPaused(false);
+    setCurrentWordIndex(-1);
+    
+    if (wordHighlightIntervalRef.current) {
+      clearInterval(wordHighlightIntervalRef.current);
+      wordHighlightIntervalRef.current = null;
+    }
+    
+    if (onHighlightChange) {
+      onHighlightChange(textRef.current);
+    }
+  }, [onHighlightChange]);
+
+  const handleVoiceChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedVoice(e.target.value);
+  }, []);
+
+  const handleRateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newRate = parseFloat(e.target.value);
+    setRate(newRate);
+  }, []);
 
   // Update highlight when word index changes
   useEffect(() => {
@@ -170,75 +209,11 @@ export default function NarrationControls({
     }
   }, [currentWordIndex, onHighlightChange, isPlaying]);
 
-  const handlePlay = useCallback(() => {
-    console.log('[NARRATION] handlePlay called', {
-      hasController: !!speechControllerRef.current,
-      textLength: text.length,
-      textTrimmed: text.trim().length,
-      isPaused,
-      isPlaying,
-      globalSpeaking: typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.speaking : false
-    });
-    // #region agent log
-    const stackTrace = new Error().stack;
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:173',message:'handlePlay called',data:{hasController:!!speechControllerRef.current,textLength:text.length,textTrimmed:text.trim().length,isPaused:isPaused,isPlaying:isPlaying,globalSpeaking:typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.speaking : false,stackTrace:stackTrace?.split('\n').slice(0,5).join(' | ')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
-    if (!speechControllerRef.current || !text.trim()) {
-      console.log('[NARRATION] handlePlay early return', { hasController: !!speechControllerRef.current, textTrimmed: text.trim().length });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:186',message:'handlePlay early return',data:{hasController:!!speechControllerRef.current,textTrimmed:text.trim().length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
-      return;
-    }
-
-    if (isPaused) {
-      console.log('[NARRATION] resuming speech');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:193',message:'resuming speech',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      speechControllerRef.current.resume();
-    } else {
-      console.log('[NARRATION] calling speak', { textLength: text.length, globalSpeaking: typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.speaking : false });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:197',message:'calling speak',data:{textLength:text.length,globalSpeaking:typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.speaking : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      speechControllerRef.current.speak(text);
-    }
-  }, [text, isPaused, isPlaying]);
-
-  const handlePause = useCallback(() => {
-    if (speechControllerRef.current) {
-      speechControllerRef.current.pause();
-    }
-  }, []);
-
-  const handleStop = useCallback(() => {
-    if (speechControllerRef.current) {
-      speechControllerRef.current.stop();
-      setCurrentWordIndex(-1);
-      if (onHighlightChange) {
-        onHighlightChange(textRef.current);
-      }
-    }
-  }, [onHighlightChange]);
-
-  const handleVoiceChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const voiceName = e.target.value;
-    const voice = voices.find(v => v.name === voiceName);
-    setSelectedVoice(voice || null);
-  }, [voices]);
-
-  const handleRateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newRate = parseFloat(e.target.value);
-    setRate(newRate);
-  }, []);
-
   if (!isSupported) {
     return (
       <div className={`p-4 bg-yellow-900/20 border border-yellow-500/30 rounded-lg ${className}`}>
         <p className="text-yellow-200 text-sm">
-          Text-to-speech is not supported in this browser.
+          Text-to-speech is not available. Please ensure ResponsiveVoice is loaded.
         </p>
       </div>
     );
@@ -257,12 +232,7 @@ export default function NarrationControls({
       {/* Playback Controls */}
       <div className="flex items-center gap-2">
         <button
-          onClick={(e) => {
-            console.log('[NARRATION] Play button clicked directly');
-            e.preventDefault();
-            e.stopPropagation();
-            handlePlay();
-          }}
+          onClick={handlePlay}
           disabled={!text.trim() || (isPlaying && !isPaused)}
           className="p-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg transition-colors"
           title={isPaused ? 'Resume' : 'Play'}
@@ -294,14 +264,14 @@ export default function NarrationControls({
       <div className="space-y-2">
         <label className="text-gray-300 text-sm font-medium">Voice</label>
         <select
-          value={selectedVoice?.name || ''}
+          value={selectedVoice}
           onChange={handleVoiceChange}
           disabled={isPlaying}
           className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {voices.map((voice) => (
-            <option key={voice.name} value={voice.name}>
-              {voice.name} {voice.lang} {voice.localService ? '(Local)' : '(Remote)'}
+          {RESPONSIVE_VOICE_OPTIONS.map((voice) => (
+            <option key={voice.value} value={voice.value}>
+              {voice.name}
             </option>
           ))}
         </select>
