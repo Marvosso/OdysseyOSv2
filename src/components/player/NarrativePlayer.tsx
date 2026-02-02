@@ -13,7 +13,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import type { Scene } from '@/types/story';
-import { SpeechManager } from '@/lib/audio/speechManager';
+import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
 import { VoiceLoader } from '@/lib/audio/voiceLoader';
 
 interface NarrativePlayerProps {
@@ -47,7 +47,7 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   
-  const speechManagerRef = useRef(SpeechManager.getInstance());
+  const speechServiceRef = useRef(SafeSpeechService.getInstance());
   const currentScene = scenes[currentSceneIndex];
 
   const handleNext = useCallback(() => {
@@ -92,7 +92,10 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
         const adjustedRate = isMuted ? 0 : speed;
         
         setIsSpeaking(true);
-        await speechManagerRef.current.speak(currentScene.content, voiceName, adjustedRate);
+        await speechServiceRef.current.speak(currentScene.content, { 
+          rate: adjustedRate,
+          voice: voiceName 
+        });
         setIsSpeaking(false);
         
         // Move to next scene if still playing
@@ -111,7 +114,7 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
     speakScene();
 
     return () => {
-      speechManagerRef.current.stop();
+      speechServiceRef.current.cancel();
     };
   }, [isPlaying, currentScene, speed, volume, isMuted, selectedVoice, currentSceneIndex, scenes.length, handleNext]);
 
@@ -119,7 +122,7 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
     if (!isPlaying && scenes.length === 0) return;
     
     if (isSpeaking) {
-      speechManagerRef.current.stop();
+      speechServiceRef.current.cancel();
       setIsSpeaking(false);
     }
     setIsPlaying(!isPlaying);

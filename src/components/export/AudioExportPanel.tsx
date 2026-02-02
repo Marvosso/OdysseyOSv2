@@ -22,7 +22,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import { SpeechManager } from '@/lib/audio/speechManager';
+import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
 import { VoiceLoader } from '@/lib/audio/voiceLoader';
 import { TextChunker } from '@/lib/audio/textChunker';
 import type { Story, Character } from '@/types/story';
@@ -41,8 +41,10 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
+  const [chunksRef, setChunksRef] = useState<string[]>([]);
   
-  const speechManagerRef = React.useRef(SpeechManager.getInstance());
+  const speechServiceRef = React.useRef(SafeSpeechService.getInstance());
 
   // Load available voices
   useEffect(() => {
@@ -70,7 +72,7 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
     
     // Cleanup on unmount
     return () => {
-      speechManagerRef.current.stop();
+      speechServiceRef.current.cancel();
     };
   }, []);
 
@@ -84,7 +86,10 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
     
     try {
       await VoiceLoader.waitForVoices();
-      await speechManagerRef.current.speak(text, selectedVoice, rate);
+      await speechServiceRef.current.speak(text, { 
+        rate, 
+        voice: selectedVoice 
+      });
     } catch (err) {
       console.error('[AudioExportPanel] Preview error:', err);
       setError(err instanceof Error ? err.message : 'Failed to preview voice');
@@ -123,19 +128,23 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
       // Chunk the text
       const chunks = TextChunker.chunkText(storyText, 200);
       const totalChunks = chunks.length;
-      let completed = 0;
+      setChunksRef(chunks);
+      setCurrentChunkIndex(0);
 
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AudioExportPanel.tsx:150',message:'Starting to speak chunks',data:{totalChunks:totalChunks,storyTextLength:storyText.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
 
-      // Speak each chunk
-      for (const chunk of chunks) {
+      // Speak each chunk starting from current index
+      for (let i = currentChunkIndex; i < chunks.length; i++) {
         if (!isSpeaking && !isPaused) break; // Check if stopped
         
-        await speechManagerRef.current.speak(chunk, selectedVoice, rate);
-        completed++;
-        setProgress((completed / totalChunks) * 100);
+        setCurrentChunkIndex(i);
+        await speechServiceRef.current.speak(chunks[i], { 
+          rate, 
+          voice: selectedVoice 
+        });
+        setProgress(((i + 1) / totalChunks) * 100);
       }
 
       setIsSpeaking(false);
@@ -167,22 +176,41 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
   // Pause generation
   const handlePause = () => {
     if (isSpeaking && !isPaused) {
-      speechManagerRef.current.pause();
+      // SafeSpeechService doesn't have pause/resume, so we cancel and will resume by re-speaking
+      speechServiceRef.current.cancel();
       setIsPaused(true);
     }
   };
 
   // Resume generation
-  const handleResume = () => {
-    if (isPaused) {
-      speechManagerRef.current.resume();
+  const handleResume = async () => {
+    if (isPaused && chunksRef.length > 0) {
       setIsPaused(false);
+      
+      // Continue from current chunk index
+      const totalChunks = chunksRef.length;
+      for (let i = currentChunkIndex; i < chunksRef.length; i++) {
+        if (!isSpeaking && !isPaused) break;
+        
+        setCurrentChunkIndex(i);
+        await speechServiceRef.current.speak(chunksRef[i], { 
+          rate, 
+          voice: selectedVoice 
+        });
+        setProgress(((i + 1) / totalChunks) * 100);
+      }
+      
+      if (currentChunkIndex >= chunksRef.length) {
+        setIsSpeaking(false);
+        setProgress(100);
+        setSuccess('Audio playback completed!');
+      }
     }
   };
 
   // Stop generation
   const handleStop = () => {
-    speechManagerRef.current.stop();
+    speechServiceRef.current.cancel();
     setIsSpeaking(false);
     setIsPaused(false);
     setProgress(0);

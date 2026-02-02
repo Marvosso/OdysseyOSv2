@@ -152,12 +152,12 @@ export default function VoiceTrainer({
 
   const speakText = async (text: string) => {
     try {
-      const { SpeechManager } = await import('@/lib/audio/speechManager');
+      const { SafeSpeechService } = await import('@/lib/audio/safeSpeechService');
       const { VoiceLoader } = await import('@/lib/audio/voiceLoader');
       
       await VoiceLoader.waitForVoices();
-      const speechManager = SpeechManager.getInstance();
-      await speechManager.speak(text);
+      const speechService = SafeSpeechService.getInstance();
+      await speechService.speak(text);
     } catch (error) {
       console.error('[VoiceTrainer] Speech error:', error);
     }

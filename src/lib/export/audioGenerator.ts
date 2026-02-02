@@ -7,6 +7,7 @@
 
 import type { Scene, Character } from '@/types/story';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
 
 export interface VoiceSettings {
   voiceName: string;
@@ -288,132 +289,52 @@ export class AudioGenerator {
   }
 
   /**
-   * Speak text synchronously
+   * Speak text synchronously using SafeSpeechService
    */
-  private speakTextAsync(text: string, voiceSettings: VoiceSettings): Promise<void> {
-    return new Promise((resolve, reject) => {
+  private async speakTextAsync(text: string, voiceSettings: VoiceSettings): Promise<void> {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:303',message:'speakTextAsync entry',data:{textLength:text.length,voiceName:voiceSettings.voiceName,isPaused:this.isPaused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    const speechService = SafeSpeechService.getInstance();
+    
+    try {
+      await speechService.speak(text, {
+        rate: voiceSettings.rate * (this.isPaused ? 0 : 1),
+        pitch: voiceSettings.pitch,
+        volume: voiceSettings.volume,
+        voice: voiceSettings.voiceName
+      });
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:303',message:'speakTextAsync entry',data:{textLength:text.length,voiceName:voiceSettings.voiceName,isPaused:this.isPaused,wasSpeaking:typeof window !== 'undefined' && window.speechSynthesis ? window.speechSynthesis.speaking : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:315',message:'speakTextAsync completed',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
-      
-      if (typeof window === 'undefined' || !window.speechSynthesis) {
-        reject(new Error('SpeechSynthesis not available'));
-        return;
-      }
-
-      // Cancel any ongoing speech before starting new one
-      const wasSpeaking = window.speechSynthesis.speaking;
-      if (wasSpeaking) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:312',message:'canceling previous speech',data:{wasSpeaking:true},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        window.speechSynthesis.cancel();
-      }
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      
+    } catch (error) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:318',message:'utterance created',data:{textLength:text.length,currentUtterance:this.currentUtterance !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:319',message:'speakTextAsync error',data:{error:error instanceof Error ? error.message : 'Unknown error'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
-      
-      // Set voice
-      const voices = window.speechSynthesis.getVoices();
-      const selectedVoice = voices.find((v) => v.name === voiceSettings.voiceName);
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
-
-      // Set properties
-      utterance.pitch = voiceSettings.pitch;
-      utterance.rate = voiceSettings.rate * (this.isPaused ? 0 : 1);
-      utterance.volume = voiceSettings.volume;
-
-      utterance.onend = () => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:332',message:'utterance onend',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        this.currentUtterance = null;
-        resolve();
-      };
-      
-      utterance.onerror = (error) => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:339',message:'utterance onerror',data:{errorType:error.error,errorName:error.name,errorCharIndex:error.charIndex,errorElapsedTime:error.elapsedTime,hasErrorProperty:'error' in error,errorKeys:Object.keys(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        
-        this.currentUtterance = null;
-        // Handle "interrupted" errors gracefully - they're not real errors
-        const errorType = error.error || error.type || (error as any).code;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:345',message:'error type check',data:{errorType:errorType,isInterrupted:errorType === 'interrupted',isCanceled:errorType === 'canceled',willResolve:errorType === 'interrupted' || errorType === 'canceled'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        
-        if (errorType === 'interrupted' || errorType === 'canceled') {
-          // Interruption is expected when canceling or pausing
-          resolve();
-        } else {
-          // Log other errors but don't fail the generation
-          console.warn('Speech synthesis error:', error);
-          resolve();
-        }
-      };
-
-      this.currentUtterance = utterance;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:358',message:'calling speechSynthesis.speak',data:{textLength:text.length,queueLength:window.speechSynthesis.speaking ? 1 : 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      window.speechSynthesis.speak(utterance);
-    });
+      // SafeSpeechService handles "interrupted" gracefully, so we can just log
+      console.warn('[AudioGenerator] Speech error:', error);
+    }
   }
 
   /**
-   * Speak text (callback version)
+   * Speak text (callback version) using SafeSpeechService
    */
   private speakText(text: string, voiceSettings: VoiceSettings, onComplete: () => void): void {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      onComplete();
-      return;
-    }
-
-    // Cancel any ongoing speech before starting new one
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-    }
-
-    const utterance = new SpeechSynthesisUtterance(text);
+    const speechService = SafeSpeechService.getInstance();
     
-    // Set voice
-    const voices = window.speechSynthesis.getVoices();
-    const selectedVoice = voices.find((v) => v.name === voiceSettings.voiceName);
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-
-    // Set properties
-    utterance.pitch = voiceSettings.pitch;
-    utterance.rate = voiceSettings.rate;
-    utterance.volume = voiceSettings.volume;
-
-    utterance.onend = () => {
-      this.currentUtterance = null;
+    speechService.speak(text, {
+      rate: voiceSettings.rate,
+      pitch: voiceSettings.pitch,
+      volume: voiceSettings.volume,
+      voice: voiceSettings.voiceName
+    }).then(() => {
       onComplete();
-    };
-    
-    utterance.onerror = (error) => {
-      this.currentUtterance = null;
-      // Handle interruptions gracefully
-      if (error.error === 'interrupted' || error.error === 'canceled') {
-        // Interruption is expected, just complete
-        onComplete();
-      } else {
-        // Log other errors but still complete
-        console.warn('Speech synthesis error:', error);
-        onComplete();
-      }
-    };
-
-    this.currentUtterance = utterance;
-    window.speechSynthesis.speak(utterance);
+    }).catch((error) => {
+      // SafeSpeechService handles "interrupted" gracefully
+      console.warn('[AudioGenerator] Speech error:', error);
+      onComplete();
+    });
   }
 
   /**
