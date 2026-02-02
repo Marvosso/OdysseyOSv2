@@ -214,15 +214,16 @@ export class SpeechController {
 
     // Speak - use requestAnimationFrame to ensure utterance is fully set up
     // Some browsers need a small delay between cancel and speak
+    const utterance = this.utterance; // Capture reference
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:215',message:'about to call speechSynthesis.speak',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceText:this.utterance.text.substring(0,50),hasVoice:!!this.utterance.voice},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] about to call speechSynthesis.speak:', {textLength: text.length, wasSpeaking: speechSynthesis.speaking, hasVoice: !!this.utterance.voice});});
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:215',message:'about to call speechSynthesis.speak',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceText:utterance.text.substring(0,50),hasVoice:!!utterance.voice},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] about to call speechSynthesis.speak:', {textLength: text.length, wasSpeaking: speechSynthesis.speaking, hasVoice: !!utterance.voice});});
     // #endregion
     
     // Use requestAnimationFrame to ensure the utterance is fully configured
     // This prevents race conditions where cancel happens right after speak
     requestAnimationFrame(() => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:222',message:'calling speechSynthesis.speak in RAF',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceStillExists:this.utterance !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] calling speechSynthesis.speak in RAF');});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:223',message:'calling speechSynthesis.speak in RAF',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceStillExists:this.utterance !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] calling speechSynthesis.speak in RAF');});
       // #endregion
       if (this.utterance) {
         speechSynthesis.speak(this.utterance);
