@@ -6,15 +6,8 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   runtimeCaching: [
     {
-      // Exclude root page and redirects from caching
-      urlPattern: ({ url }) => {
-        // Don't cache the root page (it redirects)
-        if (url.pathname === '/' || url.pathname === '') {
-          return false;
-        }
-        // Don't cache redirect responses
-        return true;
-      },
+      // Cache all pages except root (which redirects)
+      urlPattern: /^https?:\/\/.*\/(?!$)/,
       handler: 'NetworkFirst',
       options: {
         cacheName: 'offlineCache',
