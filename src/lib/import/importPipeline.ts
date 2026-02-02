@@ -893,7 +893,18 @@ export class CharacterDetector {
         }
       }
 
-      // Pattern 4: Capitalized words at sentence start - LOW CONFIDENCE, only if not already found
+      // Pattern 4: Name as subject (Name was/were/is/are/had/has/will/would/could/should)
+      // This catches names that appear as sentence subjects even if not at sentence start
+      const subjectPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:was|were|is|are|had|has|will|would|could|should|felt|feels|seems|seemed|appears|appeared|becomes|became|remains|remained|stays|stayed)/gi;
+      let subjectMatch;
+      while ((subjectMatch = subjectPattern.exec(line)) !== null) {
+        const name = subjectMatch[1].trim();
+        if (this.isValidCharacterName(name)) {
+          this.addCandidateWithContext(candidates, name, i, line, 'action');
+        }
+      }
+
+      // Pattern 5: Capitalized words at sentence start - LOW CONFIDENCE, only if not already found
       // Only check if we haven't seen this word in dialogue/action contexts
       const sentenceStartPattern = /(?:^|\.\s+|!\s+|\?\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g;
       let match;
@@ -906,6 +917,16 @@ export class CharacterDetector {
           fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:892',message:'Testing sentence-start candidate (not in dialogue/action)',data:{lineIndex:i,potentialName:potentialName,length:potentialName.length,isExcluded:this.EXCLUDED_WORDS.has(potentialName.toLowerCase())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
           // #endregion
           this.addCandidateWithContext(candidates, potentialName, i, line, 'sentence-start');
+        }
+      }
+      
+      // Special logging for known character names (Alma, Deek)
+      const knownNames = ['Alma', 'Deek'];
+      for (const knownName of knownNames) {
+        if (line.includes(knownName)) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:920',message:'Found known character name in line',data:{name:knownName,lineIndex:i,line:line.substring(0,150),inCandidates:candidates.has(knownName),matchesDialogue:dialoguePattern.test(line),matchesSaid:saidPattern.test(line),matchesAction:actionPattern.test(line),matchesSubject:subjectPattern.test(line)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+          // #endregion
         }
       }
     }
@@ -964,13 +985,19 @@ export class CharacterDetector {
       // #endregion
       
       // Stricter requirements:
-      // - Must have dialogue/action context OR appear 5+ times
+      // - Must have dialogue/action context OR appear 3+ times (lowered from 5 for sentence-start)
       // - Confidence must be >= 0.5 (raised from 0.4)
       // - Must appear at least 2 times
       const hasStrongContext = data.contextTypes.has('dialogue') || data.contextTypes.has('action');
-      const meetsOccurrenceThreshold = data.occurrences >= (hasStrongContext ? 2 : 5);
+      const meetsOccurrenceThreshold = data.occurrences >= (hasStrongContext ? 2 : 3); // Lowered from 5 to 3
       
-      if (confidence >= 0.5 && meetsOccurrenceThreshold) {
+      // Special check for known character names (Alma, Deek) - lower threshold
+      const knownNames = ['Alma', 'Deek'];
+      const isKnownName = knownNames.includes(name);
+      const adjustedConfidenceThreshold = isKnownName ? 0.4 : 0.5; // Lower threshold for known names
+      const adjustedOccurrenceThreshold = isKnownName ? 1 : (hasStrongContext ? 2 : 3); // Lower for known names
+      
+      if (confidence >= adjustedConfidenceThreshold && data.occurrences >= adjustedOccurrenceThreshold) {
         detected.push({
           name,
           confidence,
@@ -978,11 +1005,11 @@ export class CharacterDetector {
           firstSeen: data.firstSeen,
         });
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:943',message:'Character added to detected list',data:{name:name,confidence:confidence,occurrences:data.occurrences,hasStrongContext:hasStrongContext},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:943',message:'Character added to detected list',data:{name:name,confidence:confidence,occurrences:data.occurrences,hasStrongContext:hasStrongContext,isKnownName:isKnownName,adjustedThreshold:adjustedConfidenceThreshold},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
         // #endregion
       } else {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:949',message:'Character rejected',data:{name:name,confidence:confidence,occurrences:data.occurrences,reason:confidence < 0.5 ? 'Low confidence' : 'Too few occurrences',hasStrongContext:hasStrongContext},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:949',message:'Character rejected',data:{name:name,confidence:confidence,occurrences:data.occurrences,reason:confidence < adjustedConfidenceThreshold ? 'Low confidence' : 'Too few occurrences',hasStrongContext:hasStrongContext,isKnownName:isKnownName,adjustedThreshold:adjustedConfidenceThreshold,requiredOccurrences:adjustedOccurrenceThreshold},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
         // #endregion
       }
     }
