@@ -19,15 +19,15 @@ export const metadata: Metadata = {
     userScalable: false,
     viewportFit: 'cover',
   },
-  icons: {
-    icon: [
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
-    ],
-    apple: [
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-    ],
-  },
+      icons: {
+        icon: [
+          { url: '/api/og/icon?size=192', sizes: '192x192', type: 'image/png' },
+          { url: '/api/og/icon?size=512', sizes: '512x512', type: 'image/png' },
+        ],
+        apple: [
+          { url: '/api/og/icon?size=192', sizes: '192x192', type: 'image/png' },
+        ],
+      },
 };
 
 export default function RootLayout({

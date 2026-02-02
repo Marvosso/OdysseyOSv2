@@ -61,9 +61,9 @@ export class CryptoManager {
       ['deriveBits', 'deriveKey']
     );
 
-    // Use type assertion to work around TypeScript strict typing
-    const deriveKey = crypto.subtle.deriveKey as any;
-    return deriveKey(
+    // Call deriveKey with proper context binding
+    // TypeScript's Web Crypto types are strict, so we use a type assertion
+    return (crypto.subtle.deriveKey as any)(
       {
         name: 'PBKDF2',
         salt: salt,
@@ -77,7 +77,7 @@ export class CryptoManager {
       },
       false,
       ['encrypt', 'decrypt']
-    );
+    ) as Promise<CryptoKey>;
   }
 
   /**
