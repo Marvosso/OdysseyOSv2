@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import PWAInitializer from '@/components/pwa/PWAInitializer';
+import SpeechFixInitializer from '@/components/audio/SpeechFixInitializer';
 import SpeechFixInterceptor from '@/components/audio/SpeechFixInterceptor';
 
 export const metadata: Metadata = {
