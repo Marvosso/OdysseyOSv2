@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GripVertical, Plus, Trash2, Volume2, ChevronDown, ChevronUp, MapPin, User, FileText, ExternalLink } from 'lucide-react';
 import type { Scene, Story, SceneStatus } from '@/types/story';
@@ -9,6 +9,7 @@ import { computeWordCount } from '@/utils/wordCount';
 import { getWorldElementsForScene, findWorldElementByName } from '@/lib/world/worldLinkHelper';
 import WorldElementTooltip from '@/components/world/WorldElementTooltip';
 import { useRouter } from 'next/navigation';
+import { StoryStorage } from '@/lib/storage/storyStorage';
 
 // Component to display word count (memoized for performance)
 function SceneWordCount({ content }: { content: string }) {
@@ -31,8 +32,26 @@ export default function StoryCanvas({
   onStoryChange,
 }: StoryCanvasProps) {
   const router = useRouter();
-  const [story, setStory] = useState<Story>(() => {
-    const baseStory = initialStory || {
+  
+  // Load story from storage or use initialStory
+  const loadStory = (): Story => {
+    const savedStory = StoryStorage.loadStory();
+    const savedScenes = StoryStorage.loadScenes();
+    
+    if (savedStory) {
+      // Use saved story but ensure scenes are loaded
+      return {
+        ...savedStory,
+        scenes: savedScenes.length > 0 ? savedScenes : savedStory.scenes,
+      };
+    }
+    
+    if (initialStory) {
+      return initialStory;
+    }
+    
+    // Default empty story
+    return {
       id: 'story-1',
       title: 'Untitled Story',
       scenes: [],
@@ -40,6 +59,10 @@ export default function StoryCanvas({
       createdAt: new Date(),
       updatedAt: new Date(),
     };
+  };
+
+  const [story, setStory] = useState<Story>(() => {
+    const baseStory = loadStory();
     
     // Ensure backward compatibility: add default status and wordCount to existing scenes
     const scenesWithDefaults = baseStory.scenes.map(scene => ({
@@ -53,9 +76,48 @@ export default function StoryCanvas({
       scenes: scenesWithDefaults,
     };
   });
+  
+  // Reload story when storage changes (e.g., after import)
+  useEffect(() => {
+    const reloadStory = () => {
+      const loaded = loadStory();
+      const scenesWithDefaults = loaded.scenes.map(scene => ({
+        ...scene,
+        status: scene.status || 'draft',
+        wordCount: scene.wordCount ?? computeWordCount(scene.content),
+      }));
+      setStory({
+        ...loaded,
+        scenes: scenesWithDefaults,
+      });
+    };
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      reloadStory();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also check periodically for changes (for same-tab updates)
+    const interval = setInterval(reloadStory, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+
   const [expandedNarration, setExpandedNarration] = useState<string | null>(null);
   const [highlightedContent, setHighlightedContent] = useState<Record<string, string>>({});
   const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
+
+  // Save story to storage whenever it changes
+  useEffect(() => {
+    if (story && story.scenes.length > 0) {
+      StoryStorage.saveStory(story);
+      StoryStorage.saveScenes(story.scenes);
+    }
+  }, [story]);
 
   const addScene = () => {
     const newScene: Scene = {

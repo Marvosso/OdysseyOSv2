@@ -42,8 +42,16 @@ export default function StoryImport({ onImport }: StoryImportProps) {
       
       const title = file.name.replace(/\.[^/.]+$/, '');
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StoryImport.tsx:46',message:'Before parsing - cleanText sample',data:{textLength:cleanText.length,textSample:cleanText.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       // Parse the cleaned text
       const parsed = StoryParser.parseTextFile(cleanText, title);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StoryImport.tsx:48',message:'After parsing - chapter titles',data:{chapterCount:parsed.chapters.length,chapterTitles:parsed.chapters.map(c=>({id:c.id,title:c.title,titleLength:c.title.length,hasNonAscii:c.title.split('').some(ch=>ch.charCodeAt(0)>126)}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       
       // Final defensive sanitization: ensure all chapter titles are ASCII-only
       // This is the LAST line of defense before displaying in the UI
@@ -95,12 +103,20 @@ export default function StoryImport({ onImport }: StoryImportProps) {
             sanitizedTitle = `Chapter ${index + 1}`;
           }
           
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StoryImport.tsx:100',message:'UI sanitization result',data:{chapterIndex:index,originalTitle:chapter.title,sanitizedTitle:sanitizedTitle,originalHasNonAscii:chapter.title.split('').some(ch=>ch.charCodeAt(0)>126),sanitizedHasNonAscii:sanitizedTitle.split('').some(ch=>ch.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
           return {
             ...chapter,
             title: sanitizedTitle
           };
         })
       };
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StoryImport.tsx:106',message:'Before setState - final chapter titles',data:{chapterCount:sanitizedParsed.chapters.length,chapterTitles:sanitizedParsed.chapters.map(c=>({id:c.id,title:c.title,hasNonAscii:c.title.split('').some(ch=>ch.charCodeAt(0)>126)}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       
       setParsedData(sanitizedParsed);
       setSuccess(true);
@@ -356,7 +372,12 @@ export default function StoryImport({ onImport }: StoryImportProps) {
                     {parsedData.chapters.length} Chapter{parsedData.chapters.length > 1 ? 's' : ''} Detected
                   </h4>
                   <div className="space-y-2">
-                    {parsedData.chapters.slice(0, 5).map((chapter) => (
+                    {parsedData.chapters.slice(0, 5).map((chapter) => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StoryImport.tsx:382',message:'Rendering chapter title in UI',data:{chapterId:chapter.id,title:chapter.title,titleLength:chapter.title.length,hasNonAscii:chapter.title.split('').some(ch=>ch.charCodeAt(0)>126),charCodes:chapter.title.split('').slice(0,20).map(ch=>ch.charCodeAt(0))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                      // #endregion
+                      
+                      return (
                       <div
                         key={chapter.id}
                         className="p-3 bg-gray-800/50 border border-gray-700 rounded-lg"
@@ -371,7 +392,8 @@ export default function StoryImport({ onImport }: StoryImportProps) {
                           <BookOpen className="w-4 h-4 text-gray-500" />
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                     {parsedData.chapters.length > 5 && (
                       <p className="text-gray-500 text-sm text-center">
                         +{parsedData.chapters.length - 5} more chapters

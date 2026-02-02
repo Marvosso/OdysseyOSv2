@@ -437,6 +437,10 @@ export class StoryParser {
           finalTitle = `Chapter ${chapters.length + 1}`;
         }
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storyParser.ts:442',message:'Creating chapter with final title',data:{chapterId:`chapter-${chapters.length + 1}`,finalTitle:finalTitle,finalTitleLength:finalTitle.length,hasNonAscii:finalTitle.split('').some(ch=>ch.charCodeAt(0)>126),originalLine:line.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         // Create new chapter
         const chapterId = `chapter-${chapters.length + 1}`;
         currentChapter = {
@@ -565,6 +569,10 @@ export class StoryParser {
         chapters.push(defaultChapter);
       }
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storyParser.ts:566',message:'Before final sanitization - chapters',data:{chapterCount:chapters.length,chapterTitles:chapters.map(c=>({id:c.id,title:c.title,hasNonAscii:c.title.split('').some(ch=>ch.charCodeAt(0)>126)}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+      
       // FINAL SANITIZATION PASS: Clean all chapter titles one more time before returning
       // This is the absolute last line of defense against corrupted titles
       const sanitizedChapters = chapters.map((chapter, index) => {
@@ -592,11 +600,19 @@ export class StoryParser {
           cleanTitle = `Chapter ${index + 1}`;
         }
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storyParser.ts:590',message:'Final sanitization result',data:{chapterIndex:index,originalTitle:chapter.title,cleanTitle:cleanTitle,originalHasNonAscii:chapter.title.split('').some(ch=>ch.charCodeAt(0)>126),cleanHasNonAscii:cleanTitle.split('').some(ch=>ch.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        
         return {
           ...chapter,
           title: cleanTitle
         };
       });
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'storyParser.ts:600',message:'Returning parsed story',data:{chapterCount:sanitizedChapters.length,chapterTitles:sanitizedChapters.map(c=>({id:c.id,title:c.title,hasNonAscii:c.title.split('').some(ch=>ch.charCodeAt(0)>126)}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       
       return { title, chapters: sanitizedChapters, scenes };
     } catch (error) {

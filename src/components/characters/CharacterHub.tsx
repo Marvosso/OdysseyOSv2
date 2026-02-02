@@ -5,8 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Plus, Crown, Shield, Heart, BookOpen, Sparkles, AlertCircle, Search } from 'lucide-react';
 import CharacterForm from './CharacterForm';
 import CharacterCard from './CharacterCard';
+import { StoryStorage } from '@/lib/storage/storyStorage';
+import type { Character } from '@/types/story';
 
-interface Character {
+// Map Character type from story to local interface
+interface LocalCharacter {
   id: string;
   name: string;
   role: 'protagonist' | 'antagonist' | 'supporting' | 'mentor' | 'love-interest' | 'comic-relief' | 'other';
@@ -19,21 +22,72 @@ interface Character {
   arcStatus: 'unstarted' | 'beginning' | 'middle' | 'complete';
 }
 
+// Convert Character from story type to local type
+function convertToLocalCharacter(char: Character): LocalCharacter {
+  return {
+    id: char.id,
+    name: char.name,
+    role: (char.role as any) || 'supporting',
+    age: (char as any).age || 0,
+    appearance: char.description || '',
+    personality: (char as any).personality || '',
+    background: (char as any).background || '',
+    motivation: (char as any).motivation || '',
+    flaw: (char as any).flaw || '',
+    arcStatus: (char as any).arcStatus || 'unstarted',
+  };
+}
+
+// Convert local character back to story Character type
+function convertToStoryCharacter(char: LocalCharacter): Character {
+  return {
+    id: char.id,
+    name: char.name,
+    description: char.appearance || '',
+    role: char.role as any,
+    goals: [],
+    flaws: [],
+    relationships: [],
+  };
+}
+
 export default function CharacterHub() {
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
+  const [characters, setCharacters] = useState<LocalCharacter[]>([]);
+  const [selectedCharacter, setSelectedCharacter] = useState<LocalCharacter | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Load characters from StoryStorage on mount and when storage changes
   useEffect(() => {
-    const saved = localStorage.getItem('odysseyos-characters');
-    if (saved) {
-      setCharacters(JSON.parse(saved));
-    }
+    const loadCharacters = () => {
+      const saved = StoryStorage.loadCharacters();
+      const converted = saved.map(convertToLocalCharacter);
+      setCharacters(converted);
+    };
+
+    loadCharacters();
+
+    // Listen for storage changes (when import saves)
+    const handleStorageChange = () => {
+      loadCharacters();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also check periodically for changes (for same-tab updates)
+    const interval = setInterval(loadCharacters, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
   }, []);
 
+  // Save characters to StoryStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('odysseyos-characters', JSON.stringify(characters));
+    const storyChars = characters.map(convertToStoryCharacter);
+    StoryStorage.saveCharacters(storyChars);
+    // Trigger storage event to notify other tabs/components
+    window.dispatchEvent(new Event('storage'));
   }, [characters]);
 
   const handleSaveCharacter = (char: Character) => {

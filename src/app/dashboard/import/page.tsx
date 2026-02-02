@@ -97,8 +97,15 @@ export default function ImportPage() {
       StoryStorage.saveScenes(story.scenes);
       StoryStorage.saveCharacters(story.characters);
       
+      // Trigger storage event to notify other tabs/components
+      window.dispatchEvent(new Event('storage'));
+      
+      // Small delay to ensure storage is written
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Redirect to stories page
       router.push('/dashboard');
+      router.refresh(); // Force refresh to reload data
     } catch (err) {
       setError(`Failed to save story: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error('Save error:', err);

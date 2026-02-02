@@ -386,6 +386,10 @@ export async function extractTextFromFile(file: File): Promise<ExtractedText> {
     console.warn('Warning: Some null bytes may still be present after sanitization');
   }
   
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'fileExtractor.ts:389',message:'Extracted text sample',data:{textLength:text.length,textSample:text.substring(0,200),hasNonAscii:text.split('').some(c=>c.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+
   return {
     text,
     fileType,

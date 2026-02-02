@@ -30,12 +30,12 @@ import GlobalSearch from '@/components/search/GlobalSearch';
 
 const navigationItems = [
   { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome' },
-  { id: 'stories', label: 'Stories', icon: BookOpen, path: '/dashboard' },
   { id: 'import', label: 'Import', icon: Upload, path: '/dashboard/import' },
+  { id: 'stories', label: 'Stories', icon: BookOpen, path: '/dashboard' },
   { id: 'characters', label: 'Characters', icon: Users, path: '/dashboard/characters' },
-  { id: 'ai', label: 'AI Tools', icon: Sparkles, path: '/dashboard/ai' },
   { id: 'outline', label: 'Outline', icon: FileText, path: '/dashboard/outline' },
   { id: 'world', label: 'World', icon: Globe, path: '/dashboard/world' },
+  { id: 'ai', label: 'AI Tools', icon: Sparkles, path: '/dashboard/ai' },
   { id: 'beats', label: 'Beats', icon: BarChart3, path: '/dashboard/beats' },
   { id: 'export', label: 'Export', icon: Download, path: '/dashboard/export' },
   { id: 'publish', label: 'Publish', icon: Share2, path: '/dashboard/publish' },
