@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { installSpeechErrorInterceptor } from '@/lib/audio/speechErrorInterceptor';
 import Link from 'next/link';
 import {
   BookOpen,
