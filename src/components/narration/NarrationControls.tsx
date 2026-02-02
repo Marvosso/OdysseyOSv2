@@ -172,24 +172,25 @@ export default function NarrationControls({
 
   const handlePlay = useCallback(() => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:145',message:'handlePlay called',data:{hasController:!!speechControllerRef.current,textLength:text.length,textTrimmed:text.trim().length,isPaused:isPaused,isPlaying:isPlaying},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    const stackTrace = new Error().stack;
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:145',message:'handlePlay called',data:{hasController:!!speechControllerRef.current,textLength:text.length,textTrimmed:text.trim().length,isPaused:isPaused,isPlaying:isPlaying,globalSpeaking:typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.speaking : false,stackTrace:stackTrace?.split('\n').slice(0,5).join(' | ')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] handlePlay called, globalSpeaking:', typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.speaking : false);});
     // #endregion
     
     if (!speechControllerRef.current || !text.trim()) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:149',message:'handlePlay early return',data:{hasController:!!speechControllerRef.current,textTrimmed:text.trim().length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:152',message:'handlePlay early return',data:{hasController:!!speechControllerRef.current,textTrimmed:text.trim().length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{console.log('[DEBUG] handlePlay early return');});
       // #endregion
       return;
     }
 
     if (isPaused) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:153',message:'resuming speech',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:158',message:'resuming speech',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] resuming speech');});
       // #endregion
       speechControllerRef.current.resume();
     } else {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:156',message:'calling speak',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'NarrationControls.tsx:161',message:'calling speak',data:{textLength:text.length,globalSpeaking:typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis.speaking : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] calling speak, textLength:', text.length);});
       // #endregion
       speechControllerRef.current.speak(text);
     }

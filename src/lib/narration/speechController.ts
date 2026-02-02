@@ -112,18 +112,22 @@ export class SpeechController {
       return;
     }
 
-    // Cancel any existing speech only if actually speaking
+    // Don't cancel existing speech - let it finish naturally
+    // Only cancel if we have our own utterance that's still active
     const wasSpeaking = speechSynthesis.speaking;
+    const hasOurUtterance = this.utterance !== null;
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:112',message:'before stop check',data:{wasSpeaking:wasSpeaking,hadUtterance:this.utterance !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] before stop:', {wasSpeaking, hadUtterance: this.utterance !== null});});
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:115',message:'before speak - checking existing speech',data:{wasSpeaking:wasSpeaking,hasOurUtterance:hasOurUtterance},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] before speak:', {wasSpeaking, hasOurUtterance});});
     // #endregion
     
-    // Only stop if there's actually something speaking
-    if (wasSpeaking || this.utterance !== null) {
+    // Only cancel if we have our own utterance that's still active
+    // This prevents canceling other components' speech
+    if (hasOurUtterance && wasSpeaking) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:120',message:'calling stop',data:{wasSpeaking:wasSpeaking,hadUtterance:this.utterance !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] calling stop');});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:123',message:'canceling our own utterance',data:{wasSpeaking:wasSpeaking,hasOurUtterance:hasOurUtterance},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] canceling our own utterance');});
       // #endregion
-      this.stop();
+      speechSynthesis.cancel();
+      this.utterance = null;
     }
 
     // Create new utterance
