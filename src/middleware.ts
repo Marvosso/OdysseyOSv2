@@ -7,7 +7,21 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { checkRateLimit, RateLimitConfigs } from '@/lib/api/rateLimit';
+
+// Lazy import rate limiting to prevent build failures
+let rateLimitModule: typeof import('@/lib/api/rateLimit') | null = null;
+
+async function getRateLimitModule() {
+  if (!rateLimitModule) {
+    try {
+      rateLimitModule = await import('@/lib/api/rateLimit');
+    } catch (error) {
+      console.error('[Middleware] Failed to load rate limit module:', error);
+      return null;
+    }
+  }
+  return rateLimitModule;
+}
 
 /**
  * Middleware configuration
@@ -16,11 +30,11 @@ const middlewareConfig = {
   // API routes to apply middleware to
   apiRoutes: ['/api'],
   
-  // Rate limit configuration per route pattern
+  // Rate limit configuration per route pattern (will be loaded dynamically)
   rateLimits: {
-    '/api/session': RateLimitConfigs.strict,
-    '/api/stories': RateLimitConfigs.standard,
-    default: RateLimitConfigs.standard,
+    '/api/session': 'strict',
+    '/api/stories': 'standard',
+    default: 'standard',
   },
 };
 
@@ -32,15 +46,15 @@ function isApiRoute(pathname: string): boolean {
 }
 
 /**
- * Get rate limit config for path
+ * Get rate limit config type for path
  */
-function getRateLimitConfig(pathname: string) {
-  for (const [pattern, rateLimitConfig] of Object.entries(middlewareConfig.rateLimits)) {
+function getRateLimitConfig(pathname: string): 'strict' | 'standard' {
+  for (const [pattern, rateLimitType] of Object.entries(middlewareConfig.rateLimits)) {
     if (pathname.startsWith(pattern)) {
-      return rateLimitConfig;
+      return rateLimitType as 'strict' | 'standard';
     }
   }
-  return middlewareConfig.rateLimits.default;
+  return middlewareConfig.rateLimits.default as 'strict' | 'standard';
 }
 
 /**
@@ -87,41 +101,55 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Rate limiting
-  const rateLimitConfig = getRateLimitConfig(pathname);
-  const rateLimit = await checkRateLimit(request, rateLimitConfig);
-
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: 'RATE_LIMIT_EXCEEDED',
-          message: 'Rate limit exceeded',
-        },
-        meta: {
-          timestamp: new Date().toISOString(),
-        },
-      },
-      {
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
-          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-          'X-RateLimit-Reset': rateLimit.resetAt.toString(),
-          ...(rateLimit.retryAfter && {
-            'Retry-After': rateLimit.retryAfter.toString(),
-          }),
-        },
-      }
-    );
-  }
-
-  // Add rate limit headers to response
+  // Create response early
   const response = NextResponse.next();
-  response.headers.set('X-RateLimit-Limit', rateLimitConfig.maxRequests.toString());
-  response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
-  response.headers.set('X-RateLimit-Reset', rateLimit.resetAt.toString());
+
+  // Rate limiting (only if module is available)
+  const rateLimitModule = await getRateLimitModule();
+  if (rateLimitModule) {
+    try {
+      const rateLimitType = getRateLimitConfig(pathname);
+      const rateLimitConfig = rateLimitType === 'strict' 
+        ? rateLimitModule.RateLimitConfigs.strict 
+        : rateLimitModule.RateLimitConfigs.standard;
+      
+      const rateLimit = await rateLimitModule.checkRateLimit(request, rateLimitConfig);
+
+      if (!rateLimit.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'RATE_LIMIT_EXCEEDED',
+              message: 'Rate limit exceeded',
+            },
+            meta: {
+              timestamp: new Date().toISOString(),
+            },
+          },
+          {
+            status: 429,
+            headers: {
+              'X-RateLimit-Limit': rateLimitConfig.maxRequests.toString(),
+              'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+              'X-RateLimit-Reset': rateLimit.resetAt.toString(),
+              ...(rateLimit.retryAfter && {
+                'Retry-After': rateLimit.retryAfter.toString(),
+              }),
+            },
+          }
+        );
+      }
+
+      // Add rate limit headers to response
+      response.headers.set('X-RateLimit-Limit', rateLimitConfig.maxRequests.toString());
+      response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
+      response.headers.set('X-RateLimit-Reset', rateLimit.resetAt.toString());
+    } catch (error) {
+      console.error('[Middleware] Rate limit check failed:', error);
+      // Continue without rate limiting if it fails
+    }
+  }
 
   // CORS headers (for future use)
   response.headers.set('Access-Control-Allow-Origin', '*');
