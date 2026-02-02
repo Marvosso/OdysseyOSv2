@@ -7,6 +7,7 @@
 
 import { VoiceLoader } from './voiceLoader';
 import { TextChunker } from './textChunker';
+import GlobalSpeechLock from './globalSpeechLock';
 
 export class SpeechManager {
   private static instance: SpeechManager;
@@ -34,6 +35,7 @@ export class SpeechManager {
    * Speak text with optional voice and rate
    * Returns a promise that resolves when speech completes
    * Automatically chunks long text to prevent timeouts
+   * Uses GlobalSpeechLock to prevent conflicts across the entire app
    */
   speak(text: string, voice?: string, rate = 1): Promise<void> {
     console.log('[SpeechManager] speak() called', { textLength: text.length, voice, rate });
@@ -41,24 +43,28 @@ export class SpeechManager {
     // For long text, use TextChunker to break it into manageable pieces
     if (text.length > 500) {
       console.log('[SpeechManager] Text is long, using TextChunker', { textLength: text.length });
-      return TextChunker.speakText(text, voice, rate, 300);
+      // Wrap TextChunker in the global lock
+      return GlobalSpeechLock.acquire(() => TextChunker.speakText(text, voice, rate, 300));
     }
     
-    return new Promise((resolve, reject) => {
-      // If already speaking, queue this request
-      if (this.isSpeaking || this.processingQueue) {
-        console.log('[SpeechManager] Already speaking, queuing request');
-        this.queue.push({ text, voice, rate, resolve, reject });
-        return;
-      }
+    // Use global lock to ensure only one speech operation at a time
+    return GlobalSpeechLock.acquire(() => {
+      return new Promise<void>((resolve, reject) => {
+        // If already speaking, queue this request
+        if (this.isSpeaking || this.processingQueue) {
+          console.log('[SpeechManager] Already speaking, queuing request');
+          this.queue.push({ text, voice, rate, resolve, reject });
+          return;
+        }
 
-      // Start speaking immediately
-      this.processingQueue = true;
-      this.processUtterance(text, rate, resolve, reject, voice).catch((error) => {
-        console.error('[SpeechManager] Error in processUtterance:', error);
-        reject(error);
-        this.processingQueue = false;
-        this.processQueue();
+        // Start speaking immediately
+        this.processingQueue = true;
+        this.processUtterance(text, rate, resolve, reject, voice).catch((error) => {
+          console.error('[SpeechManager] Error in processUtterance:', error);
+          reject(error);
+          this.processingQueue = false;
+          this.processQueue();
+        });
       });
     });
   }
