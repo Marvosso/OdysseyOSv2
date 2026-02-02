@@ -5,15 +5,25 @@
  * Call debugSpeech() early in the app lifecycle to enable
  */
 
+let isDebugInstalled = false;
+
 export function debugSpeech() {
   if (typeof window === 'undefined' || !window.speechSynthesis) {
     console.warn('[Speech Debug] speechSynthesis not available');
     return;
   }
 
+  // Prevent double installation
+  if (isDebugInstalled) {
+    console.warn('[Speech Debug] Debug wrapper already installed');
+    return;
+  }
+
   // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'debugSpeech.ts:12',message:'Installing speech debug wrapper',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'debugSpeech.ts:20',message:'Installing speech debug wrapper',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H'})}).catch(()=>{});
   // #endregion
+
+  isDebugInstalled = true;
 
   const originalSpeak = window.speechSynthesis.speak;
   const originalCancel = window.speechSynthesis.cancel;

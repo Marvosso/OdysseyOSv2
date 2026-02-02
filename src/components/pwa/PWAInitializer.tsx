@@ -13,9 +13,17 @@ import PWAInstallPrompt from './PWAInstallPrompt';
 
 export default function PWAInitializer() {
   useEffect(() => {
-    // Install speech synthesis debug wrapper (only in development or when debugging)
-    if (process.env.NODE_ENV === 'development' || typeof window !== 'undefined' && (window as any).__DEBUG_SPEECH__) {
+    // Install speech synthesis debug wrapper
+    // Enable in development or by setting window.__DEBUG_SPEECH__ = true in console
+    if (
+      process.env.NODE_ENV === 'development' || 
+      (typeof window !== 'undefined' && (window as any).__DEBUG_SPEECH__)
+    ) {
       debugSpeech();
+      // Make it available globally for manual enabling
+      if (typeof window !== 'undefined') {
+        (window as any).enableSpeechDebug = debugSpeech;
+      }
     }
     
     // Register service worker
