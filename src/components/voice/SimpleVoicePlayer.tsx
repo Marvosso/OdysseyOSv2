@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Volume2, VolumeX, Play, Pause } from 'lucide-react';
+import { ResponsiveVoiceService } from '@/lib/audio/responsiveVoiceService';
 
 interface SimpleVoicePlayerProps {
   text: string;
@@ -9,82 +10,81 @@ interface SimpleVoicePlayerProps {
   showTitle?: boolean;
 }
 
-type VoiceOption = {
-  id: string;
-  name: string;
-  description: string;
-  emoji: string;
-};
-
 export default function SimpleVoicePlayer({ 
   text, 
-  className = '',
+  className = '', 
   showTitle = true 
 }: SimpleVoicePlayerProps) {
   const [selectedVoice, setSelectedVoice] = useState<string>('UK English Female');
+  const [availableVoices, setAvailableVoices] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
   
-  const voiceOptions: VoiceOption[] = [
-    { id: 'UK English Female', name: 'British Female', description: 'Sophisticated British accent', emoji: '👩‍🦰' },
-    { id: 'US English Female', name: 'American Female', description: 'Clear American accent', emoji: '👩' },
-    { id: 'UK English Male', name: 'British Male', description: 'Classic British accent', emoji: '👨‍🦰' },
-    { id: 'US English Male', name: 'American Male', description: 'Standard American accent', emoji: '👨' },
-  ];
+  const voiceServiceRef = useState(() => ResponsiveVoiceService.getInstance())[0];
 
-  // Check if ResponsiveVoice is loaded
+  // Check if ResponsiveVoice is loaded and get voices
   useEffect(() => {
-    const checkVoiceReady = () => {
-      if (typeof window !== 'undefined' && (window as any).responsiveVoice) {
-        setIsReady(true);
-      } else {
-        // Retry after a bit
-        setTimeout(checkVoiceReady, 500);
+    const checkVoiceReady = async () => {
+      await voiceServiceRef.waitForResponsiveVoice();
+      const available = voiceServiceRef.isAvailable();
+      setIsReady(available);
+      
+      if (available) {
+        const voices = voiceServiceRef.getVoices();
+        setAvailableVoices(voices);
+        // Set default voice if available
+        if (voices.length > 0 && !voices.includes(selectedVoice)) {
+          setSelectedVoice(voices[0]);
+        }
       }
     };
     
     checkVoiceReady();
   }, []);
 
-  const speak = () => {
+  const speak = async () => {
     if (!isReady || !text.trim()) return;
     
-    const responsiveVoice = (window as any).responsiveVoice;
-    
-    responsiveVoice.speak(text, selectedVoice, {
-      rate: 0.9, // Slightly slower for clarity
-      pitch: 1,
-      volume: 1,
-      onstart: () => {
-        setIsPlaying(true);
-        console.log('[Voice] Started playing');
-      },
-      onend: () => {
-        setIsPlaying(false);
-        console.log('[Voice] Finished playing');
-      },
-      onerror: (error: any) => {
-        setIsPlaying(false);
-        console.error('[Voice] Error:', error);
-      }
-    });
+    try {
+      await voiceServiceRef.speak(text, selectedVoice, {
+        rate: 0.9, // Slightly slower for clarity
+        pitch: 1,
+        volume: 1,
+        onstart: () => {
+          setIsPlaying(true);
+          console.log('[Voice] Started playing');
+        },
+        onend: () => {
+          setIsPlaying(false);
+          console.log('[Voice] Finished playing');
+        },
+        onerror: (error: any) => {
+          setIsPlaying(false);
+          console.error('[Voice] Error:', error);
+        }
+      });
+    } catch (error) {
+      console.error('[Voice] Speak error:', error);
+      setIsPlaying(false);
+    }
   };
 
   const pause = () => {
     if (!isReady) return;
-    (window as any).responsiveVoice.pause();
+    // ResponsiveVoice doesn't have pause, so we cancel
+    voiceServiceRef.cancel();
     setIsPlaying(false);
   };
 
   const resume = () => {
+    // ResponsiveVoice doesn't have resume, so we restart
     if (!isReady) return;
-    (window as any).responsiveVoice.resume();
-    setIsPlaying(true);
+    speak();
   };
 
   const stop = () => {
     if (!isReady) return;
-    (window as any).responsiveVoice.cancel();
+    voiceServiceRef.cancel();
     setIsPlaying(false);
   };
 
@@ -113,30 +113,26 @@ export default function SimpleVoicePlayer({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Select Voice
           </label>
-          <div className="grid grid-cols-2 gap-2">
-            {voiceOptions.map((voice) => (
-              <button
-                key={voice.id}
-                onClick={() => {
-                  setSelectedVoice(voice.id);
-                  stop(); // Stop current playback when switching voices
-                }}
-                className={`p-3 border rounded-lg text-left transition-colors ${
-                  selectedVoice === voice.id 
-                    ? 'border-blue-500 bg-blue-50' 
-                    : 'border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{voice.emoji}</span>
-                  <div>
-                    <div className="font-medium text-gray-900">{voice.name}</div>
-                    <div className="text-xs text-gray-500">{voice.description}</div>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
+          {availableVoices.length === 0 ? (
+            <div className="p-3 border border-dashed border-gray-300 rounded-lg text-gray-500 text-sm text-center">
+              Loading voices...
+            </div>
+          ) : (
+            <select
+              value={selectedVoice}
+              onChange={(e) => {
+                setSelectedVoice(e.target.value);
+                stop(); // Stop current playback when switching voices
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {availableVoices.map((voice) => (
+                <option key={voice} value={voice}>
+                  {voice}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Controls */}

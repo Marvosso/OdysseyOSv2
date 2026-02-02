@@ -30,15 +30,9 @@ interface AudioExportPanelProps {
   story: Story;
 }
 
-const RESPONSIVE_VOICE_OPTIONS = [
-  { name: 'UK English Female', label: 'British Female' },
-  { name: 'US English Female', label: 'American Female' },
-  { name: 'UK English Male', label: 'British Male' },
-  { name: 'US English Male', label: 'American Male' },
-];
-
 export default function AudioExportPanel({ story }: AudioExportPanelProps) {
   const [selectedVoice, setSelectedVoice] = useState<string>('UK English Female');
+  const [availableVoices, setAvailableVoices] = useState<string[]>([]);
   const [rate, setRate] = useState(1);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -51,11 +45,21 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
   
   const voiceServiceRef = React.useRef(ResponsiveVoiceService.getInstance());
 
-  // Check if ResponsiveVoice is ready
+  // Check if ResponsiveVoice is ready and load voices
   useEffect(() => {
     const checkReady = async () => {
       await voiceServiceRef.current.waitForResponsiveVoice();
-      setIsReady(voiceServiceRef.current.isAvailable());
+      const available = voiceServiceRef.current.isAvailable();
+      setIsReady(available);
+      
+      if (available) {
+        const voices = voiceServiceRef.current.getVoices();
+        setAvailableVoices(voices);
+        // Set default voice if available
+        if (voices.length > 0 && !voices.includes(selectedVoice)) {
+          setSelectedVoice(voices[0]);
+        }
+      }
     };
     checkReady();
   }, []);
@@ -255,13 +259,17 @@ export default function AudioExportPanel({ story }: AudioExportPanelProps) {
               value={selectedVoice}
               onChange={(e) => setSelectedVoice(e.target.value)}
               className="w-full px-3 py-2 bg-gray-700 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-              disabled={isSpeaking}
+              disabled={isSpeaking || availableVoices.length === 0}
             >
-              {RESPONSIVE_VOICE_OPTIONS.map((voice) => (
-                <option key={voice.name} value={voice.name}>
-                  {voice.label}
-                </option>
-              ))}
+              {availableVoices.length === 0 ? (
+                <option>Loading voices...</option>
+              ) : (
+                availableVoices.map((voice) => (
+                  <option key={voice} value={voice}>
+                    {voice}
+                  </option>
+                ))
+              )}
             </select>
           </div>
           <div className="flex items-center gap-2">

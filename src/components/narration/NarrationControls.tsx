@@ -17,22 +17,13 @@ export interface NarrationControlsProps {
   className?: string;
 }
 
-// ResponsiveVoice voice names (common ones)
-const RESPONSIVE_VOICE_OPTIONS = [
-  { name: 'UK English Female', value: 'UK English Female' },
-  { name: 'US English Female', value: 'US English Female' },
-  { name: 'UK English Male', value: 'UK English Male' },
-  { name: 'US English Male', value: 'US English Male' },
-  { name: 'Australian Female', value: 'Australian Female' },
-  { name: 'Australian Male', value: 'Australian Male' },
-];
-
 export default function NarrationControls({
   text,
   onHighlightChange,
   className = '',
 }: NarrationControlsProps) {
   const [isSupported, setIsSupported] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState<string[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('UK English Female');
   const [rate, setRate] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -48,12 +39,21 @@ export default function NarrationControls({
     textRef.current = text;
   }, [text]);
 
-  // Check if ResponsiveVoice is available
+  // Check if ResponsiveVoice is available and load voices
   useEffect(() => {
     const checkSupport = async () => {
       await voiceServiceRef.current.waitForResponsiveVoice();
       const available = voiceServiceRef.current.isAvailable();
       setIsSupported(available);
+      
+      if (available) {
+        const voices = voiceServiceRef.current.getVoices();
+        setAvailableVoices(voices);
+        // Set default voice if available
+        if (voices.length > 0 && !voices.includes(selectedVoice)) {
+          setSelectedVoice(voices[0]);
+        }
+      }
     };
 
     checkSupport();
@@ -266,14 +266,18 @@ export default function NarrationControls({
         <select
           value={selectedVoice}
           onChange={handleVoiceChange}
-          disabled={isPlaying}
+          disabled={isPlaying || availableVoices.length === 0}
           className="w-full px-3 py-2 bg-gray-900/50 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {RESPONSIVE_VOICE_OPTIONS.map((voice) => (
-            <option key={voice.value} value={voice.value}>
-              {voice.name}
-            </option>
-          ))}
+          {availableVoices.length === 0 ? (
+            <option>Loading voices...</option>
+          ) : (
+            availableVoices.map((voice) => (
+              <option key={voice} value={voice}>
+                {voice}
+              </option>
+            ))
+          )}
         </select>
       </div>
 

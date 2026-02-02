@@ -20,13 +20,6 @@ interface NarrativePlayerProps {
   onSceneSelect: (sceneId: string) => void;
 }
 
-const VOICE_OPTIONS = [
-  { label: 'UK English Female', value: 'UK English Female' },
-  { label: 'US English Female', value: 'US English Female' },
-  { label: 'UK English Male', value: 'UK English Male' },
-  { label: 'US English Male', value: 'US English Male' },
-];
-
 const SPEED_OPTIONS = [
   { label: '0.5x', value: 0.5 },
   { label: '0.75x', value: 0.75 },
@@ -41,6 +34,7 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [speed, setSpeed] = useState(1);
+  const [availableVoices, setAvailableVoices] = useState<string[]>([]);
   const [selectedVoice, setSelectedVoice] = useState('UK English Female');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -49,11 +43,21 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
   const voiceServiceRef = useRef(ResponsiveVoiceService.getInstance());
   const currentScene = scenes[currentSceneIndex];
 
-  // Check if ResponsiveVoice is ready
+  // Check if ResponsiveVoice is ready and load voices
   useEffect(() => {
     const checkReady = async () => {
       await voiceServiceRef.current.waitForResponsiveVoice();
-      setIsReady(voiceServiceRef.current.isAvailable());
+      const available = voiceServiceRef.current.isAvailable();
+      setIsReady(available);
+      
+      if (available) {
+        const voices = voiceServiceRef.current.getVoices();
+        setAvailableVoices(voices);
+        // Set default voice if available
+        if (voices.length > 0 && !voices.includes(selectedVoice)) {
+          setSelectedVoice(voices[0]);
+        }
+      }
     };
     checkReady();
   }, []);
@@ -289,12 +293,17 @@ export default function NarrativePlayer({ scenes, onSceneSelect }: NarrativePlay
               value={selectedVoice}
               onChange={(e) => setSelectedVoice(e.target.value)}
               className="w-full p-2 bg-gray-700 text-white rounded border border-gray-600 text-sm focus:outline-none focus:border-blue-500"
+              disabled={availableVoices.length === 0}
             >
-              {VOICE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              {availableVoices.length === 0 ? (
+                <option>Loading voices...</option>
+              ) : (
+                availableVoices.map((voice) => (
+                  <option key={voice} value={voice}>
+                    {voice}
+                  </option>
+                ))
+              )}
             </select>
           </div>
         </motion.div>
