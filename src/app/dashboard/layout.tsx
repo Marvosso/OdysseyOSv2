@@ -35,8 +35,6 @@ import GlobalSearch from '@/components/search/GlobalSearch';
 import GuestManager from '@/components/session/GuestManager';
 import MigrationWizard from '@/components/session/MigrationWizard';
 import KeyboardShortcutsProvider, { openCheatsheet } from '@/components/shortcuts/KeyboardShortcutsProvider';
-import SpeechDebugger from '@/components/debug/SpeechDebugger';
-import SpeechServiceTester from '@/components/debug/SpeechServiceTester';
 import { AccountStorage } from '@/lib/storage/accountStorage';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 
@@ -219,8 +217,6 @@ export default function DashboardLayout({
 
   return (
     <KeyboardShortcutsProvider onAction={handleShortcutAction}>
-      <SpeechDebugger />
-      <SpeechServiceTester />
       <div className="min-h-screen bg-gray-900 flex">
         {/* Global Search */}
         <GlobalSearch

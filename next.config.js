@@ -66,46 +66,7 @@ const nextConfig = {
   },
   // Add empty turbopack config to silence warning (next-pwa requires webpack)
   turbopack: {},
-  // Webpack configuration for speech synthesis fix
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      // Inject speech fix into all client bundles
-      const webpack = require('webpack');
-      
-      // Add DefinePlugin for speech fix flag
-      config.plugins.push(
-        new webpack.DefinePlugin({
-          'window.__SPEECH_FIX': JSON.stringify(true),
-        })
-      );
-      
-      // Add banner with fix code that runs before any other code
-      config.plugins.push(
-        new webpack.BannerPlugin({
-          banner: `
-// SPEECH SYNTHESIS AUTO-FIX (injected at build time)
-if (typeof window !== 'undefined' && window.speechSynthesis) {
-  window.__speechFixInstalled = true;
-  const origSpeak = window.speechSynthesis.speak;
-  window.speechSynthesis.speak = function(utterance) {
-    if (window.speechSynthesis.speaking) {
-      console.warn('[Auto-Fix] Speech already active, cancelling previous');
-      window.speechSynthesis.cancel();
-      setTimeout(() => origSpeak.call(this, utterance), 100);
-      return;
-    }
-    return origSpeak.call(this, utterance);
-  };
-}
-          `,
-          raw: true,
-          entryOnly: true,
-          include: /\.js$/,
-        })
-      );
-    }
-    return config;
-  },
+  // Speech synthesis webpack fixes removed - using ResponsiveVoice instead
 };
 
 module.exports = withPWA(nextConfig);

@@ -1,11 +1,15 @@
 /**
  * Speech Controller
  * 
+ * @deprecated This file uses browser SpeechSynthesis API which has been replaced with ResponsiveVoice.
+ * Use ResponsiveVoiceService and SimpleVoicePlayer components instead.
+ * This file is kept for reference but should not be used in new code.
+ * 
  * Manages Web Speech API (speechSynthesis) for text-to-speech narration
- * Now uses SpeechManager singleton to prevent conflicts
  */
 
-import { SpeechManager } from '@/lib/audio/speechManager';
+// This file is deprecated - all functionality moved to ResponsiveVoice
+// Keeping for reference only
 
 export interface SpeechControllerOptions {
   voice?: SpeechSynthesisVoice;
@@ -24,211 +28,71 @@ export interface SpeechControllerCallbacks {
 }
 
 export class SpeechController {
-  private speechManager!: SpeechManager; // Initialized in constructor
-  private utterance: SpeechSynthesisUtterance | null = null;
-  private isPaused = false;
-  private callbacks: SpeechControllerCallbacks = {};
-  private options: SpeechControllerOptions = {};
-
   /**
-   * Check if speech synthesis is supported
+   * @deprecated Use ResponsiveVoiceService instead
    */
   static isSupported(): boolean {
-    return typeof window !== 'undefined' && 'speechSynthesis' in window;
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
+    return false;
   }
 
   /**
-   * Get available voices
+   * @deprecated Use ResponsiveVoiceService instead
    */
   static getVoices(): SpeechSynthesisVoice[] {
-    if (!this.isSupported()) {
-      return [];
-    }
-    return speechSynthesis.getVoices();
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
+    return [];
   }
 
   /**
-   * Load voices (async, as they may not be immediately available)
+   * @deprecated Use ResponsiveVoiceService instead
    */
   static async loadVoices(): Promise<SpeechSynthesisVoice[]> {
-    return new Promise((resolve) => {
-      if (!this.isSupported()) {
-        resolve([]);
-        return;
-      }
-
-      const voices = speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        resolve(voices);
-        return;
-      }
-
-      // Voices may load asynchronously
-      speechSynthesis.onvoiceschanged = () => {
-        resolve(speechSynthesis.getVoices());
-      };
-    });
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
+    return [];
   }
 
   /**
-   * Get default voice (prefer local/en-US voices)
+   * @deprecated Use ResponsiveVoiceService instead
    */
   static getDefaultVoice(): SpeechSynthesisVoice | null {
-    const voices = this.getVoices();
-    if (voices.length === 0) return null;
-
-    // Prefer local voices (not remote)
-    const localVoices = voices.filter(v => v.localService);
-    if (localVoices.length > 0) {
-      // Prefer English voices
-      const englishVoices = localVoices.filter(v => 
-        v.lang.startsWith('en')
-      );
-      return englishVoices.length > 0 ? englishVoices[0] : localVoices[0];
-    }
-
-    return voices[0];
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
+    return null;
   }
 
   constructor(options: SpeechControllerOptions = {}, callbacks: SpeechControllerCallbacks = {}) {
-    this.options = {
-      rate: 1,
-      pitch: 1,
-      volume: 1,
-      ...options,
-    };
-    this.callbacks = callbacks;
-    
-    // Get singleton speech manager
-    try {
-      this.speechManager = SpeechManager.getInstance();
-    } catch (error) {
-      console.error('[SpeechController] Failed to get SpeechManager:', error);
-      // Fallback - will be handled in speak()
-    }
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
   }
 
-  /**
-   * Speak text
-   */
   speak(text: string): void {
-    console.log('[SpeechController] speak() called', { textLength: text.length });
-    
-    if (!SpeechController.isSupported()) {
-      this.callbacks.onError?.(new Error('Speech synthesis is not supported in this browser'));
-      return;
-    }
-
-    if (!this.speechManager) {
-      try {
-        this.speechManager = SpeechManager.getInstance();
-      } catch (error) {
-        this.callbacks.onError?.(error instanceof Error ? error : new Error('Failed to initialize speech manager'));
-        return;
-      }
-    }
-
-    // Use speech manager to speak
-    const voiceName = this.options.voice?.name;
-    const rate = this.options.rate ?? 1;
-    
-    this.speechManager.speak(text, voiceName, rate)
-      .then(() => {
-        console.log('[SpeechController] Speech completed successfully');
-        this.callbacks.onStart?.();
-        this.callbacks.onEnd?.();
-      })
-      .catch((error) => {
-        console.error('[SpeechController] Speech error:', error);
-        // Don't call onError for interrupted/canceled
-        if (!error.message.includes('interrupted') && !error.message.includes('canceled')) {
-          this.callbacks.onError?.(error);
-        } else {
-          this.callbacks.onEnd?.();
-        }
-      });
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
   }
 
-  /**
-   * Pause speech
-   */
   pause(): void {
-    if (!SpeechController.isSupported()) return;
-
-    if (speechSynthesis.speaking && !this.isPaused) {
-      speechSynthesis.pause();
-      this.isPaused = true;
-      this.callbacks.onPause?.();
-    }
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
   }
 
-  /**
-   * Resume speech
-   */
   resume(): void {
-    if (!SpeechController.isSupported()) return;
-
-    if (speechSynthesis.speaking && this.isPaused) {
-      speechSynthesis.resume();
-      this.isPaused = false;
-      this.callbacks.onResume?.();
-    }
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
   }
 
-  /**
-   * Stop speech
-   */
   stop(): void {
-    if (!SpeechController.isSupported()) return;
-
-    speechSynthesis.cancel();
-    this.utterance = null;
-    this.isPaused = false;
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
   }
 
-  /**
-   * Check if currently speaking
-   */
   isSpeaking(): boolean {
-    if (!this.speechManager) return false;
-    return this.speechManager.isCurrentlySpeaking() && !this.isPaused;
+    return false;
   }
 
-  /**
-   * Check if paused
-   */
   isPausedState(): boolean {
-    if (!this.speechManager) return false;
-    return this.speechManager.isPaused() || this.isPaused;
+    return false;
   }
 
-  /**
-   * Update options
-   */
   updateOptions(options: Partial<SpeechControllerOptions>): void {
-    this.options = { ...this.options, ...options };
-
-    // If currently speaking, update the utterance
-    if (this.utterance && speechSynthesis.speaking) {
-      if (options.voice !== undefined) {
-        this.utterance.voice = options.voice;
-      }
-      if (options.rate !== undefined) {
-        this.utterance.rate = options.rate;
-      }
-      if (options.pitch !== undefined) {
-        this.utterance.pitch = options.pitch;
-      }
-      if (options.volume !== undefined) {
-        this.utterance.volume = options.volume;
-      }
-    }
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
   }
 
-  /**
-   * Update callbacks
-   */
   updateCallbacks(callbacks: Partial<SpeechControllerCallbacks>): void {
-    this.callbacks = { ...this.callbacks, ...callbacks };
+    console.warn('[SpeechController] This class is deprecated. Use ResponsiveVoiceService instead.');
   }
 }

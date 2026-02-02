@@ -11,7 +11,7 @@
 
 import type { Scene, Character } from '@/types/story';
 import { StoryStorage } from '@/lib/storage/storyStorage';
-import { SafeSpeechService } from '@/lib/audio/safeSpeechService';
+// SafeSpeechService removed - using ResponsiveVoice instead
 
 export interface VoiceSettings {
   voiceName: string;

@@ -8,27 +8,11 @@
 
 import { useEffect } from 'react';
 import { PWAManager } from '@/lib/pwa/pwaManager';
-import { debugSpeech } from '@/lib/audio/debugSpeech';
-import { installSpeechErrorInterceptor } from '@/lib/audio/speechErrorInterceptor';
 import PWAInstallPrompt from './PWAInstallPrompt';
 
 export default function PWAInitializer() {
   useEffect(() => {
-    // Install speech error interceptor (always enabled)
-    installSpeechErrorInterceptor();
-    
-    // Install speech synthesis debug wrapper
-    // Enable in development or by setting window.__DEBUG_SPEECH__ = true in console
-    if (
-      process.env.NODE_ENV === 'development' || 
-      (typeof window !== 'undefined' && (window as any).__DEBUG_SPEECH__)
-    ) {
-      debugSpeech();
-      // Make it available globally for manual enabling
-      if (typeof window !== 'undefined') {
-        (window as any).enableSpeechDebug = debugSpeech;
-      }
-    }
+    // Speech synthesis debug/interceptor removed - using ResponsiveVoice instead
     
     // Register service worker
     PWAManager.register().catch((error) => {
