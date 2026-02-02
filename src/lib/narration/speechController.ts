@@ -24,7 +24,7 @@ export interface SpeechControllerCallbacks {
 }
 
 export class SpeechController {
-  private speechManager: SpeechManager;
+  private speechManager!: SpeechManager; // Initialized in constructor
   private utterance: SpeechSynthesisUtterance | null = null;
   private isPaused = false;
   private callbacks: SpeechControllerCallbacks = {};
