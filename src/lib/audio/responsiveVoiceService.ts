@@ -183,7 +183,7 @@ export class ResponsiveVoiceService {
    * Set default voice
    */
   setDefaultVoice(voice: string): void {
-    if (this.isAvailable() && window.responsiveVoice!.setDefaultVoice) {
+    if (this.isAvailable() && 'setDefaultVoice' in window.responsiveVoice!) {
       window.responsiveVoice!.setDefaultVoice(voice);
     }
   }

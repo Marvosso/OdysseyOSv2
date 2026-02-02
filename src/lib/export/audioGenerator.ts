@@ -125,7 +125,8 @@ export class AudioGenerator {
       this.mediaRecorder.onstop = () => {
         const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
         // Convert to WAV for better compatibility
-        this.convertToWAV(blob).then(resolve).catch(reject);
+        const generator = this;
+        generator.convertToWAV(blob).then(resolve).catch(reject);
       };
 
       this.mediaRecorder.onerror = (error) => {
@@ -303,16 +304,6 @@ export class AudioGenerator {
     // SafeSpeechService removed - this method is deprecated
     console.warn('[AudioGenerator] speakTextAsync is deprecated. Use ResponsiveVoiceService instead.');
     throw new Error('AudioGenerator is deprecated. Use ResponsiveVoiceService instead.');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:315',message:'speakTextAsync completed',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-    } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'audioGenerator.ts:319',message:'speakTextAsync error',data:{error:error instanceof Error ? error.message : 'Unknown error'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      // SafeSpeechService handles "interrupted" gracefully, so we can just log
-      console.warn('[AudioGenerator] Speech error:', error);
-    }
   }
 
   /**

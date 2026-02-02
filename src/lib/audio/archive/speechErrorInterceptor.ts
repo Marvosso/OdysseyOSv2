@@ -1,16 +1,19 @@
+// @ts-nocheck
 /**
  * Speech Error Interceptor
+ * 
+ * @deprecated This file is archived. SpeechSynthesis has been replaced with ResponsiveVoice.
+ * This file is kept for reference only.
  * 
  * Intercepts and suppresses speech synthesis errors at multiple levels:
  * - Console.error interception
  * - Global window.onerror handler
  * - speechSynthesis.speak monkey-patch
  */
-
 let isInstalled = false;
-let originalConsoleError: typeof console.error | null = null;
-let originalWindowError: typeof window.onerror | null = null;
-let originalSpeak: typeof SpeechSynthesis['speak'] | null = null;
+let originalConsoleError: any = null;
+let originalWindowError: any = null;
+let originalSpeak: any = null;
 
 export function installSpeechErrorInterceptor() {
   if (typeof window === 'undefined') {
