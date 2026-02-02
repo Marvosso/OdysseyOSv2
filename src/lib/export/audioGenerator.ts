@@ -1,6 +1,10 @@
 /**
  * Audio Generator
  * 
+ * @deprecated This file uses browser SpeechSynthesis API which has been replaced with ResponsiveVoice.
+ * Use ResponsiveVoiceService and SimpleVoicePlayer components instead.
+ * This file is kept for reference but should not be used in new code.
+ * 
  * Generates audiobook audio using browser SpeechSynthesis API
  * Records audio using Web Audio API and exports as downloadable file
  */
