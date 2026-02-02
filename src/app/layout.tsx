@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import PWAInitializer from '@/components/pwa/PWAInitializer';
+import SpeechFixInterceptor from '@/components/audio/SpeechFixInterceptor';
 
 export const metadata: Metadata = {
   title: 'OdysseyOS - Story Writing Platform',
@@ -45,6 +46,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="OdysseyOS" />
       </head>
       <body>
+        <SpeechFixInterceptor />
         {children}
         <PWAInitializer />
       </body>
