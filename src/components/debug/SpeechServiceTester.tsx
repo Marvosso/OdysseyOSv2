@@ -136,45 +136,45 @@ export default function SpeechServiceTester() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 bg-gray-800 border border-gray-700 rounded-lg p-4 max-w-md z-[9999] shadow-xl">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-white font-semibold">Speech Service Tester</h3>
+    <div className="fixed bottom-4 right-4 bg-gray-800 border border-gray-700 rounded-lg p-3 max-w-xs z-[100] shadow-xl" style={{ pointerEvents: 'auto' }}>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-white font-semibold text-sm">Speech Tester</h3>
         <button
           onClick={() => setIsVisible(false)}
-          className="text-gray-400 hover:text-white text-xl leading-none"
+          className="text-gray-400 hover:text-white text-lg leading-none w-5 h-5 flex items-center justify-center"
           title="Hide"
         >
           ×
         </button>
       </div>
       
-      <div className="space-y-2 mb-3">
+      <div className="space-y-1.5 mb-2">
         <button
           onClick={runTest}
           disabled={isTesting}
-          className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded text-sm"
+          className="w-full px-2 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded text-xs"
         >
           {isTesting ? 'Testing...' : 'Run Tests'}
         </button>
         
         <button
           onClick={checkState}
-          className="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm"
+          className="w-full px-2 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs"
         >
           Check State
         </button>
         
         <button
           onClick={forceReset}
-          className="w-full px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm"
+          className="w-full px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs"
         >
           Force Reset
         </button>
       </div>
       
       {testResult && (
-        <div className="bg-gray-900 rounded p-2 max-h-48 overflow-y-auto">
-          <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono">
+        <div className="bg-gray-900 rounded p-1.5 max-h-32 overflow-y-auto">
+          <pre className="text-[10px] text-gray-300 whitespace-pre-wrap font-mono leading-tight">
             {testResult}
           </pre>
         </div>
