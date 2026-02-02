@@ -46,7 +46,12 @@ export class SpeechManager {
 
       // Start speaking immediately
       this.processingQueue = true;
-      this.processUtterance(text, rate, resolve, reject, voice);
+      this.processUtterance(text, rate, resolve, reject, voice).catch((error) => {
+        console.error('[SpeechManager] Error in processUtterance:', error);
+        reject(error);
+        this.processingQueue = false;
+        this.processQueue();
+      });
     });
   }
 
@@ -163,7 +168,12 @@ export class SpeechManager {
     if (next) {
       console.log('[SpeechManager] Processing queued utterance');
       this.processingQueue = true;
-      this.processUtterance(next.text, next.rate, next.resolve, next.reject, next.voice);
+      this.processUtterance(next.text, next.rate, next.resolve, next.reject, next.voice).catch((error) => {
+        console.error('[SpeechManager] Error in processUtterance (queued):', error);
+        next.reject(error);
+        this.processingQueue = false;
+        this.processQueue();
+      });
     }
   }
 
