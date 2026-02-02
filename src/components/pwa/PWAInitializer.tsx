@@ -8,10 +8,16 @@
 
 import { useEffect } from 'react';
 import { PWAManager } from '@/lib/pwa/pwaManager';
+import { debugSpeech } from '@/lib/audio/debugSpeech';
 import PWAInstallPrompt from './PWAInstallPrompt';
 
 export default function PWAInitializer() {
   useEffect(() => {
+    // Install speech synthesis debug wrapper (only in development or when debugging)
+    if (process.env.NODE_ENV === 'development' || typeof window !== 'undefined' && (window as any).__DEBUG_SPEECH__) {
+      debugSpeech();
+    }
+    
     // Register service worker
     PWAManager.register().catch((error) => {
       console.error('[PWA] Registration failed:', error);
