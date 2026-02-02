@@ -51,6 +51,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // Add empty turbopack config to silence warning (next-pwa requires webpack)
+  turbopack: {},
 };
 
 module.exports = withPWA(nextConfig);
