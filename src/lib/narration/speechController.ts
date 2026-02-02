@@ -100,6 +100,7 @@ export class SpeechController {
    * Speak text
    */
   speak(text: string): void {
+    console.log('[NARRATION] speak() called', { textLength: text.length, isSupported: SpeechController.isSupported() });
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:102',message:'speak called',data:{textLength:text.length,textPreview:text.substring(0,50),isSupported:SpeechController.isSupported(),hasVoice:!!this.options.voice,rate:this.options.rate,pitch:this.options.pitch,volume:this.options.volume},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
@@ -116,15 +117,17 @@ export class SpeechController {
     // Only cancel if we have our own utterance that's still active
     const wasSpeaking = speechSynthesis.speaking;
     const hasOurUtterance = this.utterance !== null;
+    console.log('[NARRATION] before creating utterance', { wasSpeaking, hasOurUtterance });
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:115',message:'before speak - checking existing speech',data:{wasSpeaking:wasSpeaking,hasOurUtterance:hasOurUtterance},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] before speak:', {wasSpeaking, hasOurUtterance});});
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:115',message:'before speak - checking existing speech',data:{wasSpeaking:wasSpeaking,hasOurUtterance:hasOurUtterance},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     
     // Only cancel if we have our own utterance that's still active
     // This prevents canceling other components' speech
     if (hasOurUtterance && wasSpeaking) {
+      console.log('[NARRATION] canceling our own utterance');
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:123',message:'canceling our own utterance',data:{wasSpeaking:wasSpeaking,hasOurUtterance:hasOurUtterance},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{console.log('[DEBUG] canceling our own utterance');});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:123',message:'canceling our own utterance',data:{wasSpeaking:wasSpeaking,hasOurUtterance:hasOurUtterance},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       speechSynthesis.cancel();
       this.utterance = null;
@@ -132,8 +135,9 @@ export class SpeechController {
 
     // Create new utterance
     this.utterance = new SpeechSynthesisUtterance(text);
+    console.log('[NARRATION] utterance created', { textLength: text.length, utterance: this.utterance });
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:116',message:'utterance created',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:130',message:'utterance created',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
 
     // Set voice
@@ -183,26 +187,29 @@ export class SpeechController {
     };
 
     this.utterance.onerror = (event) => {
+      const errorType = event.error;
+      console.log('[NARRATION] utterance onerror', { errorType, errorName: event.name, charIndex: event.charIndex });
       // #region agent log
       const logData = {errorType:event.error,errorName:event.name,errorCharIndex:event.charIndex,errorElapsedTime:event.elapsedTime,errorStringified:JSON.stringify(event)};
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:155',message:'utterance onerror',data:logData,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] utterance onerror:', logData);});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:175',message:'utterance onerror',data:logData,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       this.utterance = null;
       this.isPaused = false;
       // Don't treat "interrupted" or "canceled" as errors
-      const errorType = event.error;
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:181',message:'error type check',data:{errorType:errorType,isInterrupted:errorType === 'interrupted',isCanceled:errorType === 'canceled',willCallOnEnd:errorType === 'interrupted' || errorType === 'canceled'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] error type check:', {errorType, isInterrupted: errorType === 'interrupted', isCanceled: errorType === 'canceled'});});
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:185',message:'error type check',data:{errorType:errorType,isInterrupted:errorType === 'interrupted',isCanceled:errorType === 'canceled',willCallOnEnd:errorType === 'interrupted' || errorType === 'canceled'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
       // #endregion
       if (errorType === 'interrupted' || errorType === 'canceled') {
+        console.log('[NARRATION] ignoring interrupted/canceled error, calling onEnd');
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:185',message:'ignoring interrupted/canceled error, calling onEnd',data:{errorType:errorType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] ignoring interrupted error, calling onEnd');});
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:191',message:'ignoring interrupted/canceled error, calling onEnd',data:{errorType:errorType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
         // #endregion
         // Call onEnd instead of onError for interruptions - DO NOT call onError
         this.callbacks.onEnd?.();
       } else {
+        console.log('[NARRATION] calling onError for non-interrupted error:', errorType);
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:190',message:'calling onError for non-interrupted error',data:{errorType:errorType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{console.log('[DEBUG] calling onError for:', errorType);});
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:197',message:'calling onError for non-interrupted error',data:{errorType:errorType},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
         // #endregion
         this.callbacks.onError?.(new Error(`Speech synthesis error: ${event.error}`));
       }
@@ -219,26 +226,30 @@ export class SpeechController {
     fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:215',message:'about to call speechSynthesis.speak',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceText:utterance ? utterance.text.substring(0,50) : '',hasVoice:utterance ? !!utterance.voice : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] about to call speechSynthesis.speak:', {textLength: text.length, wasSpeaking: speechSynthesis.speaking, hasVoice: utterance ? !!utterance.voice : false});});
     // #endregion
     
-    // Use requestAnimationFrame to ensure the utterance is fully configured
-    // This prevents race conditions where cancel happens right after speak
-    const utteranceRef = this.utterance; // Capture reference for RAF callback
-    requestAnimationFrame(() => {
-      // #region agent log
-      const stillExists = this.utterance !== null;
-      const stillMatches = this.utterance === utteranceRef;
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:223',message:'calling speechSynthesis.speak in RAF',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceStillExists:stillExists,utteranceStillMatches:stillMatches,utteranceRefExists:utteranceRef !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] calling speechSynthesis.speak in RAF, stillExists:', stillExists, 'stillMatches:', stillMatches);});
-      // #endregion
-      if (this.utterance) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:230',message:'actually calling speechSynthesis.speak',data:{textLength:this.utterance.text.length,hasVoice:!!this.utterance.voice,rate:this.utterance.rate,volume:this.utterance.volume},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] actually calling speechSynthesis.speak');});
-        // #endregion
-        speechSynthesis.speak(this.utterance);
-      } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:234',message:'utterance is null in RAF callback',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] utterance is null in RAF callback');});
-        // #endregion
-      }
+    // Call speak immediately - requestAnimationFrame might be causing delays
+    // that allow something else to cancel the utterance
+    console.log('[NARRATION] about to call speechSynthesis.speak', { 
+      textLength: text.length, 
+      wasSpeaking: speechSynthesis.speaking,
+      utterance: this.utterance,
+      hasVoice: this.utterance ? !!this.utterance.voice : false
     });
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:215',message:'about to call speechSynthesis.speak',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceText:utterance ? utterance.text.substring(0,50) : '',hasVoice:utterance ? !!utterance.voice : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
+    if (this.utterance) {
+      console.log('[NARRATION] calling speechSynthesis.speak NOW', {
+        textLength: this.utterance.text.length,
+        hasVoice: !!this.utterance.voice,
+        rate: this.utterance.rate,
+        volume: this.utterance.volume
+      });
+      speechSynthesis.speak(this.utterance);
+      console.log('[NARRATION] speechSynthesis.speak() called, speaking:', speechSynthesis.speaking);
+    } else {
+      console.error('[NARRATION] ERROR: utterance is null when trying to speak!');
+    }
   }
 
   /**
