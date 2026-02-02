@@ -15,6 +15,9 @@ import type { ImportResult } from '@/lib/import/importPipeline';
 import type { Story } from '@/types/story';
 import { useRouter } from 'next/navigation';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import { hasPremiumAccess } from '@/lib/ai/importEnhancer';
+import AIEnhancementPanel from '@/components/import/AIEnhancementPanel';
+import { Sparkles } from 'lucide-react';
 
 export default function ImportPage() {
   const router = useRouter();
@@ -24,14 +27,20 @@ export default function ImportPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [pastedText, setPastedText] = useState('');
   const [showPasteInput, setShowPasteInput] = useState(false);
+  const [enableAI, setEnableAI] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
-  const handleFile = useCallback(async (file: File) => {
+  const handleFile = useCallback(async (file: File, useAI?: boolean) => {
     setError(null);
     setIsProcessing(true);
+    setIsEnhancing(false);
 
     try {
-      const result = await ImportPipeline.execute(file);
+      const result = await ImportPipeline.execute(file, undefined, useAI);
       setImportResult(result);
+      if (useAI) {
+        setIsEnhancing(true);
+      }
     } catch (err) {
       setError(`Failed to import file: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error('Import error:', err);
@@ -54,8 +63,11 @@ export default function ImportPage() {
       const blob = new Blob([pastedText], { type: 'text/plain' });
       const file = new File([blob], 'pasted-text.txt', { type: 'text/plain' });
       
-      const result = await ImportPipeline.execute(file);
+      const result = await ImportPipeline.execute(file, undefined, enableAI);
       setImportResult(result);
+      if (enableAI) {
+        setIsEnhancing(true);
+      }
       setPastedText('');
       setShowPasteInput(false);
     } catch (err) {
@@ -72,7 +84,7 @@ export default function ImportPage() {
     
     const file = e.dataTransfer.files[0];
     if (file && (file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.pdf') || file.name.endsWith('.docx'))) {
-      handleFile(file);
+      handleFile(file, enableAI);
     } else {
       setError('Please upload a .txt, .md, .pdf, or .docx file');
     }
@@ -81,9 +93,9 @@ export default function ImportPage() {
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFile(file);
+      handleFile(file, enableAI);
     }
-  }, [handleFile]);
+  }, [handleFile, enableAI]);
 
   const handleSave = useCallback(async () => {
     if (!importResult) return;
@@ -148,6 +160,59 @@ export default function ImportPage() {
             </div>
           </div>
         </motion.div>
+
+        {/* AI Enhancement Panel */}
+        {importResult.aiEnhancement && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-gray-800/50 border border-purple-500/30 rounded-lg"
+          >
+            <AIEnhancementPanel
+              importResult={importResult}
+              onApplyEnhancement={(enhanced) => {
+                setImportResult(enhanced);
+              }}
+            />
+          </motion.div>
+        )}
+
+        {/* AI Enhancement Available Badge */}
+        {!importResult.aiEnhancement && hasPremiumAccess() && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+                <div>
+                  <p className="text-purple-200 font-medium">AI Analysis Available</p>
+                  <p className="text-purple-300/60 text-sm mt-1">
+                    Enhance your import with AI-powered chapter splitting, relationship inference, and theme detection
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={async () => {
+                  setIsEnhancing(true);
+                  // Re-import with AI enabled
+                  const file = new File(
+                    [importResult.normalizedText.text],
+                    'story.txt',
+                    { type: 'text/plain' }
+                  );
+                  await handleFile(file, true);
+                }}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors"
+                disabled={isEnhancing}
+              >
+                {isEnhancing ? 'Enhancing...' : 'Enhance with AI'}
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Preview Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -290,6 +355,21 @@ export default function ImportPage() {
             <p className="text-gray-500 text-xs">
               Supports .txt, .md, .pdf, and .docx files
             </p>
+            {hasPremiumAccess() && (
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <input
+                  type="checkbox"
+                  id="enable-ai"
+                  checked={enableAI}
+                  onChange={(e) => setEnableAI(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                />
+                <label htmlFor="enable-ai" className="text-sm text-gray-300 flex items-center gap-2 cursor-pointer">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  Enable AI Analysis
+                </label>
+              </div>
+            )}
           </label>
         </div>
 

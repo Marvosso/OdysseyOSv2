@@ -13,10 +13,13 @@ import {
   Layout,
   Lightbulb,
   SkipForward,
+  Network,
+  List,
 } from 'lucide-react';
 import type { StoryOutline, Chapter, OutlinePoint } from '@/types/outline';
 import { outlineTemplates, generateOutlineFromTemplate, getOutlineSuggestions } from '@/lib/data/outlineTemplates';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import PlotMap from './PlotMap';
 
 interface OutlineBuilderProps {
   story: any;
@@ -30,6 +33,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
   const [editingPoint, setEditingPoint] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'graph'>('list');
 
   // Load saved outline on mount
   useEffect(() => {
@@ -162,6 +166,40 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
 
   const suggestions = outline ? getOutlineSuggestions(outline) : [];
 
+  const handleNodeClick = (nodeId: string, type: 'chapter' | 'point' | 'scene') => {
+    if (type === 'chapter' && outline) {
+      const chapter = outline.chapters.find((c) => c.id === nodeId);
+      if (chapter) {
+        setExpandedChapters(new Set([chapter.id]));
+        setViewMode('list');
+        // Scroll to chapter
+        setTimeout(() => {
+          const element = document.getElementById(`chapter-${chapter.id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+    } else if (type === 'point' && outline) {
+      // Find the chapter containing this point
+      for (const chapter of outline.chapters) {
+        const point = chapter.points.find((p) => p.id === nodeId);
+        if (point) {
+          setExpandedChapters(new Set([chapter.id]));
+          setEditingPoint(nodeId);
+          setViewMode('list');
+          setTimeout(() => {
+            const element = document.getElementById(`point-${nodeId}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 100);
+          break;
+        }
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -171,13 +209,40 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
         </h2>
         <div className="flex items-center gap-2">
           {outline && (
-            <button
-              onClick={handleClearOutline}
-              className="px-3 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-600/30 rounded-lg text-sm flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Clear
-            </button>
+            <>
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-2 transition-colors ${
+                    viewMode === 'list'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                  List
+                </button>
+                <button
+                  onClick={() => setViewMode('graph')}
+                  className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-2 transition-colors ${
+                    viewMode === 'graph'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  <Network className="w-4 h-4" />
+                  Graph
+                </button>
+              </div>
+              <button
+                onClick={handleClearOutline}
+                className="px-3 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-600/30 rounded-lg text-sm flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear
+              </button>
+            </>
           )}
           <button
             onClick={onSkip}
@@ -221,11 +286,29 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {outline && (
+      <AnimatePresence mode="wait">
+        {outline && viewMode === 'graph' && (
           <motion.div
+            key="graph"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            <PlotMap
+              outline={outline}
+              onNodeClick={handleNodeClick}
+            />
+          </motion.div>
+        )}
+
+        {outline && viewMode === 'list' && (
+          <motion.div
+            key="list"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2 }}
             className="space-y-4"
           >
             <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg space-y-3">
@@ -292,6 +375,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
               {outline.chapters.map((chapter, chapterIndex) => (
                 <motion.div
                   key={chapter.id}
+                  id={`chapter-${chapter.id}`}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="border border-gray-700 rounded-lg overflow-hidden bg-gray-800/30"
@@ -328,6 +412,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                           {chapter.points.map((point, pointIndex) => (
                             <div
                               key={point.id}
+                              id={`point-${point.id}`}
                               className="p-3 bg-gray-700/50 border border-gray-600 rounded-lg"
                             >
                               {editingPoint === point.id ? (

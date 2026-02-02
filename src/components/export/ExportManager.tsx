@@ -11,10 +11,19 @@ import {
   Check,
   BookOpen,
   FileCode,
-  Loader2
+  Loader2,
+  Volume2,
+  Twitter,
+  Book,
+  BarChart3
 } from 'lucide-react';
 import type { Story } from '@/types/story';
 import { format } from 'date-fns';
+import AudioExportPanel from './AudioExportPanel';
+import SocialMediaExports from './SocialMediaExports';
+import PublishingExports from './PublishingExports';
+import AnalysisExports from './AnalysisExports';
+import { StoryStorage } from '@/lib/storage/storyStorage';
 
 interface ExportManagerProps {
   story: Story;
@@ -39,6 +48,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
   const [includeCharacters, setIncludeCharacters] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [activeTab, setActiveTab] = useState<'text' | 'audio' | 'social' | 'publishing' | 'analysis'>('text');
 
   const stats = calculateStats(story);
 
@@ -263,12 +273,104 @@ export default function ExportManager({ story }: ExportManagerProps) {
     return content;
   };
 
+  // Load actual story from storage
+  const actualStory = story.id === 'default' ? (() => {
+    const savedStory = StoryStorage.loadStory();
+    const savedScenes = StoryStorage.loadScenes();
+    if (savedStory) {
+      return { ...savedStory, scenes: savedScenes.length > 0 ? savedScenes : savedStory.scenes };
+    }
+    return story;
+  })() : story;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
+      {/* Tab Selection */}
+      <div className="flex items-center gap-2 border-b border-gray-700 pb-2 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('text')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === 'text'
+              ? 'text-purple-400 border-purple-400'
+              : 'text-gray-400 border-transparent hover:text-white'
+          }`}
+        >
+          <FileText className="w-4 h-4 inline mr-2" />
+          Text Export
+        </button>
+        <button
+          onClick={() => setActiveTab('audio')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === 'audio'
+              ? 'text-purple-400 border-purple-400'
+              : 'text-gray-400 border-transparent hover:text-white'
+          }`}
+        >
+          <Volume2 className="w-4 h-4 inline mr-2" />
+          Audiobook
+        </button>
+        <button
+          onClick={() => setActiveTab('social')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === 'social'
+              ? 'text-purple-400 border-purple-400'
+              : 'text-gray-400 border-transparent hover:text-white'
+          }`}
+        >
+          <Twitter className="w-4 h-4 inline mr-2" />
+          Social Media
+        </button>
+        <button
+          onClick={() => setActiveTab('publishing')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === 'publishing'
+              ? 'text-purple-400 border-purple-400'
+              : 'text-gray-400 border-transparent hover:text-white'
+          }`}
+        >
+          <Book className="w-4 h-4 inline mr-2" />
+          Publishing
+        </button>
+        <button
+          onClick={() => setActiveTab('analysis')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === 'analysis'
+              ? 'text-purple-400 border-purple-400'
+              : 'text-gray-400 border-transparent hover:text-white'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4 inline mr-2" />
+          Analysis
+        </button>
+      </div>
+
+      {/* Audio Export Tab */}
+      {activeTab === 'audio' && (
+        <AudioExportPanel story={actualStory} />
+      )}
+
+      {/* Social Media Export Tab */}
+      {activeTab === 'social' && (
+        <SocialMediaExports story={actualStory} />
+      )}
+
+      {/* Publishing Export Tab */}
+      {activeTab === 'publishing' && (
+        <PublishingExports story={actualStory} />
+      )}
+
+      {/* Analysis Export Tab */}
+      {activeTab === 'analysis' && (
+        <AnalysisExports story={actualStory} />
+      )}
+
+      {/* Text Export Tab */}
+      {activeTab === 'text' && (
+        <>
       {/* Stats Dashboard */}
       <div className="grid grid-cols-2 gap-3">
         <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
@@ -400,6 +502,8 @@ export default function ExportManager({ story }: ExportManagerProps) {
           </>
         )}
       </button>
+        </>
+      )}
     </motion.div>
   );
 }

@@ -25,8 +25,17 @@ import {
   Upload,
   Search,
   Info,
+  User,
+  X,
+  TrendingUp,
+  Keyboard,
 } from 'lucide-react';
 import GlobalSearch from '@/components/search/GlobalSearch';
+import GuestManager from '@/components/session/GuestManager';
+import MigrationWizard from '@/components/session/MigrationWizard';
+import KeyboardShortcutsProvider, { openCheatsheet } from '@/components/shortcuts/KeyboardShortcutsProvider';
+import { AccountStorage } from '@/lib/storage/accountStorage';
+import { StoryStorage } from '@/lib/storage/storyStorage';
 
 const navigationItems = [
   { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome' },
@@ -37,6 +46,7 @@ const navigationItems = [
   { id: 'world', label: 'World', icon: Globe, path: '/dashboard/world' },
   { id: 'ai', label: 'AI Tools', icon: Sparkles, path: '/dashboard/ai' },
   { id: 'beats', label: 'Beats', icon: BarChart3, path: '/dashboard/beats' },
+  { id: 'analytics', label: 'Analytics', icon: TrendingUp, path: '/dashboard/analytics' },
   { id: 'export', label: 'Export', icon: Download, path: '/dashboard/export' },
   { id: 'publish', label: 'Publish', icon: Share2, path: '/dashboard/publish' },
 ];
@@ -50,6 +60,29 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [guestId, setGuestId] = useState<string>('');
+  const [showGuestModal, setShowGuestModal] = useState(false);
+  const [showMigrationWizard, setShowMigrationWizard] = useState(false);
+
+  /**
+   * Initialize guest session on first visit
+   */
+  useEffect(() => {
+    const initGuestSession = () => {
+      const id = StoryStorage.getOrCreateGuestSession();
+      setGuestId(id);
+      
+      // Check if user has account, if not, show migration wizard
+      if (!AccountStorage.hasAccount()) {
+        // Show migration wizard after a delay to let the page load
+        setTimeout(() => {
+          setShowMigrationWizard(true);
+        }, 2000);
+      }
+    };
+
+    initGuestSession();
+  }, []);
 
   /**
    * Check authentication and redirect if not authenticated
@@ -113,6 +146,20 @@ export default function DashboardLayout({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSearchOpen]);
 
+  /**
+   * Listen for migration wizard open event
+   */
+  useEffect(() => {
+    const handleOpenMigration = () => {
+      setShowMigrationWizard(true);
+    };
+
+    window.addEventListener('odysseyos:open-migration', handleOpenMigration);
+    return () => {
+      window.removeEventListener('odysseyos:open-migration', handleOpenMigration);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
@@ -123,28 +170,91 @@ export default function DashboardLayout({
     );
   }
 
+  const handleShortcutAction = (action: string, event: KeyboardEvent) => {
+    // Handle shortcut actions
+    switch (action) {
+      case 'new-scene':
+        // Trigger new scene creation
+        break;
+      case 'delete-scene':
+        // Trigger scene deletion
+        break;
+      case 'next-scene':
+        // Navigate to next scene
+        break;
+      case 'prev-scene':
+        // Navigate to previous scene
+        break;
+      case 'save':
+        // Trigger save
+        break;
+      case 'export':
+        router.push('/dashboard/export');
+        break;
+      case 'search':
+        setIsSearchOpen(true);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 flex">
-      {/* Global Search */}
-      <GlobalSearch
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-      />
+    <KeyboardShortcutsProvider onAction={handleShortcutAction}>
+      <div className="min-h-screen bg-gray-900 flex">
+        {/* Global Search */}
+        <GlobalSearch
+          isOpen={isSearchOpen}
+          onClose={() => setIsSearchOpen(false)}
+        />
 
       {/* Sidebar */}
       <aside className="w-64 bg-gray-800/50 border-r border-gray-700 flex flex-col">
         <div className="p-6 border-b border-gray-700">
           <h1 className="text-xl font-bold text-white mb-3">OdysseyOS</h1>
+          
+          {/* Guest Session ID Display */}
+          {guestId && (
+            <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-400">Guest Session</span>
+                <button
+                  onClick={() => setShowGuestModal(true)}
+                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  title="Manage session"
+                >
+                  <User className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="font-mono text-xs font-bold text-purple-400 tracking-wider">
+                {guestId}
+              </div>
+            </div>
+          )}
+
           {/* Search Button */}
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-700/50 hover:bg-gray-700 rounded-lg text-gray-300 hover:text-white transition-colors text-sm"
+            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-700/50 hover:bg-gray-700 rounded-lg text-gray-300 hover:text-white transition-colors text-sm mb-2"
             title="Search (Cmd/Ctrl + K)"
           >
             <Search className="w-4 h-4" />
             <span className="flex-1 text-left">Search...</span>
             <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs text-gray-400">
               {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}K
+            </kbd>
+          </button>
+
+          {/* Keyboard Shortcuts Button */}
+          <button
+            onClick={() => openCheatsheet?.()}
+            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-700/50 hover:bg-gray-700 rounded-lg text-gray-300 hover:text-white transition-colors text-sm"
+            title="Keyboard Shortcuts (Ctrl+Shift+?)"
+          >
+            <Keyboard className="w-4 h-4" />
+            <span className="flex-1 text-left">Shortcuts</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs text-gray-400">
+              ?
             </kbd>
           </button>
         </div>
@@ -192,6 +302,49 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
-    </div>
+
+      {/* Guest Session Modal */}
+      {showGuestModal && guestId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <User className="w-5 h-5 text-purple-400" />
+                Guest Session Management
+              </h2>
+              <button
+                onClick={() => setShowGuestModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <GuestManager
+                guestId={guestId}
+                onGuestIdChange={(newId) => {
+                  setGuestId(newId);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Migration Wizard */}
+      {showMigrationWizard && (
+        <MigrationWizard
+          onComplete={() => {
+            setShowMigrationWizard(false);
+            // Reload to refresh account state
+            window.location.reload();
+          }}
+          onCancel={() => {
+            setShowMigrationWizard(false);
+          }}
+        />
+      )}
+      </div>
+    </KeyboardShortcutsProvider>
   );
 }

@@ -123,6 +123,33 @@ export interface ImportResult {
   readonly validation: ValidationResult;
   /** Preview data for UI */
   readonly preview: PreviewData;
+  /** AI enhancement data (optional) */
+  readonly aiEnhancement?: {
+    readonly chapters?: Array<{
+      readonly chapterNumber: number;
+      readonly title: string;
+      readonly startLine: number;
+      readonly endLine: number;
+      readonly confidence: number;
+    }>;
+    readonly relationships?: Array<{
+      readonly character1: string;
+      readonly character2: string;
+      readonly relationship: string;
+      readonly intensity: number;
+    }>;
+    readonly themes?: Array<{
+      readonly theme: string;
+      readonly confidence: number;
+    }>;
+    readonly summary?: {
+      readonly summary: string;
+      readonly genre: string;
+      readonly themes: string[];
+      readonly tone: string;
+    };
+    readonly cached: boolean;
+  };
 }
 
 /**
@@ -1291,7 +1318,11 @@ export class ImportPipeline {
    * Execute the complete import pipeline
    * FIXED: Added edge case handling
    */
-  static async execute(file: File, title?: string): Promise<ImportResult> {
+  static async execute(
+    file: File,
+    title?: string,
+    enableAI?: boolean
+  ): Promise<ImportResult> {
     try {
       // #region agent log
       console.log('[ImportPipeline.execute] File validation check. File:', file.name, 'Type:', file.type, 'Extension:', file.name.substring(file.name.lastIndexOf('.')));
@@ -1393,10 +1424,47 @@ export class ImportPipeline {
       
       const preview = PreviewGenerator.generatePreview(partialResult);
       
+      let aiEnhancement: ImportResult['aiEnhancement'] = undefined;
+
+      // Apply AI enhancement if enabled and user has premium access
+      if (enableAI) {
+        try {
+          const { hasPremiumAccess, enhanceImportWithAI } = await import('@/lib/ai/importEnhancer');
+          
+          if (hasPremiumAccess()) {
+            const characterNames = partialResult.detectedCharacters.map((c) => c.name);
+            const aiResult = await enhanceImportWithAI(
+              partialResult.normalizedText.text,
+              characterNames,
+              {
+                enableChapterSplitting: true,
+                enableRelationshipInference: characterNames.length >= 2,
+                enableThemeTagging: true,
+                enableSummaryGeneration: true,
+              }
+            );
+
+            if (aiResult.chapters || aiResult.relationships || aiResult.themes || aiResult.summary) {
+              aiEnhancement = {
+                chapters: aiResult.chapters,
+                relationships: aiResult.relationships,
+                themes: aiResult.themes,
+                summary: aiResult.summary,
+                cached: aiResult.cached,
+              };
+            }
+          }
+        } catch (error) {
+          console.error('AI enhancement failed:', error);
+          // Continue without AI enhancement
+        }
+      }
+      
       return {
         ...partialResult,
         validation: enhancedValidation,
         preview,
+        aiEnhancement,
       };
     } catch (error) {
       if (error instanceof ImportError) {

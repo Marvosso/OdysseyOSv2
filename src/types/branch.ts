@@ -5,6 +5,7 @@ export interface StoryBranch {
   parentId: string | null;
   isMain: boolean;
   createdAt: Date;
+  updatedAt?: Date;
   divergencePoint: {
     sceneId: string;
     beatId?: string;
@@ -15,10 +16,20 @@ export interface StoryBranch {
 
 export interface BranchScene {
   id: string;
-  originalSceneId?: string; // if this diverges from main
+  originalSceneId?: string;
+  storyId?: string;
+  title: string;
   content: string;
-  beats: string[];
-  metadata: {
+  position: number;
+  emotion: string;
+  status: 'draft' | 'revised' | 'final';
+  wordCount?: number;
+  povCharacter?: string;
+  location?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  beats?: string[];
+  metadata?: {
     wordCount: number;
     emotion: string;
     conflictLevel: number;

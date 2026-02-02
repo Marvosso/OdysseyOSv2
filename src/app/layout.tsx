@@ -1,9 +1,33 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import PWAInitializer from '@/components/pwa/PWAInitializer';
 
 export const metadata: Metadata = {
-  title: 'OdysseyOS',
-  description: 'OdysseyOS - Your story writing companion',
+  title: 'OdysseyOS - Story Writing Platform',
+  description: 'A comprehensive story writing platform with AI-powered features, character management, and world building',
+  manifest: '/manifest.json',
+  themeColor: '#9333EA',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'OdysseyOS',
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+  },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -13,7 +37,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#9333EA" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="OdysseyOS" />
+      </head>
+      <body>
+        {children}
+        <PWAInitializer />
+      </body>
     </html>
   );
 }

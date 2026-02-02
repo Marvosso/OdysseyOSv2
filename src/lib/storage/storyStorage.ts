@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   CHARACTERS: 'odysseyos_characters',
   SCENES: 'odysseyos_scenes',
   SETTINGS: 'odysseyos_settings',
+  GUEST_ID: 'odysseyos_guest_id',
 };
 
 export interface SavedData {
@@ -28,6 +29,13 @@ export class StoryStorage {
       data.lastSaved = new Date();
       localStorage.setItem(STORAGE_KEYS.STORY, JSON.stringify(story));
       this.saveAll(data);
+      
+      // Queue for background sync if offline
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        import('@/lib/pwa/backgroundSync').then(({ BackgroundSyncManager }) => {
+          BackgroundSyncManager.queueStorySave(story);
+        });
+      }
     } catch (error) {
       console.error('Error saving story:', error);
     }
@@ -186,5 +194,131 @@ export class StoryStorage {
     } catch {
       return null;
     }
+  }
+
+  // ============================================================================
+  // Guest Session Management
+  // ============================================================================
+
+  /**
+   * Generate a random 8-character guest ID
+   */
+  static generateGuestId(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  /**
+   * Get existing guest session ID or create a new one
+   */
+  static getOrCreateGuestSession(): string {
+    try {
+      const existing = localStorage.getItem(STORAGE_KEYS.GUEST_ID);
+      if (existing) {
+        return existing;
+      }
+
+      const newId = this.generateGuestId();
+      localStorage.setItem(STORAGE_KEYS.GUEST_ID, newId);
+      return newId;
+    } catch (error) {
+      console.error('Error managing guest session:', error);
+      // Fallback: generate ID without storing (for privacy mode)
+      return this.generateGuestId();
+    }
+  }
+
+  /**
+   * Get current guest session ID (returns null if not set)
+   */
+  static getGuestSessionId(): string | null {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.GUEST_ID);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Export all guest session data as JSON for backup
+   */
+  static exportGuestData(): string {
+    const data = this.loadAll();
+    const guestId = this.getGuestSessionId();
+    
+    const exportData = {
+      guestId: guestId || 'unknown',
+      exportedAt: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        story: data.story,
+        outline: data.outline,
+        characters: data.characters,
+        scenes: data.scenes,
+      },
+    };
+
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  /**
+   * Import guest session data from JSON backup
+   * @param guestId - Guest ID to restore (optional, will use from data if not provided)
+   * @param jsonString - JSON string containing the backup data
+   */
+  static importGuestData(guestId: string | null, jsonString: string): { success: boolean; error?: string } {
+    try {
+      const importData = JSON.parse(jsonString);
+      
+      // Validate structure
+      if (!importData.data) {
+        return { success: false, error: 'Invalid backup format: missing data field' };
+      }
+
+      const data = importData.data;
+
+      // Restore guest ID if provided
+      const restoreId = guestId || importData.guestId;
+      if (restoreId) {
+        localStorage.setItem(STORAGE_KEYS.GUEST_ID, restoreId);
+      }
+
+      // Restore all data
+      if (data.story) {
+        this.saveStory(data.story);
+      }
+      if (data.outline) {
+        this.saveOutline(data.outline);
+      }
+      if (data.characters) {
+        this.saveCharacters(data.characters);
+      }
+      if (data.scenes) {
+        this.saveScenes(data.scenes);
+      }
+
+      // Trigger storage event to notify other components
+      window.dispatchEvent(new Event('storage'));
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error importing guest data:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to import backup data',
+      };
+    }
+  }
+
+  /**
+   * Clear guest session (removes guest ID and all data)
+   */
+  static clearGuestSession(): void {
+    localStorage.removeItem(STORAGE_KEYS.GUEST_ID);
+    this.clearAll();
   }
 }

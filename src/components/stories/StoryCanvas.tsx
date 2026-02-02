@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GripVertical, Plus, Trash2, Volume2, ChevronDown, ChevronUp, MapPin, User, FileText, ExternalLink } from 'lucide-react';
+import { GripVertical, Plus, Trash2, Volume2, ChevronDown, ChevronUp, MapPin, User, FileText, ExternalLink, AlertTriangle, Timer, Users, Brain, GitBranch } from 'lucide-react';
 import type { Scene, Story, SceneStatus } from '@/types/story';
 import NarrationControls from '@/components/narration/NarrationControls';
 import { computeWordCount } from '@/utils/wordCount';
@@ -10,6 +10,12 @@ import { getWorldElementsForScene, findWorldElementByName } from '@/lib/world/wo
 import WorldElementTooltip from '@/components/world/WorldElementTooltip';
 import { useRouter } from 'next/navigation';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import ConsistencyPanel from '@/components/analysis/ConsistencyPanel';
+import type { ConsistencyIssue } from '@/lib/analysis/consistencyChecker';
+import SprintTimer from '@/components/writing/SprintTimer';
+import WritingRoom from '@/components/collaboration/WritingRoom';
+import SceneInsights from '@/components/analysis/SceneInsights';
+import BranchingTool from '@/components/experiment/BranchingTool';
 
 // Component to display word count (memoized for performance)
 function SceneWordCount({ content }: { content: string }) {
@@ -110,6 +116,25 @@ export default function StoryCanvas({
   const [expandedNarration, setExpandedNarration] = useState<string | null>(null);
   const [highlightedContent, setHighlightedContent] = useState<Record<string, string>>({});
   const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
+  const [showConsistencyPanel, setShowConsistencyPanel] = useState(false);
+  const [showSprintTimer, setShowSprintTimer] = useState(false);
+  const [showWritingRoom, setShowWritingRoom] = useState(false);
+  const [insightsSceneId, setInsightsSceneId] = useState<string | null>(null);
+  const [showBranchingTool, setShowBranchingTool] = useState(false);
+
+  const handleIssueClick = (issue: ConsistencyIssue) => {
+    if (issue.sceneId) {
+      const sceneElement = document.getElementById(`scene-${issue.sceneId}`);
+      if (sceneElement) {
+        sceneElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight the scene briefly
+        sceneElement.classList.add('ring-2', 'ring-yellow-500');
+        setTimeout(() => {
+          sceneElement.classList.remove('ring-2', 'ring-yellow-500');
+        }, 2000);
+      }
+    }
+  };
 
   // Save story to storage whenever it changes
   useEffect(() => {
@@ -164,6 +189,44 @@ export default function StoryCanvas({
             <span>•</span>
             <span>{story.characters.length} characters</span>
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowWritingRoom(!showWritingRoom)}
+              className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+                showWritingRoom
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+              title="Collaborative Writing Room"
+            >
+              <Users className="w-4 h-4" />
+              Collaborate
+            </button>
+            <button
+              onClick={() => setShowSprintTimer(!showSprintTimer)}
+              className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+                showSprintTimer
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+              title="Writing Sprint Timer"
+            >
+              <Timer className="w-4 h-4" />
+              Sprint
+            </button>
+            <button
+              onClick={() => setShowConsistencyPanel(!showConsistencyPanel)}
+              className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
+                showConsistencyPanel
+                  ? 'bg-yellow-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+              title="Consistency Checker"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Consistency
+            </button>
+          </div>
           {/* Story-wide Narration */}
           {story.scenes.length > 0 && (
             <button
@@ -207,6 +270,7 @@ export default function StoryCanvas({
           {story.scenes.map((scene) => (
             <motion.div
               key={scene.id}
+              id={`scene-${scene.id}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -459,7 +523,46 @@ export default function StoryCanvas({
                       opacity: highlightedContent[scene.id] && expandedNarration === scene.id ? 0 : 1,
                     }}
                   />
+                  
+                  {/* Scene Insights Button */}
+                  {scene.content.trim() && (
+                    <button
+                      onClick={() => setInsightsSceneId(insightsSceneId === scene.id ? null : scene.id)}
+                      className="absolute top-2 right-2 p-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg transition-colors z-20"
+                      title="Scene Insights"
+                    >
+                      <Brain className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
+                
+                {/* Scene Insights Panel */}
+                <AnimatePresence>
+                  {insightsSceneId === scene.id && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-4"
+                    >
+                      <SceneInsights
+                        scene={scene}
+                        onClose={() => setInsightsSceneId(null)}
+                        onApplySuggestion={(suggestion, rewrittenText) => {
+                          // Apply rewrite to scene
+                          const updatedScenes = story.scenes.map((s) =>
+                            s.id === scene.id
+                              ? { ...s, content: rewrittenText, updatedAt: new Date() }
+                              : s
+                          );
+                          const updated = { ...story, scenes: updatedScenes, updatedAt: new Date() };
+                          setStory(updated);
+                          onStoryChange?.(updated);
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           ))}
@@ -487,6 +590,90 @@ export default function StoryCanvas({
           </button>
         )}
       </div>
+
+      {/* Writing Room */}
+      <AnimatePresence>
+        {showWritingRoom && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-6"
+          >
+            <WritingRoom
+              story={story}
+              userId={StoryStorage.getGuestSessionId() || 'guest-' + Date.now()}
+              userName={`Guest ${(StoryStorage.getGuestSessionId() || '').substring(0, 4)}`}
+              onClose={() => setShowWritingRoom(false)}
+              onStoryUpdate={(updatedStory) => {
+                setStory(updatedStory);
+                onStoryChange?.(updatedStory);
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sprint Timer */}
+      <AnimatePresence>
+        {showSprintTimer && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-6"
+          >
+            <SprintTimer
+              initialContent=""
+              onContentChange={(content) => {
+                // Content from sprint timer can be saved separately
+                // or integrated into the story scenes
+              }}
+              onClose={() => setShowSprintTimer(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Consistency Panel */}
+      <AnimatePresence>
+        {showConsistencyPanel && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-6"
+          >
+            <ConsistencyPanel
+              storyId={story.id}
+              onIssueClick={handleIssueClick}
+              autoRefresh={true}
+              refreshInterval={5000}
+            />
+          </motion.div>
+        )}
+
+        {/* Branching Tool */}
+        {showBranchingTool && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed inset-4 bg-gray-800 rounded-lg border border-gray-700 z-50 overflow-y-auto"
+          >
+            <div className="p-6">
+              <BranchingTool
+                story={story}
+                onStoryUpdate={(updated) => {
+                  setStory(updated);
+                  onStoryChange?.(updated);
+                }}
+                onClose={() => setShowBranchingTool(false)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
