@@ -226,29 +226,52 @@ export class SpeechController {
     fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:215',message:'about to call speechSynthesis.speak',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceText:utterance ? utterance.text.substring(0,50) : '',hasVoice:utterance ? !!utterance.voice : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] about to call speechSynthesis.speak:', {textLength: text.length, wasSpeaking: speechSynthesis.speaking, hasVoice: utterance ? !!utterance.voice : false});});
     // #endregion
     
-    // Call speak immediately - requestAnimationFrame might be causing delays
-    // that allow something else to cancel the utterance
+    // Call speak immediately - must be in user interaction context
+    // Browsers require speechSynthesis.speak() to be called directly from user interaction
     console.log('[NARRATION] about to call speechSynthesis.speak', { 
       textLength: text.length, 
       wasSpeaking: speechSynthesis.speaking,
       utterance: this.utterance,
-      hasVoice: this.utterance ? !!this.utterance.voice : false
+      hasVoice: this.utterance ? !!this.utterance.voice : false,
+      pending: speechSynthesis.pending,
+      speaking: speechSynthesis.speaking
     });
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:215',message:'about to call speechSynthesis.speak',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceText:utterance ? utterance.text.substring(0,50) : '',hasVoice:utterance ? !!utterance.voice : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
     // #endregion
     
-    if (this.utterance) {
-      console.log('[NARRATION] calling speechSynthesis.speak NOW', {
-        textLength: this.utterance.text.length,
-        hasVoice: !!this.utterance.voice,
-        rate: this.utterance.rate,
-        volume: this.utterance.volume
-      });
-      speechSynthesis.speak(this.utterance);
-      console.log('[NARRATION] speechSynthesis.speak() called, speaking:', speechSynthesis.speaking);
-    } else {
+    if (!this.utterance) {
       console.error('[NARRATION] ERROR: utterance is null when trying to speak!');
+      return;
+    }
+
+    // Ensure we're not already speaking something else
+    if (speechSynthesis.speaking && !this.utterance) {
+      console.log('[NARRATION] Already speaking, canceling first');
+      speechSynthesis.cancel();
+      // Small delay to let cancel complete
+      setTimeout(() => {
+        console.log('[NARRATION] calling speechSynthesis.speak after cancel delay');
+        speechSynthesis.speak(this.utterance!);
+      }, 50);
+      return;
+    }
+
+    console.log('[NARRATION] calling speechSynthesis.speak NOW', {
+      textLength: this.utterance.text.length,
+      hasVoice: !!this.utterance.voice,
+      rate: this.utterance.rate,
+      volume: this.utterance.volume,
+      pending: speechSynthesis.pending,
+      speaking: speechSynthesis.speaking
+    });
+    
+    try {
+      speechSynthesis.speak(this.utterance);
+      console.log('[NARRATION] speechSynthesis.speak() called successfully, speaking:', speechSynthesis.speaking, 'pending:', speechSynthesis.pending);
+    } catch (error) {
+      console.error('[NARRATION] ERROR calling speechSynthesis.speak:', error);
+      this.callbacks.onError?.(error instanceof Error ? error : new Error(String(error)));
     }
   }
 

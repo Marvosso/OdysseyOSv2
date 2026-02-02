@@ -257,7 +257,12 @@ export default function NarrationControls({
       {/* Playback Controls */}
       <div className="flex items-center gap-2">
         <button
-          onClick={handlePlay}
+          onClick={(e) => {
+            console.log('[NARRATION] Play button clicked directly');
+            e.preventDefault();
+            e.stopPropagation();
+            handlePlay();
+          }}
           disabled={!text.trim() || (isPlaying && !isPaused)}
           className="p-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg transition-colors"
           title={isPaused ? 'Resume' : 'Play'}
