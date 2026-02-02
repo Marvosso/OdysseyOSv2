@@ -5,6 +5,8 @@
  * SOLUTION: Singleton speech manager to coordinate all speech synthesis
  */
 
+import { VoiceLoader } from './voiceLoader';
+
 export class SpeechManager {
   private static instance: SpeechManager;
   private synthesis: SpeechSynthesis;
@@ -51,13 +53,13 @@ export class SpeechManager {
   /**
    * Process a single utterance
    */
-  private processUtterance(
+  private async processUtterance(
     text: string,
     rate: number,
     resolve: () => void,
     reject: (error: Error) => void,
     voice?: string
-  ): void {
+  ): Promise<void> {
     console.log('[SpeechManager] Processing utterance', { textLength: text.length, voice, rate });
     
     // Cancel any current speech
@@ -65,6 +67,11 @@ export class SpeechManager {
       console.log('[SpeechManager] Canceling existing speech');
       this.synthesis.cancel();
     }
+
+    // Wait for voices to load before creating utterance
+    await VoiceLoader.waitForVoices();
+    const voices = this.synthesis.getVoices();
+    console.log('[SpeechManager] Voices available', { count: voices.length });
 
     // Create utterance
     const utterance = new SpeechSynthesisUtterance(text);
@@ -74,19 +81,21 @@ export class SpeechManager {
     
     // Set voice if specified
     if (voice) {
-      const voices = this.synthesis.getVoices();
       const selectedVoice = voices.find(v => v.name === voice);
       if (selectedVoice) {
         utterance.voice = selectedVoice;
         console.log('[SpeechManager] Voice set:', selectedVoice.name);
+      } else {
+        console.warn('[SpeechManager] Voice not found:', voice, 'Available voices:', voices.map(v => v.name).slice(0, 5));
       }
     } else {
       // Use default voice
-      const voices = this.synthesis.getVoices();
       const defaultVoice = voices.find(v => v.localService && v.lang.startsWith('en')) || voices[0];
       if (defaultVoice) {
         utterance.voice = defaultVoice;
         console.log('[SpeechManager] Default voice set:', defaultVoice.name);
+      } else {
+        console.warn('[SpeechManager] No default voice found');
       }
     }
 
