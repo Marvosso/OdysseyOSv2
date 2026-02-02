@@ -2,7 +2,10 @@
  * Speech Controller
  * 
  * Manages Web Speech API (speechSynthesis) for text-to-speech narration
+ * Now uses SpeechManager singleton to prevent conflicts
  */
+
+import { SpeechManager } from '@/lib/audio/speechManager';
 
 export interface SpeechControllerOptions {
   voice?: SpeechSynthesisVoice;
@@ -21,6 +24,7 @@ export interface SpeechControllerCallbacks {
 }
 
 export class SpeechController {
+  private speechManager: SpeechManager;
   private utterance: SpeechSynthesisUtterance | null = null;
   private isPaused = false;
   private callbacks: SpeechControllerCallbacks = {};
@@ -94,6 +98,14 @@ export class SpeechController {
       ...options,
     };
     this.callbacks = callbacks;
+    
+    // Get singleton speech manager
+    try {
+      this.speechManager = SpeechManager.getInstance();
+    } catch (error) {
+      console.error('[SpeechController] Failed to get SpeechManager:', error);
+      // Fallback - will be handled in speak()
+    }
   }
 
   /**
@@ -316,15 +328,16 @@ export class SpeechController {
    * Check if currently speaking
    */
   isSpeaking(): boolean {
-    if (!SpeechController.isSupported()) return false;
-    return speechSynthesis.speaking && !this.isPaused;
+    if (!this.speechManager) return false;
+    return this.speechManager.isCurrentlySpeaking() && !this.isPaused;
   }
 
   /**
    * Check if paused
    */
   isPausedState(): boolean {
-    return this.isPaused;
+    if (!this.speechManager) return false;
+    return this.speechManager.isPaused() || this.isPaused;
   }
 
   /**
