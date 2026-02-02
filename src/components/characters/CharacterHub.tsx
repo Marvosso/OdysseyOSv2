@@ -22,32 +22,51 @@ interface LocalCharacter {
   arcStatus: 'unstarted' | 'beginning' | 'middle' | 'complete';
 }
 
+// Extended Character type that includes additional properties stored in metadata
+interface ExtendedCharacter extends Character {
+  role?: 'protagonist' | 'antagonist' | 'supporting' | 'mentor' | 'love-interest' | 'comic-relief' | 'other';
+  age?: number;
+  personality?: string;
+  background?: string;
+  motivation?: string;
+  flaw?: string;
+  arcStatus?: 'unstarted' | 'beginning' | 'middle' | 'complete';
+}
+
 // Convert Character from story type to local type
-function convertToLocalCharacter(char: Character): LocalCharacter {
+function convertToLocalCharacter(char: Character | ExtendedCharacter): LocalCharacter {
+  const extended = char as ExtendedCharacter;
   return {
     id: char.id,
     name: char.name,
-    role: (char.role as any) || 'supporting',
-    age: (char as any).age || 0,
+    role: extended.role || 'supporting',
+    age: extended.age || 0,
     appearance: char.description || '',
-    personality: (char as any).personality || '',
-    background: (char as any).background || '',
-    motivation: (char as any).motivation || '',
-    flaw: (char as any).flaw || '',
-    arcStatus: (char as any).arcStatus || 'unstarted',
+    personality: extended.personality || '',
+    background: extended.background || '',
+    motivation: extended.motivation || '',
+    flaw: extended.flaw || '',
+    arcStatus: extended.arcStatus || 'unstarted',
   };
 }
 
 // Convert local character back to story Character type
-function convertToStoryCharacter(char: LocalCharacter): Character {
+function convertToStoryCharacter(char: LocalCharacter): ExtendedCharacter {
   return {
     id: char.id,
     name: char.name,
     description: char.appearance || '',
-    role: char.role as any,
     goals: [],
     flaws: [],
     relationships: [],
+    // Store additional properties for persistence
+    role: char.role,
+    age: char.age,
+    personality: char.personality,
+    background: char.background,
+    motivation: char.motivation,
+    flaw: char.flaw,
+    arcStatus: char.arcStatus,
   };
 }
 
@@ -61,7 +80,7 @@ export default function CharacterHub() {
   useEffect(() => {
     const loadCharacters = () => {
       const saved = StoryStorage.loadCharacters();
-      const converted = saved.map(convertToLocalCharacter);
+      const converted: LocalCharacter[] = saved.map(convertToLocalCharacter);
       setCharacters(converted);
     };
 
@@ -90,7 +109,7 @@ export default function CharacterHub() {
     window.dispatchEvent(new Event('storage'));
   }, [characters]);
 
-  const handleSaveCharacter = (char: Character) => {
+  const handleSaveCharacter = (char: LocalCharacter) => {
     if (char.id) {
       setCharacters(characters.map(c => c.id === char.id ? char : c));
     } else {
@@ -104,7 +123,7 @@ export default function CharacterHub() {
     setCharacters(characters.filter(c => c.id !== id));
   };
 
-  const handleEditCharacter = (char: Character) => {
+  const handleEditCharacter = (char: LocalCharacter) => {
     setSelectedCharacter(char);
     setIsFormVisible(true);
   };
