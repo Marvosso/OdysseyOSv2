@@ -221,12 +221,22 @@ export class SpeechController {
     
     // Use requestAnimationFrame to ensure the utterance is fully configured
     // This prevents race conditions where cancel happens right after speak
+    const utteranceRef = this.utterance; // Capture reference for RAF callback
     requestAnimationFrame(() => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:223',message:'calling speechSynthesis.speak in RAF',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceStillExists:this.utterance !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] calling speechSynthesis.speak in RAF');});
+      const stillExists = this.utterance !== null;
+      const stillMatches = this.utterance === utteranceRef;
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:223',message:'calling speechSynthesis.speak in RAF',data:{textLength:text.length,wasSpeaking:speechSynthesis.speaking,utteranceStillExists:stillExists,utteranceStillMatches:stillMatches,utteranceRefExists:utteranceRef !== null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] calling speechSynthesis.speak in RAF, stillExists:', stillExists, 'stillMatches:', stillMatches);});
       // #endregion
       if (this.utterance) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:230',message:'actually calling speechSynthesis.speak',data:{textLength:this.utterance.text.length,hasVoice:!!this.utterance.voice,rate:this.utterance.rate,volume:this.utterance.volume},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] actually calling speechSynthesis.speak');});
+        // #endregion
         speechSynthesis.speak(this.utterance);
+      } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechController.ts:234',message:'utterance is null in RAF callback',data:{textLength:text.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{console.log('[DEBUG] utterance is null in RAF callback');});
+        // #endregion
       }
     });
   }
