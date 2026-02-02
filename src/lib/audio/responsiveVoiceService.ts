@@ -50,9 +50,9 @@ export class ResponsiveVoiceService {
   }
 
   /**
-   * Wait for ResponsiveVoice to be loaded
+   * Wait for ResponsiveVoice to be loaded (public method)
    */
-  private waitForResponsiveVoice(): Promise<void> {
+  async waitForResponsiveVoice(): Promise<void> {
     return new Promise((resolve) => {
       if (typeof window === 'undefined') {
         resolve();
