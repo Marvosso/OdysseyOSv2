@@ -6,6 +6,7 @@
  */
 
 import { VoiceLoader } from './voiceLoader';
+import { TextChunker } from './textChunker';
 
 export class SpeechManager {
   private static instance: SpeechManager;
@@ -32,9 +33,16 @@ export class SpeechManager {
   /**
    * Speak text with optional voice and rate
    * Returns a promise that resolves when speech completes
+   * Automatically chunks long text to prevent timeouts
    */
   speak(text: string, voice?: string, rate = 1): Promise<void> {
     console.log('[SpeechManager] speak() called', { textLength: text.length, voice, rate });
+    
+    // For long text, use TextChunker to break it into manageable pieces
+    if (text.length > 500) {
+      console.log('[SpeechManager] Text is long, using TextChunker', { textLength: text.length });
+      return TextChunker.speakText(text, voice, rate, 300);
+    }
     
     return new Promise((resolve, reject) => {
       // If already speaking, queue this request
