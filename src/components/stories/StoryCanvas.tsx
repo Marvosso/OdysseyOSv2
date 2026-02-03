@@ -466,8 +466,8 @@ export default function StoryCanvas({
                 )}
               </div>
               <div className="p-4">
-                {/* Narration Controls for this scene */}
-                {expandedNarration === scene.id && (
+                {/* Narration disabled - feature temporarily disabled */}
+                {/* {expandedNarration === scene.id && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -478,18 +478,16 @@ export default function StoryCanvas({
                       text={scene.content}
                       onHighlightChange={(html) => {
                         if (html === scene.content) {
-                          // Clear highlight when narration ends
                           const newHighlighted = { ...highlightedContent };
                           delete newHighlighted[scene.id];
                           setHighlightedContent(newHighlighted);
                         } else {
-                          // Set highlight during narration
                           setHighlightedContent({ ...highlightedContent, [scene.id]: html });
                         }
                       }}
                     />
                   </motion.div>
-                )}
+                )} */}
                 
                 {/* Scene Content */}
                 <div className="relative">
