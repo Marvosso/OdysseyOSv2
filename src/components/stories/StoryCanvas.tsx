@@ -105,7 +105,8 @@ export default function StoryCanvas({
 
     window.addEventListener('storage', handleStorageChange);
     // Also check periodically for changes (for same-tab updates)
-    const interval = setInterval(reloadStory, 1000);
+    // Use longer interval to reduce interference with navigation
+    const interval = setInterval(reloadStory, 5000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
