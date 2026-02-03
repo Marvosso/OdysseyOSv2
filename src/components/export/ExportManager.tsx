@@ -293,9 +293,6 @@ export default function ExportManager({ story }: ExportManagerProps) {
       <div className="flex items-center gap-2 border-b border-gray-700 pb-2 overflow-x-auto">
         <button
           onClick={() => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ExportManager.tsx:295',message:'text tab clicked',data:{currentTab:activeTab},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-            // #endregion
             setActiveTab('text');
           }}
           className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
@@ -309,9 +306,6 @@ export default function ExportManager({ story }: ExportManagerProps) {
         </button>
         <button
           onClick={() => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ExportManager.tsx:306',message:'audio tab clicked',data:{currentTab:activeTab},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-            // #endregion
             setActiveTab('audio');
           }}
           className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
