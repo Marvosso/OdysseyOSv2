@@ -249,21 +249,7 @@ export default function StoryCanvas({
       </div>
 
       {/* Narration disabled - feature temporarily disabled */}
-      {/* {expandedNarration === 'story' && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="mb-6"
-        >
-          <NarrationControls
-            text={story.scenes.map(s => s.content).join('\n\n')}
-            onHighlightChange={(html) => {
-              setHighlightedContent({ story: html });
-            }}
-          />
-        </motion.div>
-      )} */}
+      {/* Story-wide narration panel commented out */}
 
       {/* Scenes List */}
       <div className="space-y-4">
