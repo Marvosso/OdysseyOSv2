@@ -93,7 +93,8 @@ export default function CharacterHub() {
 
     window.addEventListener('storage', handleStorageChange);
     // Also check periodically for changes (for same-tab updates)
-    const interval = setInterval(loadCharacters, 1000);
+    // Use longer interval to reduce interference with navigation
+    const interval = setInterval(loadCharacters, 5000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);

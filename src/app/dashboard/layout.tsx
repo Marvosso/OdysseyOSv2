@@ -285,10 +285,12 @@ export default function DashboardLayout({
               <Link
                 key={item.id}
                 href={item.path}
-                onClick={() => {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/layout.tsx:269',message:'nav link clicked',data:{itemId:item.id,itemPath:item.path,currentPath:pathname,willNavigate:item.path !== pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{console.log('[DEBUG] nav link clicked:', item.id, item.path, 'current:', pathname);});
-                  // #endregion
+                onClick={(e) => {
+                  // Don't prevent navigation - let Next.js Link handle it
+                  // Log navigation asynchronously without blocking
+                  setTimeout(() => {
+                    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/layout.tsx:269',message:'nav link clicked',data:{itemId:item.id,itemPath:item.path,currentPath:pathname,willNavigate:item.path !== pathname},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+                  }, 0);
                 }}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   isActive
