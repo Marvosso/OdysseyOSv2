@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import type { Story } from '@/types/story';
 import { format } from 'date-fns';
-import AudioExportPanel from './AudioExportPanel';
+// AudioExportPanel disabled - narration feature temporarily disabled
+// import AudioExportPanel from './AudioExportPanel';
 import SocialMediaExports from './SocialMediaExports';
 import PublishingExports from './PublishingExports';
 import AnalysisExports from './AnalysisExports';
@@ -352,17 +353,12 @@ export default function ExportManager({ story }: ExportManagerProps) {
         </button>
       </div>
 
-      {/* Audio Export Tab */}
+      {/* Audio Export Tab - Disabled */}
       {activeTab === 'audio' && (
-        <>
-          {/* #region agent log */}
-          {(() => {
-            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ExportManager.tsx:352',message:'rendering audio tab',data:{activeTab:activeTab,storyId:actualStory.id,storyTitle:actualStory.title,scenesCount:actualStory.scenes.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-            return null;
-          })()}
-          {/* #endregion */}
-          <AudioExportPanel story={actualStory} />
-        </>
+        <div className="p-8 text-center">
+          <p className="text-gray-400 mb-4">Audiobook export is temporarily disabled.</p>
+          <p className="text-sm text-gray-500">This feature will be restored in a future update.</p>
+        </div>
       )}
 
       {/* Social Media Export Tab */}
