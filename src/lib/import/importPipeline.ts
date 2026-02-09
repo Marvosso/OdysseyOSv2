@@ -418,11 +418,7 @@ export class ChapterDetector {
       if (/^chapter\s+\d+/i.test(line)) {
         console.log(`[ChapterDetector] Testing line ${i} that starts with "Chapter X":`, line.substring(0, 100));
       }
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:351',message:'Testing line against chapter patterns',data:{lineIndex:i,line:line.substring(0,100),lineLength:line.length,hasNonAscii:line.split('').some(ch=>ch.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
+
       // Test against all patterns
       let matched = false;
       for (const { pattern, weight, name } of this.PATTERNS) {
@@ -434,28 +430,17 @@ export class ChapterDetector {
           const confidence = this.calculateConfidence(line, i, lines, weight);
           
           console.log(`[ChapterDetector] Confidence calculated: ${confidence} (threshold: 0.3)`);
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:355',message:'Pattern matched',data:{lineIndex:i,matchedPattern:name,confidence:confidence,line:line.substring(0,100),hasNonAscii:line.split('').some(ch=>ch.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          
+
           // Only add if confidence is above threshold
           if (confidence >= 0.3) {
             console.log('[detectChapters] Pattern matched, cleaning title. Line:', line.substring(0, 100));
             const cleanedTitle = this.cleanChapterTitle(line);
             
             console.log('[detectChapters] Cleaned title:', cleanedTitle);
-            
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:361',message:'Creating detected chapter',data:{lineIndex:i,originalLine:line.substring(0,100),cleanedTitle:cleanedTitle,cleanedTitleLength:cleanedTitle.length,hasNonAscii:cleanedTitle.split('').some(ch=>ch.charCodeAt(0)>126),confidence:confidence},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
-            
+
             // Skip if cleaned title is empty or corrupted
             if (!cleanedTitle || cleanedTitle.length === 0) {
               console.log('[detectChapters] SKIPPING - cleaned title is empty. Original:', line.substring(0, 100));
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:370',message:'Skipping chapter - cleaned title is empty',data:{lineIndex:i,originalLine:line.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-              // #endregion
               break; // Skip this match
             }
             
@@ -940,9 +925,6 @@ export class CharacterDetector {
         // Only add sentence-start candidates if they're not already in the map
         // This prevents common words from being added just because they start sentences
         if (this.isValidCharacterName(potentialName) && !candidates.has(potentialName)) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:892',message:'Testing sentence-start candidate (not in dialogue/action)',data:{lineIndex:i,potentialName:potentialName,length:potentialName.length,isExcluded:this.EXCLUDED_WORDS.has(potentialName.toLowerCase())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           this.addCandidateWithContext(candidates, potentialName, i, line, 'sentence-start');
         }
       }
@@ -951,9 +933,6 @@ export class CharacterDetector {
       const knownNames = ['Alma', 'Deek'];
       for (const knownName of knownNames) {
         if (line.includes(knownName)) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:920',message:'Found known character name in line',data:{name:knownName,lineIndex:i,line:line.substring(0,150),inCandidates:candidates.has(knownName),matchesDialogue:dialoguePattern.test(line),matchesSaid:saidPattern.test(line),matchesAction:actionPattern.test(line),matchesSubject:subjectPattern.test(line)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-          // #endregion
         }
       }
     }
@@ -962,20 +941,13 @@ export class CharacterDetector {
     const lowerText = text.toLowerCase();
     for (const [name, data] of candidates.entries()) {
       const lowerName = name.toLowerCase();
-      const appearsInLowercase = lowerText.includes(lowerName) && 
+      const appearsInLowercase = lowerText.includes(lowerName) &&
         !lowerText.includes(name); // Appears lowercase but not capitalized
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:910',message:'Checking if candidate appears in lowercase',data:{name:name,appearsInLowercase:appearsInLowercase,contextTypes:Array.from(data.contextTypes)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
-      
+
       // If it appears in lowercase, it's likely a common word, not a name
       if (appearsInLowercase && !data.contextTypes.has('dialogue') && !data.contextTypes.has('action')) {
         // Only remove if it doesn't appear in dialogue/action contexts
         candidates.delete(name);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:916',message:'Removed candidate - appears in lowercase',data:{name:name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
       }
     }
 
@@ -983,10 +955,6 @@ export class CharacterDetector {
     const detected: DetectedCharacter[] = [];
     
     for (const [name, data] of candidates.entries()) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:920',message:'Evaluating candidate',data:{name:name,occurrences:data.occurrences,contextTypes:Array.from(data.contextTypes),contexts:data.contexts},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-      
       // Calculate confidence based on:
       // - Context type (dialogue/action = high, sentence-start = low)
       // - Number of occurrences (more = higher confidence)
@@ -1006,11 +974,7 @@ export class CharacterDetector {
       }
 
       const confidence = (occurrenceScore * 0.3 + lengthScore * 0.2 + contextScore * 0.5);
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:933',message:'Confidence calculated',data:{name:name,confidence:confidence,occurrenceScore:occurrenceScore,lengthScore:lengthScore,contextScore:contextScore,contextTypes:Array.from(data.contextTypes),meetsThreshold:confidence >= 0.5,meetsOccurrence:data.occurrences >= 2},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-      
+
       // Stricter requirements:
       // - Must have dialogue/action context OR appear 3+ times (lowered from 5 for sentence-start)
       // - Confidence must be >= 0.5 (raised from 0.4)
@@ -1031,13 +995,7 @@ export class CharacterDetector {
           occurrences: data.occurrences,
           firstSeen: data.firstSeen,
         });
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:943',message:'Character added to detected list',data:{name:name,confidence:confidence,occurrences:data.occurrences,hasStrongContext:hasStrongContext,isKnownName:isKnownName,adjustedThreshold:adjustedConfidenceThreshold},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
       } else {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:949',message:'Character rejected',data:{name:name,confidence:confidence,occurrences:data.occurrences,reason:confidence < adjustedConfidenceThreshold ? 'Low confidence' : 'Too few occurrences',hasStrongContext:hasStrongContext,isKnownName:isKnownName,adjustedThreshold:adjustedConfidenceThreshold,requiredOccurrences:adjustedOccurrenceThreshold},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
       }
     }
 
@@ -1324,11 +1282,8 @@ export class ImportPipeline {
     enableAI?: boolean
   ): Promise<ImportResult> {
     try {
-      // #region agent log
       console.log('[ImportPipeline.execute] File validation check. File:', file.name, 'Type:', file.type, 'Extension:', file.name.substring(file.name.lastIndexOf('.')));
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:987',message:'File validation',data:{fileName:file.name,fileType:file.type,extension:file.name.substring(file.name.lastIndexOf('.'))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
+
       // Pre-validation: Check file before processing
       const fileValidation = EdgeCaseHandlers.validateFile(file);
       
@@ -1341,38 +1296,26 @@ export class ImportPipeline {
         );
       }
       
-      // #region agent log
       console.log('[ImportPipeline.execute] Starting import for file:', file.name, 'Type:', file.type, 'Size:', file.size);
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:1000',message:'Starting import pipeline',data:{fileName:file.name,fileType:file.type,fileSize:file.size},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
+
       // Stage 1: File read + UTF-8 normalization
       const { text: rawText, encoding } = await FileReaderStage.readFile(file);
       
-      // #region agent log
       console.log('[ImportPipeline.execute] File read complete. Text length:', rawText.length, 'Sample:', rawText.substring(0, 200));
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:1003',message:'File read complete',data:{textLength:rawText.length,textSample:rawText.substring(0,200),hasNonAscii:rawText.substring(0,200).split('').some(c=>c.charCodeAt(0)>126)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
+
       // Stage 2: Line ending normalization
       const normalizedText = LineEndingNormalizer.normalize(rawText);
       
-      // #region agent log
       console.log('[ImportPipeline.execute] Starting chapter detection. Lines:', normalizedText.lines.length);
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:982',message:'Before chapter detection',data:{lineCount:normalizedText.lines.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
+
       // Stage 3: Chapter detection
       const detectedChapters = ChapterDetector.detectChapters(normalizedText.lines);
       
-      // #region agent log
       console.log('[ImportPipeline.execute] Chapter detection complete. Detected:', detectedChapters.length, 'chapters');
       detectedChapters.forEach((ch, idx) => {
         console.log(`[ImportPipeline.execute] Chapter ${idx}:`, ch.title, 'Confidence:', ch.confidence, 'Has non-ASCII:', ch.title.split('').some(c=>c.charCodeAt(0)>126));
       });
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'importPipeline.ts:985',message:'After chapter detection',data:{chapterCount:detectedChapters.length,chapters:detectedChapters.map(c=>({title:c.title,confidence:c.confidence,hasNonAscii:c.title.split('').some(ch=>ch.charCodeAt(0)>126)}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-      
+
       // Stage 4: Scene detection
       const detectedScenes = SceneDetector.detectScenes(
         normalizedText.lines,

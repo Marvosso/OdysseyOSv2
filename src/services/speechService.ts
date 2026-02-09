@@ -23,11 +23,7 @@ export class SpeechService {
   private constructor() {
     this.synthesis = typeof window !== 'undefined' ? window.speechSynthesis : null as any;
     this.isAvailable = !!this.synthesis;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:20',message:'SpeechService constructor',data:{isAvailable:this.isAvailable},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-    // #endregion
-    
+
     if (this.isAvailable) {
       this.initialize();
     }
@@ -42,18 +38,11 @@ export class SpeechService {
 
   private initialize() {
     if (this.isInitialized) return;
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:35',message:'Initializing SpeechService',data:{voicesCount:this.synthesis.getVoices().length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-    // #endregion
-    
+
     // Preload voices
     if (this.synthesis.getVoices().length === 0) {
       this.synthesis.onvoiceschanged = () => {
         console.log('[SpeechService] Voices loaded:', this.synthesis.getVoices().length);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:42',message:'Voices loaded',data:{voicesCount:this.synthesis.getVoices().length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-        // #endregion
         this.synthesis.onvoiceschanged = null;
       };
     }
@@ -66,10 +55,6 @@ export class SpeechService {
       throw new Error('Speech synthesis not available');
     }
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:55',message:'speak called',data:{textLength:text.length,rate:options.rate,pitch:options.pitch,volume:options.volume,voice:options.voice,wasSpeaking:this.synthesis.speaking},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-    // #endregion
-
     // Cancel any current speech
     this.cancel();
 
@@ -80,9 +65,6 @@ export class SpeechService {
 
       // Check if aborted before starting
       if (signal.aborted) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:68',message:'Speech aborted before start',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-        // #endregion
         reject(new Error('Speech aborted before start'));
         return;
       }
@@ -99,27 +81,17 @@ export class SpeechService {
         const voice = voices.find(v => v.name === options.voice);
         if (voice) {
           this.currentUtterance.voice = voice;
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:84',message:'Voice set',data:{voiceName:voice.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-          // #endregion
         }
       }
 
       // Set up event handlers
       const onEnd = () => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:92',message:'Utterance ended',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-        // #endregion
         cleanup();
         resolve();
       };
 
       const onError = (event: SpeechSynthesisErrorEvent) => {
         const errorType = event.error;
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:99',message:'Utterance error',data:{errorType:errorType,errorName:event.name,charIndex:event.charIndex,elapsedTime:event.elapsedTime,isInterrupted:errorType === 'interrupted'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-        // #endregion
-        
         cleanup();
         
         // Don't reject for 'interrupted' - it's usually expected
@@ -132,9 +104,6 @@ export class SpeechService {
       };
 
       const onAbort = () => {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:111',message:'Speech aborted',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-        // #endregion
         cleanup();
         reject(new Error('Speech aborted'));
       };
@@ -161,24 +130,13 @@ export class SpeechService {
       // Start speaking with a small delay to ensure clean state
       setTimeout(() => {
         if (!signal.aborted) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:135',message:'Calling synthesis.speak',data:{textLength:text.length,wasAborted:signal.aborted},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-          // #endregion
           this.synthesis.speak(this.currentUtterance!);
-        } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:139',message:'Skipping speak - already aborted',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-          // #endregion
         }
       }, 50);
     });
   }
 
   cancel(): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:145',message:'cancel called',data:{hasAbortController:!!this.abortController,wasAborted:this.abortController?.signal.aborted,wasSpeaking:this.synthesis?.speaking},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-    // #endregion
-    
     if (this.abortController && !this.abortController.signal.aborted) {
       this.abortController.abort();
     }
@@ -192,20 +150,12 @@ export class SpeechService {
   }
 
   pause(): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:160',message:'pause called',data:{wasSpeaking:this.synthesis?.speaking,wasPaused:this.synthesis?.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-    // #endregion
-    
     if (this.synthesis.speaking && !this.synthesis.paused) {
       this.synthesis.pause();
     }
   }
 
   resume(): void {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'speechService.ts:168',message:'resume called',data:{wasPaused:this.synthesis?.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'L'})}).catch(()=>{});
-    // #endregion
-    
     if (this.synthesis.paused) {
       this.synthesis.resume();
     }

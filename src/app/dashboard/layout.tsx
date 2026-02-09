@@ -56,7 +56,11 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<{ email?: string } | null>(null);
+  const [user, setUser] = useState<{ email?: string } | null>(() => {
+    if (typeof window === 'undefined') return null;
+    const stored = sessionStorage.getItem('odysseyos_user_email');
+    return stored ? { email: stored } : null;
+  });
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [guestId, setGuestId] = useState<string>('');
   const [showGuestModal, setShowGuestModal] = useState(false);
@@ -94,11 +98,15 @@ export default function DashboardLayout({
         }
 
         if (!session?.user) {
+          sessionStorage.removeItem('odysseyos_user_email');
           router.replace('/auth');
           return;
         }
 
         setUser(session.user);
+        if (session.user.email) {
+          sessionStorage.setItem('odysseyos_user_email', session.user.email);
+        }
         setLoading(false);
       } catch (err) {
         console.error('Error checking session:', err);
@@ -113,7 +121,11 @@ export default function DashboardLayout({
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
+        if (session.user.email) {
+          sessionStorage.setItem('odysseyos_user_email', session.user.email);
+        }
       } else {
+        sessionStorage.removeItem('odysseyos_user_email');
         router.replace('/auth');
       }
     });

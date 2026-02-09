@@ -245,20 +245,14 @@ export default function ImportPage() {
           <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
             <h3 className="text-white font-semibold mb-3">Detected Chapters</h3>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {importResult.detectedChapters.map((chapter, index) => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'import/page.tsx:178',message:'Rendering detected chapter in UI',data:{chapterIndex:index,title:chapter.title,titleLength:chapter.title.length,hasNonAscii:chapter.title.split('').some(ch=>ch.charCodeAt(0)>126),confidence:chapter.confidence},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                // #endregion
-                
-                return (
+              {importResult.detectedChapters.map((chapter, index) => (
                 <div key={index} className="flex items-center justify-between p-2 bg-gray-800/30 rounded">
                   <span className="text-gray-300">{chapter.title}</span>
                   <span className="text-gray-500 text-sm">
                     {(chapter.confidence * 100).toFixed(0)}% confidence
                   </span>
                 </div>
-                );
-              })}
+              ))}
             </div>
           </div>
         )}
