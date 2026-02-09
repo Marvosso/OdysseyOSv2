@@ -265,6 +265,8 @@ export default function DashboardLayout({
               <a
                 key={item.id}
                 href={item.path}
+                target="_self"
+                rel="noopener noreferrer"
                 className={`block w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                   isActive
                     ? 'bg-purple-600 text-white'

@@ -5,8 +5,14 @@ const withPWA = require('next-pwa')({
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
   runtimeCaching: [
+    // Dashboard: never cache (NetworkOnly) so tab switching always gets fresh app.
+    // After deploy, do one hard refresh or clear site data so the new SW is used.
     {
-      // Cache pages (root page is excluded in service worker)
+      urlPattern: /\/dashboard(\/|$)/,
+      handler: 'NetworkOnly',
+    },
+    {
+      // Other pages
       urlPattern: /^https?.*/,
       handler: 'NetworkFirst',
       options: {
@@ -16,7 +22,6 @@ const withPWA = require('next-pwa')({
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
         },
         networkTimeoutSeconds: 10,
-        // Follow redirects
         fetchOptions: {
           redirect: 'follow',
         },
