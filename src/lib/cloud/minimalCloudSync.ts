@@ -68,7 +68,7 @@ export class MinimalCloudSync {
   async syncStory(storyId?: string): Promise<boolean> {
     if (this.isSyncing) {
       console.log('[Cloud] Already syncing, queuing...');
-      this.syncQueue.push(() => this.syncStory(storyId));
+      this.syncQueue.push(() => this.syncStory(storyId).then(() => {}));
       return false;
     }
 
