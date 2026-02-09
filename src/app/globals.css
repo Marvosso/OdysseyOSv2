@@ -27,25 +27,37 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-/* Dark-theme scrollbars (dashboard / app) */
+/* Dark-theme scrollbars (dashboard / app) – apply to document and all elements so every tab matches */
+html,
+body,
 * {
   scrollbar-width: thin;
   scrollbar-color: #4b5563 #1f2937;
 }
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
 *::-webkit-scrollbar-track {
   background: #1f2937;
 }
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb {
   background: #4b5563;
   border-radius: 4px;
 }
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
 *::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
 *::-webkit-scrollbar-corner {
   background: #1f2937;
 }

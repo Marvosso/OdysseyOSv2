@@ -129,20 +129,20 @@ export default function CharacterHub() {
     };
   }, []);
 
-  // Save characters to StoryStorage whenever they change
+  // Save characters to StoryStorage whenever they change (no storage event - avoids same-tab reload overwriting state)
   useEffect(() => {
     const storyChars = characters.map(convertToStoryCharacter);
     StoryStorage.saveCharacters(storyChars);
-    // Trigger storage event to notify other tabs/components
-    window.dispatchEvent(new Event('storage'));
   }, [characters]);
 
   const handleSaveCharacter = (char: LocalCharacter) => {
-    if (char.id) {
-      setCharacters(characters.map(c => c.id === char.id ? char : c));
-    } else {
-      setCharacters([...characters, { ...char, id: `char-${Date.now()}` }]);
-    }
+    const nextId = char.id || `char-${Date.now()}`;
+    const withId = { ...char, id: nextId };
+    const exists = characters.some((c) => c.id === nextId);
+    const next = exists
+      ? characters.map((c) => (c.id === nextId ? withId : c))
+      : [...characters, withId];
+    setCharacters(next);
     setIsFormVisible(false);
     setSelectedCharacter(null);
   };
