@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GripVertical, Plus, Trash2, ChevronDown, ChevronUp, MapPin, User, FileText, ExternalLink, AlertTriangle, Timer, Users, Brain, GitBranch } from 'lucide-react';
 import type { Scene, Story, SceneStatus } from '@/types/story';
@@ -103,8 +103,10 @@ export default function StoryCanvas({
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Slow polling only for same-tab sync; fast polling was breaking tab switching after ~30s
-    const interval = setInterval(reloadStory, 60000);
+    // Don't poll while Scene Insights is open - avoids panel flicker
+    const interval = setInterval(() => {
+      if (insightsSceneIdRef.current === null) reloadStory();
+    }, 60000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -117,7 +119,12 @@ export default function StoryCanvas({
   const [showSprintTimer, setShowSprintTimer] = useState(false);
   const [showWritingRoom, setShowWritingRoom] = useState(false);
   const [insightsSceneId, setInsightsSceneId] = useState<string | null>(null);
+  const insightsSceneIdRef = useRef<string | null>(null);
   const [showBranchingTool, setShowBranchingTool] = useState(false);
+
+  useEffect(() => {
+    insightsSceneIdRef.current = insightsSceneId;
+  }, [insightsSceneId]);
 
   const handleIssueClick = (issue: ConsistencyIssue) => {
     if (issue.sceneId) {
@@ -442,18 +449,18 @@ export default function StoryCanvas({
                   )}
                 </div>
                 
-                {/* Scene Insights Panel */}
-                <AnimatePresence>
-                  {insightsSceneId === scene.id && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="mt-4"
-                    >
-                      <SceneInsights
-                        scene={scene}
-                        onClose={() => setInsightsSceneId(null)}
+                {/* Scene Insights Panel - stable key so it does not remount on story updates */}
+                {insightsSceneId === scene.id && (
+                  <motion.div
+                    key={`insights-${scene.id}`}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4"
+                  >
+                    <SceneInsights
+                      scene={scene}
+                      onClose={() => setInsightsSceneId(null)}
                         onApplySuggestion={(suggestion, rewrittenText) => {
                           // Apply rewrite to scene
                           const updatedScenes = story.scenes.map((s) =>
@@ -466,9 +473,8 @@ export default function StoryCanvas({
                           onStoryChange?.(updated);
                         }}
                       />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  </motion.div>
+                )}
               </div>
             </motion.div>
           ))}

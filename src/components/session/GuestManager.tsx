@@ -118,10 +118,10 @@ export default function GuestManager({ guestId, onGuestIdChange, hideClaimAccoun
 
   return (
     <div className="space-y-4">
-      {/* Guest ID Display */}
+      {/* Session / backup ID */}
       <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-400">Guest Session ID</label>
+          <label className="text-sm font-medium text-gray-400">{hideClaimAccount ? 'Session ID' : 'Guest Session ID'}</label>
           <button
             onClick={handleCopyId}
             className="flex items-center gap-2 px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 rounded-lg text-sm text-gray-300 hover:text-white transition-colors"

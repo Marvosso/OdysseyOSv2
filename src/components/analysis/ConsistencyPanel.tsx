@@ -6,7 +6,7 @@
  * Displays real-time consistency warnings and suggestions
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
@@ -48,6 +48,7 @@ export default function ConsistencyPanel({
 }: ConsistencyPanelProps) {
   const [report, setReport] = useState<ConsistencyReport | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const hasReportRef = useRef(false);
   const [acknowledgedIssues, setAcknowledgedIssues] = useState<Set<string>>(new Set());
   const [ignoredIssues, setIgnoredIssues] = useState<Set<string>>(new Set());
   const [showIgnored, setShowIgnored] = useState(false);
@@ -66,17 +67,19 @@ export default function ConsistencyPanel({
     }
   }, []);
 
-  // Run consistency check
+  // Run consistency check - only show loading on first run so panel doesn't flicker every refresh
   const runCheck = useMemo(
     () => () => {
-      setIsLoading(true);
+      const isInitial = !hasReportRef.current;
+      if (isInitial) setIsLoading(true);
       try {
         const newReport = generateConsistencyReport(storyId);
         setReport(newReport);
+        hasReportRef.current = true;
       } catch (error) {
         console.error('Error running consistency check:', error);
       } finally {
-        setIsLoading(false);
+        if (isInitial) setIsLoading(false);
       }
     },
     [storyId]
