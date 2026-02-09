@@ -8,7 +8,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import {
@@ -205,8 +204,8 @@ export default function DashboardLayout({
           onClose={() => setIsSearchOpen(false)}
         />
 
-      {/* Sidebar - above main so nav stays clickable */}
-      <aside className="relative z-20 w-64 flex-shrink-0 bg-gray-800/50 border-r border-gray-700 flex flex-col">
+      {/* Sidebar - fixed so nothing can cover it; full-page links so nav always works */}
+      <aside className="fixed left-0 top-0 bottom-0 z-[9999] w-64 flex flex-col bg-gray-800/95 border-r border-gray-700 pointer-events-auto">
         <div className="p-6 border-b border-gray-700">
           <h1 className="text-xl font-bold text-white mb-3">OdysseyOS · latest</h1>
           
@@ -263,10 +262,9 @@ export default function DashboardLayout({
               (item.path === '/dashboard' && pathname === '/dashboard');
 
             return (
-              <Link
+              <a
                 key={item.id}
                 href={item.path}
-                prefetch={false}
                 className={`block w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                   isActive
                     ? 'bg-purple-600 text-white'
@@ -275,7 +273,7 @@ export default function DashboardLayout({
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 <span className="font-medium">{item.label}</span>
-              </Link>
+              </a>
             );
           })}
         </nav>
@@ -297,8 +295,8 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Main content - below sidebar so nav is never covered */}
-      <main className="relative z-0 flex-1 overflow-auto">
+      {/* Main content - offset so fixed sidebar doesn't overlap */}
+      <main className="relative z-0 flex-1 overflow-auto ml-64">
         <div className="p-6">
           {/* If you see this banner, you are on the latest deployment */}
           <div className="mb-4 rounded-lg border-2 border-amber-500 bg-amber-950/50 px-4 py-2 text-center text-sm font-semibold text-amber-200">
