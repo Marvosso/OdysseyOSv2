@@ -62,20 +62,26 @@ export default function SceneInsights({ scene, onClose, onApplySuggestion }: Sce
   const [selectedParagraph, setSelectedParagraph] = useState<number | null>(null);
   const [rewriteText, setRewriteText] = useState<Record<number, string>>({});
 
-  // Analyze scene
+  // Analyze scene - depend on id and content only so we don't re-run on every parent re-render
+  const sceneId = scene?.id;
+  const sceneContent = scene?.content ?? '';
+
   useEffect(() => {
-    if (scene.content.trim()) {
-      setIsAnalyzing(true);
-      // Simulate analysis delay for better UX
-      setTimeout(() => {
-        const result = analyzeScene(scene);
-        setAnalysis(result);
-        setIsAnalyzing(false);
-      }, 500);
-    } else {
+    if (!scene || !sceneContent.trim()) {
       setAnalysis(null);
+      return;
     }
-  }, [scene]);
+    setIsAnalyzing(true);
+    const sceneToAnalyze = { ...scene, content: sceneContent };
+    const timer = setTimeout(() => {
+      const result = analyzeScene(sceneToAnalyze);
+      setAnalysis(result);
+      setIsAnalyzing(false);
+    }, 500);
+    return () => clearTimeout(timer);
+    // Intentionally depend only on id/content to avoid re-running on every parent re-render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneId, sceneContent]);
 
   // Generate rewrite suggestion
   const handleGenerateRewrite = (paragraphIndex: number, suggestion: ImprovementSuggestion) => {

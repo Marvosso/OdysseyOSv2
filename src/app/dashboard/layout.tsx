@@ -10,8 +10,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-// Speech error interceptor removed - using ResponsiveVoice instead
-import Link from 'next/link';
 import {
   BookOpen,
   Users,
@@ -73,12 +71,9 @@ export default function DashboardLayout({
       const id = StoryStorage.getOrCreateGuestSession();
       setGuestId(id);
       
-      // Check if user has account, if not, show migration wizard
+      // Check if user has account, if not, show migration wizard (user can dismiss via "Continue as guest")
       if (!AccountStorage.hasAccount()) {
-        // Show migration wizard after a delay to let the page load
-        setTimeout(() => {
-          setShowMigrationWizard(true);
-        }, 2000);
+        setTimeout(() => setShowMigrationWizard(true), 2000);
       }
     };
 
@@ -224,8 +219,8 @@ export default function DashboardLayout({
           onClose={() => setIsSearchOpen(false)}
         />
 
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-800/50 border-r border-gray-700 flex flex-col">
+      {/* Sidebar - z-40 so it stays above main content and remains clickable */}
+      <aside className="relative z-40 w-64 flex-shrink-0 bg-gray-800/50 border-r border-gray-700 flex flex-col">
         <div className="p-6 border-b border-gray-700">
           <h1 className="text-xl font-bold text-white mb-3">OdysseyOS</h1>
           
@@ -278,22 +273,23 @@ export default function DashboardLayout({
         <nav className="flex-1 p-4 space-y-1">
           {navigationItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.path || 
+            const isActive = pathname === item.path ||
               (item.path === '/dashboard' && pathname === '/dashboard');
-            
+
             return (
-              <Link
+              <button
                 key={item.id}
-                href={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                type="button"
+                onClick={() => router.push(item.path)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                   isActive
                     ? 'bg-purple-600 text-white'
                     : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-5 h-5 flex-shrink-0" />
                 <span className="font-medium">{item.label}</span>
-              </Link>
+              </button>
             );
           })}
         </nav>

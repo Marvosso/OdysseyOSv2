@@ -224,6 +224,16 @@ export default function MigrationWizard({
                   </div>
                 </div>
               )}
+
+              <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => onCancel?.()}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+                >
+                  Continue as guest
+                </button>
+              </div>
             </div>
           </div>
         );
