@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Plus, Crown, Shield, Heart, BookOpen, Sparkles, AlertCircle, Search } from 'lucide-react';
+import { Users, Plus, Crown, Shield, Heart, BookOpen, Sparkles, AlertCircle, Search, UserPlus, X } from 'lucide-react';
 import CharacterForm from './CharacterForm';
 import CharacterCard from './CharacterCard';
 import { StoryStorage } from '@/lib/storage/storyStorage';
-import type { Character } from '@/types/story';
+import { CharacterDetector } from '@/lib/import/importPipeline';
+import type { DetectedCharacter } from '@/lib/import/importPipeline';
+import type { Character, Story } from '@/types/story';
 
 // Map Character type from story to local interface
 interface LocalCharacter {
@@ -72,31 +74,26 @@ function convertToStoryCharacter(char: LocalCharacter): ExtendedCharacter {
 
 export default function CharacterHub() {
   const [characters, setCharacters] = useState<LocalCharacter[]>([]);
+  const [story, setStory] = useState<Story | null>(null);
   const [selectedCharacter, setSelectedCharacter] = useState<LocalCharacter | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [dismissedDetected, setDismissedDetected] = useState<Set<string>>(() => new Set());
 
-  // Load characters from StoryStorage on mount and when storage changes
+  // Load story and characters from StoryStorage on mount and when storage changes
   useEffect(() => {
-    const loadCharacters = () => {
+    const load = () => {
+      setStory(StoryStorage.loadStory());
       const saved = StoryStorage.loadCharacters();
       const converted: LocalCharacter[] = saved.map(convertToLocalCharacter);
       setCharacters(converted);
     };
 
-    loadCharacters();
-
-    // Listen for storage changes (when import saves)
-    const handleStorageChange = () => {
-      loadCharacters();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    // Slow polling only for same-tab sync; fast polling was breaking tab switching after ~30s
-    const interval = setInterval(loadCharacters, 60000);
-
+    load();
+    window.addEventListener('storage', load);
+    const interval = setInterval(load, 60000);
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', load);
       clearInterval(interval);
     };
   }, []);
@@ -126,6 +123,46 @@ export default function CharacterHub() {
   const handleEditCharacter = (char: LocalCharacter) => {
     setSelectedCharacter(char);
     setIsFormVisible(true);
+  };
+
+  // Detect character names from current story scenes (exclude already-added and dismissed)
+  const detectedFromStory = useMemo(() => {
+    if (!story?.scenes?.length) return [];
+    const lines = story.scenes.flatMap((s) => s.content.split(/\r?\n/).filter(Boolean));
+    const text = story.scenes.map((s) => s.content).join('\n');
+    if (!text.trim()) return [];
+    const existingNames = new Set(characters.map((c) => c.name.toLowerCase()));
+    const detected = CharacterDetector.detectCharacters(lines, text);
+    return detected
+      .filter(
+        (d) =>
+          !existingNames.has(d.name.toLowerCase()) &&
+          !dismissedDetected.has(d.name.toLowerCase())
+      )
+      .slice(0, 30)
+      .sort((a, b) => b.confidence - a.confidence);
+  }, [story, characters, dismissedDetected]);
+
+  const handleConfirmDetected = (d: DetectedCharacter) => {
+    const newChar: LocalCharacter = {
+      id: `char-${Date.now()}`,
+      name: d.name,
+      role: 'supporting',
+      age: 0,
+      appearance: `Detected in story (${d.occurrences} occurrence${d.occurrences !== 1 ? 's' : ''}). Add description and details.`,
+      personality: '',
+      background: '',
+      motivation: '',
+      flaw: '',
+      arcStatus: 'unstarted',
+    };
+    setCharacters((prev) => [...prev, newChar]);
+    setSelectedCharacter(newChar);
+    setIsFormVisible(true);
+  };
+
+  const handleDismissDetected = (name: string) => {
+    setDismissedDetected((prev) => new Set(prev).add(name.toLowerCase()));
   };
 
   const filteredCharacters = characters.filter(char =>
@@ -214,6 +251,48 @@ export default function CharacterHub() {
           className="w-full bg-gray-800 text-white rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
       </div>
+
+      {/* Detected from story */}
+      {detectedFromStory.length > 0 && (
+        <div className="p-4 bg-gray-800/60 border border-purple-500/30 rounded-lg">
+          <h3 className="text-sm font-semibold text-purple-300 flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4" />
+            Detected from your story
+          </h3>
+          <p className="text-xs text-gray-400 mb-3">
+            Names found in your scenes that aren’t in your character list. Confirm to add and edit details.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {detectedFromStory.map((d) => (
+              <div
+                key={d.name}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg group"
+              >
+                <span className="font-medium text-white">{d.name}</span>
+                <span className="text-xs text-gray-500">
+                  {d.occurrences}× · {Math.round(d.confidence * 100)}%
+                </span>
+                <div className="flex items-center gap-1 ml-1">
+                  <button
+                    onClick={() => handleConfirmDetected(d)}
+                    className="p-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+                    title="Add as character and edit details"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleDismissDetected(d.name)}
+                    className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                    title="Dismiss (not a character)"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {isFormVisible && (
