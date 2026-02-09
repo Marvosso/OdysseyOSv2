@@ -102,7 +102,7 @@ export class MinimalCloudSync {
         await this.pushSceneToCloud(user.id, story.id, scene);
       }
       for (const character of characters) {
-        await this.pushCharacterToCloud(user.id, story.id, character as Record<string, unknown>);
+        await this.pushCharacterToCloud(user.id, story.id, character as unknown as Record<string, unknown>);
       }
 
       if (typeof window !== 'undefined') {
