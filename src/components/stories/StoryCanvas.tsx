@@ -115,6 +115,8 @@ export default function StoryCanvas({
   }, []);
 
   const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
+  const [draggedSceneId, setDraggedSceneId] = useState<string | null>(null);
+  const [dragOverSceneId, setDragOverSceneId] = useState<string | null>(null);
   const [showConsistencyPanel, setShowConsistencyPanel] = useState(false);
   const [showSprintTimer, setShowSprintTimer] = useState(false);
   const [showWritingRoom, setShowWritingRoom] = useState(false);
@@ -172,6 +174,44 @@ export default function StoryCanvas({
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const updated = { ...story, title: e.target.value, updatedAt: new Date() };
+    setStory(updated);
+    onStoryChange?.(updated);
+  };
+
+  const handleSceneDragStart = (e: React.DragEvent, sceneId: string) => {
+    setDraggedSceneId(sceneId);
+    e.dataTransfer.setData('text/plain', sceneId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleSceneDragEnd = () => {
+    setDraggedSceneId(null);
+    setDragOverSceneId(null);
+  };
+
+  const handleSceneDragOver = (e: React.DragEvent, sceneId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedSceneId && draggedSceneId !== sceneId) setDragOverSceneId(sceneId);
+  };
+
+  const handleSceneDragLeave = () => {
+    setDragOverSceneId(null);
+  };
+
+  const handleSceneDrop = (e: React.DragEvent, targetSceneId: string) => {
+    e.preventDefault();
+    setDragOverSceneId(null);
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (!draggedId || draggedId === targetSceneId) return;
+    const fromIndex = story.scenes.findIndex((s) => s.id === draggedId);
+    const toIndex = story.scenes.findIndex((s) => s.id === targetSceneId);
+    if (fromIndex === -1 || toIndex === -1) return;
+    const newScenes = [...story.scenes];
+    const [removed] = newScenes.splice(fromIndex, 1);
+    newScenes.splice(toIndex, 0, removed);
+    const withPositions = newScenes.map((s, i) => ({ ...s, position: i }));
+    const updated = { ...story, scenes: withPositions, updatedAt: new Date() };
     setStory(updated);
     onStoryChange?.(updated);
   };
@@ -245,12 +285,29 @@ export default function StoryCanvas({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
-              className="bg-gray-800/30 backdrop-blur-sm rounded-lg border border-gray-700 overflow-hidden"
+              className={`bg-gray-800/30 backdrop-blur-sm rounded-lg border overflow-hidden transition-colors ${
+                dragOverSceneId === scene.id
+                  ? 'border-purple-500 ring-1 ring-purple-500/50'
+                  : draggedSceneId === scene.id
+                    ? 'border-gray-600 opacity-60'
+                    : 'border-gray-700'
+              }`}
+              onDragOver={(e) => handleSceneDragOver(e, scene.id)}
+              onDragLeave={handleSceneDragLeave}
+              onDrop={(e) => handleSceneDrop(e, scene.id)}
             >
               <div className="p-4 bg-gray-800/50 border-b border-gray-700">
                 {/* Header Row */}
                 <div className="flex items-center gap-4 mb-2">
-                  <GripVertical size={20} className="text-gray-500 cursor-grab" />
+                  <div
+                    draggable
+                    onDragStart={(e) => handleSceneDragStart(e, scene.id)}
+                    onDragEnd={handleSceneDragEnd}
+                    className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 rounded hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors"
+                    title="Drag to reorder"
+                  >
+                    <GripVertical size={20} aria-hidden />
+                  </div>
                   <input
                     type="text"
                     value={scene.title}
