@@ -92,9 +92,8 @@ export default function CharacterHub() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Also check periodically for changes (for same-tab updates)
-    // Use longer interval to reduce interference with navigation
-    const interval = setInterval(loadCharacters, 5000);
+    // Slow polling only for same-tab sync; fast polling was breaking tab switching after ~30s
+    const interval = setInterval(loadCharacters, 60000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);

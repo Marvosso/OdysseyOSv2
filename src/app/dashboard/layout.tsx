@@ -31,9 +31,7 @@ import {
 } from 'lucide-react';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import GuestManager from '@/components/session/GuestManager';
-import MigrationWizard from '@/components/session/MigrationWizard';
 import KeyboardShortcutsProvider, { openCheatsheet } from '@/components/shortcuts/KeyboardShortcutsProvider';
-import { AccountStorage } from '@/lib/storage/accountStorage';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 
 const navigationItems = [
@@ -58,10 +56,15 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<{ email?: string } | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [guestId, setGuestId] = useState<string>('');
   const [showGuestModal, setShowGuestModal] = useState(false);
-  const [showMigrationWizard, setShowMigrationWizard] = useState(false);
+
+  useEffect(() => {
+    document.title = 'OdysseyOS · latest';
+    return () => { document.title = 'OdysseyOS'; };
+  }, []);
 
   /**
    * Initialize guest session on first visit
@@ -70,13 +73,7 @@ export default function DashboardLayout({
     const initGuestSession = () => {
       const id = StoryStorage.getOrCreateGuestSession();
       setGuestId(id);
-      
-      // Check if user has account, if not, show migration wizard (user can dismiss via "Continue as guest")
-      if (!AccountStorage.hasAccount()) {
-        setTimeout(() => setShowMigrationWizard(true), 2000);
-      }
     };
-
     initGuestSession();
   }, []);
 
@@ -101,6 +98,7 @@ export default function DashboardLayout({
           return;
         }
 
+        setUser(session.user);
         setLoading(false);
       } catch (err) {
         console.error('Error checking session:', err);
@@ -146,30 +144,15 @@ export default function DashboardLayout({
           setShowGuestModal(false);
           e.preventDefault();
         }
-        if (showMigrationWizard) {
-          setShowMigrationWizard(false);
-          e.preventDefault();
-        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchOpen, showGuestModal, showMigrationWizard]);
+  }, [isSearchOpen, showGuestModal]);
 
-  /**
-   * Listen for migration wizard open event
-   */
-  useEffect(() => {
-    const handleOpenMigration = () => {
-      setShowMigrationWizard(true);
-    };
-
-    window.addEventListener('odysseyos:open-migration', handleOpenMigration);
-    return () => {
-      window.removeEventListener('odysseyos:open-migration', handleOpenMigration);
-    };
-  }, []);
+  // Do not open migration wizard when user is logged in (dashboard only shows when authenticated)
+  // So we do not listen for 'odysseyos:open-migration' here; wizard stays closed.
 
   if (loading) {
     return (
@@ -222,23 +205,23 @@ export default function DashboardLayout({
       {/* Sidebar - z-40 so it stays above main content and remains clickable */}
       <aside className="relative z-40 w-64 flex-shrink-0 bg-gray-800/50 border-r border-gray-700 flex flex-col">
         <div className="p-6 border-b border-gray-700">
-          <h1 className="text-xl font-bold text-white mb-3">OdysseyOS</h1>
+          <h1 className="text-xl font-bold text-white mb-3">OdysseyOS · latest</h1>
           
-          {/* Guest Session ID Display */}
-          {guestId && (
+          {/* Signed-in user: show email; session/backup still available via icon */}
+          {user && (
             <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-400">Guest Session</span>
+                <span className="text-xs text-gray-400">Signed in</span>
                 <button
                   onClick={() => setShowGuestModal(true)}
                   className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  title="Manage session"
+                  title="Session & backup"
                 >
                   <User className="w-3 h-3" />
                 </button>
               </div>
-              <div className="font-mono text-xs font-bold text-purple-400 tracking-wider">
-                {guestId}
+              <div className="text-xs font-medium text-white truncate" title={user.email}>
+                {user.email || 'Signed in'}
               </div>
             </div>
           )}
@@ -277,10 +260,9 @@ export default function DashboardLayout({
               (item.path === '/dashboard' && pathname === '/dashboard');
 
             return (
-              <button
+              <a
                 key={item.id}
-                type="button"
-                onClick={() => router.push(item.path)}
+                href={item.path}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                   isActive
                     ? 'bg-purple-600 text-white'
@@ -289,13 +271,13 @@ export default function DashboardLayout({
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 <span className="font-medium">{item.label}</span>
-              </button>
+              </a>
             );
           })}
         </nav>
 
         {/* User section */}
-        <div className="p-4 border-t border-gray-700">
+        <div className="p-4 border-t border-gray-700 space-y-2">
           <button
             onClick={async () => {
               await supabase.auth.signOut();
@@ -305,24 +287,39 @@ export default function DashboardLayout({
           >
             <span className="font-medium">Sign Out</span>
           </button>
+          <p className="text-center text-xs text-gray-500" title="Latest build">
+            OdysseyOS · latest
+          </p>
         </div>
       </aside>
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
         <div className="p-6">
+          {/* If you see this banner, you are on the latest deployment */}
+          <div className="mb-4 rounded-lg border-2 border-amber-500 bg-amber-950/50 px-4 py-2 text-center text-sm font-semibold text-amber-200">
+            ✓ LATEST BUILD — No migration wizard when signed in. Sidebar shows your email. If you don’t see this, you’re on an old deployment or cache.
+          </div>
           {children}
         </div>
       </main>
 
-      {/* Guest Session Modal */}
+      {/* Guest Session Modal - click backdrop to close */}
       {showGuestModal && guestId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setShowGuestModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="bg-gray-800 rounded-lg border border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-6 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <User className="w-5 h-5 text-purple-400" />
-                Guest Session Management
+                Session & backup
               </h2>
               <button
                 onClick={() => setShowGuestModal(false)}
@@ -334,28 +331,14 @@ export default function DashboardLayout({
             <div className="p-6">
               <GuestManager
                 guestId={guestId}
-                onGuestIdChange={(newId) => {
-                  setGuestId(newId);
-                }}
+                onGuestIdChange={(newId) => setGuestId(newId)}
+                hideClaimAccount
               />
             </div>
           </div>
         </div>
       )}
 
-      {/* Migration Wizard */}
-      {showMigrationWizard && (
-        <MigrationWizard
-          onComplete={() => {
-            setShowMigrationWizard(false);
-            // Reload to refresh account state
-            window.location.reload();
-          }}
-          onCancel={() => {
-            setShowMigrationWizard(false);
-          }}
-        />
-      )}
       </div>
     </KeyboardShortcutsProvider>
   );

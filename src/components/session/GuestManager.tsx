@@ -14,9 +14,11 @@ import { StoryStorage } from '@/lib/storage/storyStorage';
 interface GuestManagerProps {
   guestId: string;
   onGuestIdChange?: (newId: string) => void;
+  /** When true (e.g. user is logged in via Supabase), hide the "Claim as Account" migration prompt */
+  hideClaimAccount?: boolean;
 }
 
-export default function GuestManager({ guestId, onGuestIdChange }: GuestManagerProps) {
+export default function GuestManager({ guestId, onGuestIdChange, hideClaimAccount = false }: GuestManagerProps) {
   const [copied, setCopied] = useState(false);
   const [showRestore, setShowRestore] = useState(false);
   const [restoreText, setRestoreText] = useState('');
@@ -246,14 +248,16 @@ export default function GuestManager({ guestId, onGuestIdChange }: GuestManagerP
         )}
       </AnimatePresence>
 
-      {/* Claim as Account (Future Feature) */}
-      <button
-        onClick={handleClaimAccount}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg font-medium transition-colors"
-      >
-        <UserPlus className="w-5 h-5" />
-        Claim as Account (Coming Soon)
-      </button>
+      {/* Claim as Account - hidden when user is already logged in */}
+      {!hideClaimAccount && (
+        <button
+          onClick={handleClaimAccount}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 rounded-lg font-medium transition-colors"
+        >
+          <UserPlus className="w-5 h-5" />
+          Claim as Account (Coming Soon)
+        </button>
+      )}
     </div>
   );
 }

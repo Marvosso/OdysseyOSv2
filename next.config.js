@@ -64,9 +64,18 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  // Add empty turbopack config to silence warning (next-pwa requires webpack)
   turbopack: {},
-  // Speech synthesis webpack fixes removed - using ResponsiveVoice instead
+  // Reduce caching so production URL picks up new deployments
+  async headers() {
+    return [
+      {
+        source: '/dashboard/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = withPWA(nextConfig);

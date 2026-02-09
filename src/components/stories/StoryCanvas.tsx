@@ -103,9 +103,8 @@ export default function StoryCanvas({
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Also check periodically for changes (for same-tab updates)
-    // Use longer interval to reduce interference with navigation
-    const interval = setInterval(reloadStory, 5000);
+    // Slow polling only for same-tab sync; fast polling was breaking tab switching after ~30s
+    const interval = setInterval(reloadStory, 60000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -555,7 +554,7 @@ export default function StoryCanvas({
               storyId={story.id}
               onIssueClick={handleIssueClick}
               autoRefresh={true}
-              refreshInterval={5000}
+              refreshInterval={30000}
             />
           </motion.div>
         )}

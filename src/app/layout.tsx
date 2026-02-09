@@ -45,7 +45,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="OdysseyOS" />
         {/* ResponsiveVoice disabled - narration feature temporarily disabled */}
       </head>
-      <body>
+      <body data-build="odysseyos-2025-02-09-v3">
         {children}
         <PWAInitializer />
       </body>
