@@ -2,10 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GripVertical, Plus, Trash2, Volume2, ChevronDown, ChevronUp, MapPin, User, FileText, ExternalLink, AlertTriangle, Timer, Users, Brain, GitBranch } from 'lucide-react';
+import { GripVertical, Plus, Trash2, ChevronDown, ChevronUp, MapPin, User, FileText, ExternalLink, AlertTriangle, Timer, Users, Brain, GitBranch } from 'lucide-react';
 import type { Scene, Story, SceneStatus } from '@/types/story';
-// NarrationControls disabled - narration feature temporarily disabled
-// import NarrationControls from '@/components/narration/NarrationControls';
 import { computeWordCount } from '@/utils/wordCount';
 import { getWorldElementsForScene, findWorldElementByName } from '@/lib/world/worldLinkHelper';
 import WorldElementTooltip from '@/components/world/WorldElementTooltip';
@@ -115,8 +113,6 @@ export default function StoryCanvas({
     };
   }, []);
 
-  const [expandedNarration, setExpandedNarration] = useState<string | null>(null);
-  const [highlightedContent, setHighlightedContent] = useState<Record<string, string>>({});
   const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
   const [showConsistencyPanel, setShowConsistencyPanel] = useState(false);
   const [showSprintTimer, setShowSprintTimer] = useState(false);
@@ -229,27 +225,8 @@ export default function StoryCanvas({
               Consistency
             </button>
           </div>
-          {/* Narration disabled - feature temporarily disabled */}
-          {/* {story.scenes.length > 0 && (
-            <button
-              onClick={() => {
-                const allText = story.scenes.map(s => s.content).join('\n\n');
-                if (allText.trim()) {
-                  setExpandedNarration('story');
-                }
-              }}
-              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg flex items-center gap-2 transition-colors"
-              title="Narrate entire story"
-            >
-              <Volume2 className="w-4 h-4" />
-              Narrate Story
-            </button>
-          )} */}
         </div>
       </div>
-
-      {/* Narration disabled - feature temporarily disabled */}
-      {/* Story-wide narration panel commented out */}
 
       {/* Scenes List */}
       <div className="space-y-4">
@@ -285,21 +262,6 @@ export default function StoryCanvas({
                   <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300 capitalize">
                     {scene.emotion}
                   </span>
-                  {/* Narration disabled - feature temporarily disabled */}
-                  {/* <button
-                    onClick={() => {
-                      if (expandedNarration === scene.id) {
-                        setExpandedNarration(null);
-                      } else {
-                        setExpandedNarration(scene.id);
-                      }
-                    }}
-                    className="p-1.5 text-gray-400 hover:text-purple-400 transition-colors"
-                    title="Narrate this scene"
-                    aria-label="Narrate scene"
-                  >
-                    <Volume2 size={16} />
-                  </button> */}
                   <button
                     onClick={() => {
                       const updatedScenes = story.scenes.filter((s) => s.id !== scene.id);
@@ -452,40 +414,8 @@ export default function StoryCanvas({
                 )}
               </div>
               <div className="p-4">
-                {/* Narration disabled - feature temporarily disabled */}
-                {/* {expandedNarration === scene.id && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mb-4"
-                  >
-                    <NarrationControls
-                      text={scene.content}
-                      onHighlightChange={(html) => {
-                        if (html === scene.content) {
-                          const newHighlighted = { ...highlightedContent };
-                          delete newHighlighted[scene.id];
-                          setHighlightedContent(newHighlighted);
-                        } else {
-                          setHighlightedContent({ ...highlightedContent, [scene.id]: html });
-                        }
-                      }}
-                    />
-                  </motion.div>
-                )} */}
-                
                 {/* Scene Content */}
                 <div className="relative">
-                  {/* Highlighted overlay when narrating */}
-                  {highlightedContent[scene.id] && expandedNarration === scene.id ? (
-                    <div
-                      className="w-full bg-gray-900/50 rounded p-3 text-gray-300 border border-gray-700 min-h-[100px] whitespace-pre-wrap pointer-events-none absolute inset-0 z-10"
-                      dangerouslySetInnerHTML={{ __html: highlightedContent[scene.id] }}
-                    />
-                  ) : null}
-                  
-                  {/* Editable textarea (always present, behind highlight when narrating) */}
                   <textarea
                     value={scene.content}
                     onChange={(e) => {
@@ -496,18 +426,9 @@ export default function StoryCanvas({
                       const updated = { ...story, scenes: updatedScenes, updatedAt: new Date() };
                       setStory(updated);
                       onStoryChange?.(updated);
-                      // Clear highlight when content changes
-                      if (highlightedContent[scene.id]) {
-                        const newHighlighted = { ...highlightedContent };
-                        delete newHighlighted[scene.id];
-                        setHighlightedContent(newHighlighted);
-                      }
                     }}
                     className="w-full bg-gray-900/50 rounded p-3 text-gray-300 border border-gray-700 focus:border-blue-500 outline-none min-h-[100px] resize-y"
                     placeholder="Write your scene here..."
-                    style={{
-                      opacity: highlightedContent[scene.id] && expandedNarration === scene.id ? 0 : 1,
-                    }}
                   />
                   
                   {/* Scene Insights Button */}

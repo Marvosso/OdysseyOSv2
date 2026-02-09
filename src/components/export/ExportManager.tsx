@@ -12,7 +12,6 @@ import {
   BookOpen,
   FileCode,
   Loader2,
-  Volume2,
   Twitter,
   Book,
   BarChart3
@@ -49,7 +48,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
   const [includeCharacters, setIncludeCharacters] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
-  const [activeTab, setActiveTab] = useState<'text' | 'audio' | 'social' | 'publishing' | 'analysis'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'social' | 'publishing' | 'analysis'>('text');
 
   const stats = calculateStats(story);
 
@@ -306,19 +305,6 @@ export default function ExportManager({ story }: ExportManagerProps) {
           Text Export
         </button>
         <button
-          onClick={() => {
-            setActiveTab('audio');
-          }}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
-            activeTab === 'audio'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
-          }`}
-        >
-          <Volume2 className="w-4 h-4 inline mr-2" />
-          Audiobook
-        </button>
-        <button
           onClick={() => setActiveTab('social')}
           className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
             activeTab === 'social'
@@ -352,14 +338,6 @@ export default function ExportManager({ story }: ExportManagerProps) {
           Analysis
         </button>
       </div>
-
-      {/* Audio Export Tab - Disabled */}
-      {activeTab === 'audio' && (
-        <div className="p-8 text-center">
-          <p className="text-gray-400 mb-4">Audiobook export is temporarily disabled.</p>
-          <p className="text-sm text-gray-500">This feature will be restored in a future update.</p>
-        </div>
-      )}
 
       {/* Social Media Export Tab */}
       {activeTab === 'social' && (
