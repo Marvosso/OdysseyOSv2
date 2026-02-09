@@ -7,8 +7,30 @@ import CharacterForm from './CharacterForm';
 import CharacterCard from './CharacterCard';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 import { CharacterDetector } from '@/lib/import/importPipeline';
-import type { DetectedCharacter } from '@/lib/import/importPipeline';
-import type { Character, Story } from '@/types/story';
+import type { Character, Story, Scene } from '@/types/story';
+
+/** Fallback: find repeated capitalized name-like phrases in text (catches names the strict detector may miss) */
+function detectNamesFromText(text: string): Array<{ name: string; occurrences: number }> {
+  const skip = new Set([
+    'the', 'and', 'but', 'for', 'nor', 'or', 'so', 'yet', 'when', 'where', 'what', 'who', 'why', 'how',
+    'this', 'that', 'with', 'from', 'have', 'has', 'had', 'been', 'were', 'said', 'says', 'asked',
+  ]);
+  const nameLike = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/g;
+  const count = new Map<string, number>();
+  let m;
+  while ((m = nameLike.exec(text)) !== null) {
+    const name = m[1].trim();
+    if (name.length < 2 || name.length > 40) continue;
+    const first = name.split(/\s+/)[0].toLowerCase();
+    if (skip.has(first)) continue;
+    count.set(name, (count.get(name) || 0) + 1);
+  }
+  return Array.from(count.entries())
+    .filter(([, n]) => n >= 2)
+    .map(([name, occurrences]) => ({ name, occurrences }))
+    .sort((a, b) => b.occurrences - a.occurrences)
+    .slice(0, 30);
+}
 
 // Map Character type from story to local interface
 interface LocalCharacter {
@@ -74,26 +96,35 @@ function convertToStoryCharacter(char: LocalCharacter): ExtendedCharacter {
 
 export default function CharacterHub() {
   const [characters, setCharacters] = useState<LocalCharacter[]>([]);
-  const [story, setStory] = useState<Story | null>(null);
+  const [scenes, setScenes] = useState<Scene[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<LocalCharacter | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dismissedDetected, setDismissedDetected] = useState<Set<string>>(() => new Set());
 
-  // Load story and characters from StoryStorage on mount and when storage changes
+  // Load scenes and characters from StoryStorage on mount, storage change, and when tab becomes visible
+  // Use both loadScenes() and story.scenes so we get content regardless of which key was last written
   useEffect(() => {
     const load = () => {
-      setStory(StoryStorage.loadStory());
+      const fromScenesKey = StoryStorage.loadScenes();
+      const story = StoryStorage.loadStory();
+      const fromStory = story?.scenes ?? [];
+      const combined = fromScenesKey?.length ? fromScenesKey : fromStory;
+      setScenes(Array.isArray(combined) ? combined : []);
       const saved = StoryStorage.loadCharacters();
       const converted: LocalCharacter[] = saved.map(convertToLocalCharacter);
       setCharacters(converted);
     };
 
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+
     load();
     window.addEventListener('storage', load);
+    document.addEventListener('visibilitychange', onVisible);
     const interval = setInterval(load, 60000);
     return () => {
       window.removeEventListener('storage', load);
+      document.removeEventListener('visibilitychange', onVisible);
       clearInterval(interval);
     };
   }, []);
@@ -127,23 +158,39 @@ export default function CharacterHub() {
 
   // Detect character names from current story scenes (exclude already-added and dismissed)
   const detectedFromStory = useMemo(() => {
-    if (!story?.scenes?.length) return [];
-    const lines = story.scenes.flatMap((s) => s.content.split(/\r?\n/).filter(Boolean));
-    const text = story.scenes.map((s) => s.content).join('\n');
+    if (!scenes?.length) return [];
+    const lines = scenes.flatMap((s) => (s.content || '').split(/\r?\n/).filter(Boolean));
+    const text = scenes.map((s) => s.content || '').join('\n');
     if (!text.trim()) return [];
     const existingNames = new Set(characters.map((c) => c.name.toLowerCase()));
-    const detected = CharacterDetector.detectCharacters(lines, text);
-    return detected
-      .filter(
-        (d) =>
-          !existingNames.has(d.name.toLowerCase()) &&
-          !dismissedDetected.has(d.name.toLowerCase())
-      )
-      .slice(0, 30)
-      .sort((a, b) => b.confidence - a.confidence);
-  }, [story, characters, dismissedDetected]);
+    const isExcluded = (name: string) =>
+      existingNames.has(name.toLowerCase()) || dismissedDetected.has(name.toLowerCase());
 
-  const handleConfirmDetected = (d: DetectedCharacter) => {
+    const strict = CharacterDetector.detectCharacters(lines, text)
+      .filter((d) => !isExcluded(d.name))
+      .map((d) => ({ name: d.name, confidence: d.confidence, occurrences: d.occurrences }));
+
+    const fallback = detectNamesFromText(text)
+      .filter((d) => !isExcluded(d.name))
+      .map((d) => ({ name: d.name, confidence: 0.5, occurrences: d.occurrences }));
+
+    const byName = new Map<string, { name: string; confidence: number; occurrences: number }>();
+    for (const d of fallback) {
+      if (!byName.has(d.name.toLowerCase())) byName.set(d.name.toLowerCase(), d);
+    }
+    for (const d of strict) {
+      const key = d.name.toLowerCase();
+      const existing = byName.get(key);
+      if (!existing || d.confidence >= existing.confidence) {
+        byName.set(key, d);
+      }
+    }
+    return Array.from(byName.values())
+      .sort((a, b) => b.confidence - a.confidence || b.occurrences - a.occurrences)
+      .slice(0, 30);
+  }, [scenes, characters, dismissedDetected]);
+
+  const handleConfirmDetected = (d: { name: string; occurrences: number }) => {
     const newChar: LocalCharacter = {
       id: `char-${Date.now()}`,
       name: d.name,
@@ -270,7 +317,7 @@ export default function CharacterHub() {
               >
                 <span className="font-medium text-white">{d.name}</span>
                 <span className="text-xs text-gray-500">
-                  {d.occurrences}× · {Math.round(d.confidence * 100)}%
+                  {d.occurrences}× {d.confidence != null ? `· ${Math.round(d.confidence * 100)}%` : ''}
                 </span>
                 <div className="flex items-center gap-1 ml-1">
                   <button
