@@ -38,6 +38,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var f=window.fetch;if(!f)return;window.fetch=function(u,o){var s=typeof u==='string'?u:(u&&u.url||'');if(s.indexOf('7242/ingest')!==-1||s.indexOf('127.0.0.1:7242')!==-1)return Promise.resolve(new Response('',{status:200}));return f.apply(this,arguments);};})();`,
+          }}
+        />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#9333EA" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -45,7 +50,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="OdysseyOS" />
         {/* ResponsiveVoice disabled - narration feature temporarily disabled */}
       </head>
-      <body data-build="odysseyos-2025-02-09-v3">
+      <body data-build="odysseyos-v5-2025-02-09">
         {children}
         <PWAInitializer />
       </body>
