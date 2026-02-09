@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Save, User, Crown, Shield, Heart, BookOpen, Sparkles, AlertCircle } from 'lucide-react';
 
 interface Character {
@@ -22,8 +22,26 @@ interface CharacterFormProps {
   onCancel: () => void;
 }
 
+const defaultCharacter: Character = {
+  id: '',
+  name: '',
+  role: 'supporting',
+  age: 0,
+  appearance: '',
+  personality: '',
+  background: '',
+  motivation: '',
+  flaw: '',
+  arcStatus: 'unstarted',
+};
+
 export default function CharacterForm({ character, onSave, onCancel }: CharacterFormProps) {
-  const [formData, setFormData] = useState<Character>(character);
+  const [formData, setFormData] = useState<Character>({ ...defaultCharacter, ...character });
+
+  // When opening for a different character (e.g. Edit), sync form to that character
+  useEffect(() => {
+    setFormData({ ...defaultCharacter, ...character });
+  }, [character.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

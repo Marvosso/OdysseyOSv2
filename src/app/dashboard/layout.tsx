@@ -28,11 +28,15 @@ import {
   X,
   TrendingUp,
   Keyboard,
+  CloudUpload,
+  Check,
 } from 'lucide-react';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import GuestManager from '@/components/session/GuestManager';
+import { clearEnteredProject } from '@/components/session/StorySelector';
 import KeyboardShortcutsProvider, { openCheatsheet } from '@/components/shortcuts/KeyboardShortcutsProvider';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import { cloudSync } from '@/lib/cloud/minimalCloudSync';
 
 const navigationItems = [
   { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome' },
@@ -64,6 +68,9 @@ export default function DashboardLayout({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [guestId, setGuestId] = useState<string>('');
   const [showGuestModal, setShowGuestModal] = useState(false);
+  const [currentStoryTitle, setCurrentStoryTitle] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncSuccess, setSyncSuccess] = useState(false);
 
   useEffect(() => {
     document.title = 'OdysseyOS · latest';
@@ -80,6 +87,59 @@ export default function DashboardLayout({
     };
     initGuestSession();
   }, []);
+
+  /** Current project title for sidebar */
+  useEffect(() => {
+    const load = () => {
+      const story = StoryStorage.loadStory();
+      setCurrentStoryTitle(story?.title?.trim() || null);
+    };
+    load();
+    window.addEventListener('storage', load);
+    return () => window.removeEventListener('storage', load);
+  }, []);
+
+  /** Auto-sync: when tab becomes visible (debounced) and every 60s when visible + signed in */
+  useEffect(() => {
+    if (!user) return;
+    let visibilityTimer: ReturnType<typeof setTimeout>;
+    let intervalId: ReturnType<typeof setInterval>;
+
+    const runSync = () => {
+      if (StoryStorage.loadStory()) {
+        cloudSync.syncStory().catch(() => {});
+      }
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      visibilityTimer = setTimeout(runSync, 1500);
+    };
+
+    document.addEventListener('visibilitychange', onVisible);
+    intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible' && StoryStorage.loadStory()) runSync();
+    }, 60_000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      clearTimeout(visibilityTimer);
+      clearInterval(intervalId);
+    };
+  }, [user]);
+
+  const handleSidebarSync = useCallback(async () => {
+    if (isSyncing || !user) return;
+    setIsSyncing(true);
+    setSyncSuccess(false);
+    try {
+      const ok = await cloudSync.syncStory();
+      setSyncSuccess(ok);
+      if (ok) setTimeout(() => setSyncSuccess(false), 2500);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [user, isSyncing]);
 
   // Speech error interceptor removed - using ResponsiveVoice instead
 
@@ -220,6 +280,39 @@ export default function DashboardLayout({
       <aside className="fixed left-0 top-0 bottom-0 z-[9999] w-64 flex flex-col bg-gray-800/95 border-r border-gray-700 pointer-events-auto">
         <div className="p-6 border-b border-gray-700">
           <h1 className="text-xl font-bold text-white mb-3">OdysseyOS · latest</h1>
+          {currentStoryTitle && (
+            <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
+              <div className="text-xs text-gray-400 truncate" title={currentStoryTitle}>
+                Project
+              </div>
+              <div className="text-sm font-medium text-white truncate" title={currentStoryTitle}>
+                {currentStoryTitle}
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                {user && (
+                  <button
+                    onClick={handleSidebarSync}
+                    disabled={isSyncing}
+                    title="Sync to cloud"
+                    className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                  >
+                    {syncSuccess ? <Check className="w-3 h-3" /> : <CloudUpload className="w-3 h-3" />}
+                    {isSyncing ? 'Syncing…' : syncSuccess ? 'Synced' : 'Sync'}
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    clearEnteredProject();
+                    router.push('/dashboard');
+                    window.location.reload();
+                  }}
+                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Switch project
+                </button>
+              </div>
+            </div>
+          )}
           
           {/* Signed-in user: show email; session/backup still available via icon */}
           {user && (

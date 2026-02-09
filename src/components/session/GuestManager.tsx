@@ -8,8 +8,9 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Download, Upload, UserPlus, Check, AlertCircle, X } from 'lucide-react';
+import { Copy, Download, Upload, UserPlus, Check, AlertCircle, X, Cloud, CloudUpload, CloudDownload } from 'lucide-react';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import { cloudSync } from '@/lib/cloud/minimalCloudSync';
 
 interface GuestManagerProps {
   guestId: string;
@@ -25,6 +26,12 @@ export default function GuestManager({ guestId, onGuestIdChange, hideClaimAccoun
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const [restoreSuccess, setRestoreSuccess] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [showCloudLoad, setShowCloudLoad] = useState(false);
+  const [cloudStories, setCloudStories] = useState<Array<{ id: string; title: string }>>([]);
+  const [loadingCloudList, setLoadingCloudList] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(() => cloudSync.getLastSyncTime());
 
   // Copy guest ID to clipboard
   const handleCopyId = async () => {
@@ -107,6 +114,42 @@ export default function GuestManager({ guestId, onGuestIdChange, hideClaimAccoun
       setRestoreError('Failed to read file');
     };
     reader.readAsText(file);
+  };
+
+  const handleSyncToCloud = async () => {
+    setIsSyncing(true);
+    setSyncMessage(null);
+    try {
+      const ok = await cloudSync.syncStory();
+      setSyncMessage(ok ? 'Synced to cloud.' : 'Sync failed (check console).');
+      setLastSync(cloudSync.getLastSyncTime());
+      if (ok) setTimeout(() => setSyncMessage(null), 3000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleOpenCloudLoad = async () => {
+    setShowCloudLoad(true);
+    setLoadingCloudList(true);
+    try {
+      const list = await cloudSync.getCloudStories();
+      setCloudStories(list.map((s: { id: string; title: string }) => ({ id: s.id, title: s.title || 'Untitled' })));
+    } finally {
+      setLoadingCloudList(false);
+    }
+  };
+
+  const handleLoadFromCloud = async (storyId: string) => {
+    setIsRestoring(true);
+    setSyncMessage(null);
+    try {
+      const ok = await cloudSync.loadStoryFromCloud(storyId);
+      setSyncMessage(ok ? 'Loaded from cloud. Reloading...' : 'Load failed.');
+      if (ok) setTimeout(() => window.location.reload(), 1500);
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   // Claim as Account - opens migration wizard
@@ -247,6 +290,72 @@ export default function GuestManager({ guestId, onGuestIdChange, hideClaimAccoun
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Cloud sync - when signed in */}
+      {hideClaimAccount && (
+        <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg space-y-3">
+          <h3 className="text-sm font-medium text-white flex items-center gap-2">
+            <Cloud className="w-4 h-4 text-purple-400" />
+            Cloud sync
+          </h3>
+          <p className="text-xs text-gray-400">
+            Push your current project to the cloud or load a project from the cloud.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSyncToCloud}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <CloudUpload className="w-4 h-4" />
+              {isSyncing ? 'Syncing...' : 'Sync to cloud'}
+            </button>
+            <button
+              onClick={() => setShowCloudLoad(!showCloudLoad)}
+              onFocus={showCloudLoad ? undefined : handleOpenCloudLoad}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              <CloudDownload className="w-4 h-4" />
+              Load from cloud
+            </button>
+          </div>
+          {lastSync && (
+            <p className="text-xs text-gray-500">Last synced: {new Date(lastSync).toLocaleString()}</p>
+          )}
+          {syncMessage && (
+            <p className="text-sm text-purple-300">{syncMessage}</p>
+          )}
+          <AnimatePresence>
+            {showCloudLoad && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="pt-2 space-y-2"
+              >
+                {loadingCloudList ? (
+                  <p className="text-sm text-gray-400">Loading list...</p>
+                ) : cloudStories.length === 0 ? (
+                  <p className="text-sm text-gray-400">No stories in cloud.</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {cloudStories.map((s) => (
+                      <li key={s.id}>
+                        <button
+                          onClick={() => handleLoadFromCloud(s.id)}
+                          className="w-full text-left px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-white truncate"
+                        >
+                          {s.title}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Claim as Account - hidden when user is already logged in */}
       {!hideClaimAccount && (

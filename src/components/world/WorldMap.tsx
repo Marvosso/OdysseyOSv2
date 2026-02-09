@@ -20,6 +20,7 @@ import {
   Calendar,
   Plus,
   X,
+  Trash2,
   Link2,
   Route,
   Navigation,
@@ -211,6 +212,16 @@ export default function WorldMap({ story, onLocationClick, onSceneClick }: World
       setNewLocationPos(null);
       setIsPlacingLocation(false);
     }
+  };
+
+  // Remove location from map
+  const handleRemoveLocation = (locationId: string) => {
+    MapStorage.removeLocation(locationId);
+    setMapData((prev) => ({
+      ...prev,
+      locations: prev.locations.filter((l) => l.id !== locationId),
+    }));
+    setSelectedLocation(null);
   };
 
   // Calculate route distance
@@ -479,12 +490,21 @@ export default function WorldMap({ story, onLocationClick, onSceneClick }: World
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="text-white font-semibold">{location.name}</h3>
-                      <button
-                        onClick={() => setSelectedLocation(null)}
-                        className="p-1 hover:bg-gray-700 rounded"
-                      >
-                        <X className="w-4 h-4 text-gray-400" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleRemoveLocation(location.id)}
+                          className="p-1 hover:bg-red-500/20 rounded"
+                          title="Remove location"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </button>
+                        <button
+                          onClick={() => setSelectedLocation(null)}
+                          className="p-1 hover:bg-gray-700 rounded"
+                        >
+                          <X className="w-4 h-4 text-gray-400" />
+                        </button>
+                      </div>
                     </div>
                     {location.description && (
                       <p className="text-sm text-gray-300">{location.description}</p>

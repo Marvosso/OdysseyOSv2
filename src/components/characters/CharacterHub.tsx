@@ -350,7 +350,8 @@ export default function CharacterHub() {
             className="p-6 bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-lg"
           >
             <CharacterForm
-              character={selectedCharacter || {
+              key={selectedCharacter?.id ?? 'new'}
+              character={selectedCharacter ?? {
                 id: '',
                 name: '',
                 role: 'supporting',

@@ -163,7 +163,12 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
         <div className="flex items-center justify-between">
           <h3 className="font-bold text-white">Edit World Element</h3>
           <button
-            onClick={() => setIsEditing(false)}
+            onClick={() => {
+              const isNew = editForm.id && !elements.some((e) => e.id === editForm.id);
+              setIsEditing(false);
+              setEditForm({});
+              if (isNew) setSelectedElement(null);
+            }}
             className="p-1 hover:bg-gray-700 rounded"
           >
             <X className="w-5 h-5 text-gray-400" />
@@ -381,7 +386,12 @@ export default function WorldBuilder({ story, onUpdate }: { story: any; onUpdate
             Save Element
           </button>
           <button
-            onClick={() => setIsEditing(false)}
+            onClick={() => {
+              const isNew = editForm.id && !elements.some((e) => e.id === editForm.id);
+              setIsEditing(false);
+              setEditForm({});
+              if (isNew) setSelectedElement(null);
+            }}
             className="flex-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg py-2"
           >
             Cancel

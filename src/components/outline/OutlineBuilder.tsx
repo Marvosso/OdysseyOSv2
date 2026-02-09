@@ -67,7 +67,8 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
   const handleSelectTemplate = (templateId: string) => {
     const template = outlineTemplates.find(t => t.id === templateId);
     if (template) {
-      const newOutline = generateOutlineFromTemplate(template, story.id);
+      const storyId = story?.id ?? `story-${Date.now()}`;
+      const newOutline = generateOutlineFromTemplate(template, storyId);
       setOutline(newOutline);
       setShowTemplates(false);
       StoryStorage.saveOutline(newOutline);

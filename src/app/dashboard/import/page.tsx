@@ -18,6 +18,7 @@ import { StoryStorage } from '@/lib/storage/storyStorage';
 import { hasPremiumAccess } from '@/lib/ai/importEnhancer';
 import AIEnhancementPanel from '@/components/import/AIEnhancementPanel';
 import { Sparkles } from 'lucide-react';
+import { setEnteredProject } from '@/components/session/StorySelector';
 
 export default function ImportPage() {
   const router = useRouter();
@@ -109,15 +110,16 @@ export default function ImportPage() {
       StoryStorage.saveScenes(story.scenes);
       StoryStorage.saveCharacters(story.characters);
       
-      // Trigger storage event to notify other tabs/components
+      // Mark this project as selected so dashboard shows story canvas, not selector
+      setEnteredProject();
       window.dispatchEvent(new Event('storage'));
       
       // Small delay to ensure storage is written
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Redirect to stories page
+      // Redirect to stories page (imported story is now current project; all tabs use it)
       router.push('/dashboard');
-      router.refresh(); // Force refresh to reload data
+      router.refresh();
     } catch (err) {
       setError(`Failed to save story: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error('Save error:', err);

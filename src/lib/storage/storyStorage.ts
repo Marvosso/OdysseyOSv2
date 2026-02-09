@@ -151,6 +151,25 @@ export class StoryStorage {
     });
   }
 
+  /**
+   * Start a new story: clear storage and save a minimal story so all tabs have a single "current project".
+   */
+  static initNewStory(): void {
+    this.clearAll();
+    const now = new Date();
+    const story: Story = {
+      id: `story-${Date.now()}`,
+      title: 'Untitled Story',
+      scenes: [],
+      characters: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.saveStory(story);
+    this.saveScenes([]);
+    this.saveCharacters([]);
+  }
+
   // Export data as JSON
   static exportAsJSON(): string {
     const data = this.loadAll();
