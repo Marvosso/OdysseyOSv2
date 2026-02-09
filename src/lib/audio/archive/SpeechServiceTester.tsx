@@ -25,9 +25,6 @@ export default function SpeechServiceTester() {
     setTestResult('Running test...\n');
     
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechServiceTester.tsx:20',message:'Starting SafeSpeechService test',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-      // #endregion
 
       const speech = SafeSpeechService.getInstance();
       
@@ -45,18 +42,12 @@ export default function SpeechServiceTester() {
       await speech.speak('Test speech from SafeSpeechService');
       setTestResult(prev => prev + '✓ Test 1 passed\n\n');
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechServiceTester.tsx:35',message:'Test 1 completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-      // #endregion
       
       // Test 2: Speak with options
       setTestResult(prev => prev + 'Test 2: Speak with options...\n');
       await speech.speak('Test speech with rate 1.5', { rate: 1.5 });
       setTestResult(prev => prev + '✓ Test 2 passed\n\n');
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechServiceTester.tsx:42',message:'Test 2 completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-      // #endregion
       
       // Test 3: Cancel
       setTestResult(prev => prev + 'Test 3: Cancel test...\n');
@@ -65,18 +56,12 @@ export default function SpeechServiceTester() {
       speech.cancel();
       setTestResult(prev => prev + '✓ Test 3 passed\n\n');
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechServiceTester.tsx:50',message:'Test 3 completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-      // #endregion
       
       // Test 4: Reset
       setTestResult(prev => prev + 'Test 4: Reset test...\n');
       speech.reset();
       setTestResult(prev => prev + '✓ Test 4 passed\n\n');
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechServiceTester.tsx:57',message:'Test 4 completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-      // #endregion
       
       // Check final state
       const finalState = {
@@ -87,15 +72,9 @@ export default function SpeechServiceTester() {
       setTestResult(prev => prev + `Final state: ${JSON.stringify(finalState, null, 2)}\n\n`);
       setTestResult(prev => prev + '✅ All tests passed!\n');
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechServiceTester.tsx:68',message:'All tests completed successfully',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-      // #endregion
     } catch (error) {
       setTestResult(prev => prev + `❌ Test failed: ${error instanceof Error ? error.message : 'Unknown error'}\n`);
       console.error('[SpeechServiceTester] Test error:', error);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechServiceTester.tsx:73',message:'Test failed',data:{error:error instanceof Error ? error.message : 'Unknown error'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-      // #endregion
     } finally {
       setIsTesting(false);
     }
@@ -119,9 +98,6 @@ export default function SpeechServiceTester() {
     speech.cancel();
     speech.reset();
     setTestResult('Force reset completed\n');
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechServiceTester.tsx:95',message:'Force reset called',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'R'})}).catch(()=>{});
-    // #endregion
   };
 
   if (!isVisible) {

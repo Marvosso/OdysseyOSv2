@@ -20,9 +20,6 @@ export default function SpeechDebugger() {
       return;
     }
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechDebugger.tsx:18',message:'Starting speech debugger',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'Q'})}).catch(()=>{});
-    // #endregion
     
     console.log('[SpeechDebugger] Starting speech debugger');
     
@@ -53,9 +50,6 @@ export default function SpeechDebugger() {
       };
       
       console.log('[SpeechDebugger] speak() called', debugInfo);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechDebugger.tsx:45',message:'speak intercepted',data:debugInfo,timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'Q'})}).catch(()=>{});
-      // #endregion
       
       return originalSpeak.call(this, utterance);
     };
@@ -66,9 +60,6 @@ export default function SpeechDebugger() {
         wasPaused: this.paused,
         pending: this.pending
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechDebugger.tsx:56',message:'cancel intercepted',data:{wasSpeaking:this.speaking,wasPaused:this.paused,pending:this.pending},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'Q'})}).catch(()=>{});
-      // #endregion
       return originalCancel.call(this);
     };
     
@@ -77,9 +68,6 @@ export default function SpeechDebugger() {
         wasSpeaking: this.speaking,
         wasPaused: this.paused
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechDebugger.tsx:66',message:'pause intercepted',data:{wasSpeaking:this.speaking,wasPaused:this.paused},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'Q'})}).catch(()=>{});
-      // #endregion
       return originalPause.call(this);
     };
     
@@ -88,9 +76,6 @@ export default function SpeechDebugger() {
         wasPaused: this.paused,
         wasSpeaking: this.speaking
       });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechDebugger.tsx:76',message:'resume intercepted',data:{wasPaused:this.paused,wasSpeaking:this.speaking},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'Q'})}).catch(()=>{});
-      // #endregion
       return originalResume.call(this);
     };
     
@@ -101,9 +86,6 @@ export default function SpeechDebugger() {
       window.speechSynthesis.pause = originalPause;
       window.speechSynthesis.resume = originalResume;
       console.log('[SpeechDebugger] Speech debugger removed');
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'SpeechDebugger.tsx:86',message:'Speech debugger cleanup',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'Q'})}).catch(()=>{});
-      // #endregion
     };
   }, []);
   
