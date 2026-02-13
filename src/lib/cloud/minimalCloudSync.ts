@@ -102,7 +102,7 @@ export class MinimalCloudSync {
         await this.pushSceneToCloud(user.id, story.id, scene);
       }
       for (const character of characters) {
-        await this.pushCharacterToCloud(user.id, story.id, character as unknown as Record<string, unknown>);
+        await this.pushCharacterToCloud(user.id, story.id, character);
       }
 
       if (typeof window !== 'undefined') {
@@ -173,22 +173,23 @@ export class MinimalCloudSync {
   private async pushCharacterToCloud(
     userId: string,
     storyId: string,
-    character: Record<string, unknown>
+    character: unknown
   ): Promise<void> {
-    const goals = Array.isArray(character.goals) ? (character.goals as string[]).join('\n') : '';
-    const flaws = Array.isArray(character.flaws) ? (character.flaws as string[]).join('\n') : '';
+    const c = character as Record<string, unknown>;
+    const goals = Array.isArray(c.goals) ? (c.goals as string[]).join('\n') : '';
+    const flaws = Array.isArray(c.flaws) ? (c.flaws as string[]).join('\n') : '';
     const { error } = await supabase.from('characters').upsert(
       {
-        id: String(character.id),
+        id: String(c.id),
         story_id: storyId,
         user_id: userId,
-        name: (character.name as string) ?? '',
-        description: (character.description as string) ?? '',
-        role: (character.role as string) ?? 'supporting',
+        name: (c.name as string) ?? '',
+        description: (c.description as string) ?? '',
+        role: (c.role as string) ?? 'supporting',
         goals,
         flaws,
         metadata: {
-          ...character,
+          ...c,
           goals: undefined,
           flaws: undefined,
           id: undefined,
