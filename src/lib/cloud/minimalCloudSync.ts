@@ -175,7 +175,7 @@ export class MinimalCloudSync {
     storyId: string,
     character: unknown
   ): Promise<void> {
-    const c = character as Record<string, unknown>;
+    const c = character as unknown as Record<string, unknown>;
     const goals = Array.isArray(c.goals) ? (c.goals as string[]).join('\n') : '';
     const flaws = Array.isArray(c.flaws) ? (c.flaws as string[]).join('\n') : '';
     const { error } = await supabase.from('characters').upsert(
