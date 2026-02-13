@@ -74,6 +74,7 @@ export default function DashboardLayout({
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
 
   const { tier, loading: tierLoading } = useUserTier();
   const hasPulledOnLoadRef = useRef(false);
@@ -484,10 +485,14 @@ export default function DashboardLayout({
                 <div className="flex flex-wrap gap-2">
                   <button
                     onClick={async () => {
+                      setPortalError(null);
                       setPortalLoading(true);
                       try {
                         const { data: { session: authSession } } = await supabase.auth.getSession();
-                        if (!authSession?.access_token) return;
+                        if (!authSession?.access_token) {
+                          setPortalError('Please sign in again.');
+                          return;
+                        }
                         const res = await fetch('/api/stripe/create-portal-session', {
                           method: 'POST',
                           headers: { Authorization: `Bearer ${authSession.access_token}` },
@@ -497,18 +502,7 @@ export default function DashboardLayout({
                           window.location.href = data.url;
                           return;
                         }
-                        if (data.needsSubscribe) {
-                          const checkRes = await fetch('/api/stripe/create-checkout-session', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              Authorization: `Bearer ${authSession.access_token}`,
-                            },
-                            body: JSON.stringify({ plan: 'pro' }),
-                          });
-                          const checkData = await checkRes.json().catch(() => ({}));
-                          if (checkData.url) window.location.href = checkData.url;
-                        }
+                        setPortalError(data.error || 'Could not open billing. Try again.');
                       } finally {
                         setPortalLoading(false);
                       }
@@ -519,6 +513,9 @@ export default function DashboardLayout({
                     {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
                     {portalLoading ? 'Opening…' : 'Manage subscription'}
                   </button>
+                  {portalError && (
+                    <p className="text-xs text-amber-400 mt-2">{portalError}</p>
+                  )}
                 </div>
               </div>
 

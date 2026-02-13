@@ -1,7 +1,8 @@
 /**
  * Create Stripe Billing Portal session (manage subscription).
  * Requires Authorization: Bearer <Supabase access_token>.
- * Returns { url } to redirect to Stripe Portal, or { needsSubscribe: true } if no customer yet.
+ * Returns { url } to redirect to Stripe Portal.
+ * If the user has no Stripe customer yet, we create one so the portal always opens.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -25,12 +26,18 @@ export async function POST(request: NextRequest) {
 
     const key = getStripeSecretKey();
     if (!key) {
-      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 503 });
+      return NextResponse.json(
+        { error: 'Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local.' },
+        { status: 503 }
+      );
     }
 
     const db = getSupabaseServiceClient();
     if (!db) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 503 });
+      return NextResponse.json(
+        { error: 'Server config missing. Set SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL in .env.local.' },
+        { status: 503 }
+      );
     }
 
     const { data: profile } = await db
@@ -39,13 +46,24 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle();
 
-    const customerId = profile?.stripe_customer_id as string | null | undefined;
-    if (!customerId) {
-      return NextResponse.json({ needsSubscribe: true }, { status: 200 });
-    }
+    let customerId = profile?.stripe_customer_id as string | null | undefined;
 
     const stripe = new Stripe(key);
     const origin = request.headers.get('origin') || request.nextUrl?.origin || '';
+
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email ?? undefined,
+        metadata: { user_id: user.id },
+      });
+      customerId = customer.id;
+      await db
+        .from('user_profiles')
+        .upsert(
+          { id: user.id, stripe_customer_id: customerId },
+          { onConflict: 'id' }
+        );
+    }
 
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
