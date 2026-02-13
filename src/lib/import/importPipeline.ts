@@ -71,9 +71,11 @@ export interface DetectedScene {
 export interface DetectedCharacter {
   /** Character name */
   readonly name: string;
-  /** Confidence score (0-1) */
+  /** Number of times the name appears (capitalized) */
+  readonly frequency: number;
+  /** Confidence score (0-1), derived from frequency and context */
   readonly confidence: number;
-  /** Number of occurrences in text */
+  /** @deprecated Use frequency. Kept for compatibility. */
   readonly occurrences: number;
   /** First occurrence line index */
   readonly firstSeen: number;
@@ -833,179 +835,118 @@ export class WordCounter {
 // Stage 5.5: Character Detection (Non-AI Heuristics)
 // ============================================================================
 
+/** Minimum occurrences for a capitalized token to be considered a character name */
+const MIN_CHARACTER_FREQUENCY = 3;
+
+/** Confidence scale: frequency at which we cap confidence at 1.0 */
+const FREQUENCY_FOR_FULL_CONFIDENCE = 15;
+
 export class CharacterDetector {
   /**
-   * Common words to exclude from character detection
+   * Common English stopwords: capitalized at sentence start but not character names.
+   * Used to filter frequency-based character detection.
    */
-  private static readonly EXCLUDED_WORDS = new Set([
-    // Articles and conjunctions
+  private static readonly STOPWORDS = new Set([
     'the', 'a', 'an', 'and', 'or', 'but', 'if', 'once', 'when', 'where', 'while', 'what', 'which', 'who', 'why', 'how',
-    // Prepositions
     'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as', 'into', 'onto', 'upon', 'over', 'under', 'through', 'during', 'before', 'after', 'since', 'until',
-    // Verbs (common forms)
     'is', 'was', 'are', 'were', 'been', 'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can',
-    // Pronouns
     'this', 'that', 'these', 'those', 'he', 'she', 'it', 'they', 'we', 'you', 'i', 'me', 'him', 'her', 'us', 'them', 'his', 'hers', 'its', 'their', 'our', 'your', 'my', 'mine', 'yours', 'theirs', 'ours',
-    // Dialogue verbs
     'said', 'says', 'say', 'asked', 'asks', 'ask', 'replied', 'replies', 'reply', 'thought', 'think', 'thinks',
-    // Common action verbs
     'felt', 'feels', 'feel', 'looked', 'looks', 'look', 'saw', 'see', 'sees', 'went', 'go', 'goes', 'came', 'come', 'comes', 'got', 'get', 'gets', 'took', 'take', 'takes',
     'made', 'make', 'makes', 'know', 'knows', 'knew', 'want', 'wants', 'wanted', 'need', 'needs', 'needed', 'like', 'likes', 'liked',
-    // Time/place words
     'then', 'there', 'here', 'now', 'today', 'yesterday', 'tomorrow', 'soon', 'later', 'always', 'never', 'sometimes', 'often',
-    // Other common sentence starters
     'however', 'therefore', 'thus', 'hence', 'moreover', 'furthermore', 'nevertheless', 'nonetheless', 'meanwhile', 'besides',
+    'something', 'someone', 'everyone', 'everything', 'nothing', 'anything', 'somebody', 'nobody', 'anybody', 'everybody',
+    'first', 'last', 'next', 'other', 'another', 'such', 'only', 'same', 'both', 'each', 'few', 'more', 'most', 'all',
+    'very', 'just', 'also', 'still', 'already', 'again', 'back', 'away', 'out', 'down', 'up', 'off', 'on', 'so', 'too',
+    'yes', 'no', 'well', 'perhaps', 'maybe', 'certainly', 'surely', 'actually', 'really', 'almost', 'even', 'quite',
+    'father', 'mother', 'brother', 'sister', 'daughter', 'son', 'man', 'woman', 'boy', 'girl', 'lord', 'lady', 'sir', 'madam',
+    'mr', 'mrs', 'ms', 'dr', 'prof', 'miss', 'king', 'queen', 'prince', 'princess', 'duke', 'captain', 'general', 'doctor',
+    'god', 'heaven', 'hell', 'devil', 'angel', 'saint', 'church', 'state', 'country', 'world', 'life', 'death', 'love', 'time',
+    'day', 'night', 'morning', 'evening', 'week', 'month', 'year', 'moment', 'hour', 'minute',
+    'house', 'room', 'door', 'window', 'street', 'road', 'place', 'way', 'hand', 'head', 'eye', 'face', 'heart', 'voice',
+    'thing', 'kind', 'sort', 'part', 'end', 'beginning', 'side', 'rest', 'half', 'whole',
   ]);
 
   /**
-   * Detect character names using heuristics
+   * Legacy set: same as STOPWORDS for isValidCharacterName checks
+   */
+  private static readonly EXCLUDED_WORDS = CharacterDetector.STOPWORDS;
+
+  /**
+   * Detect character names by counting frequency of capitalized proper nouns.
+   * - Only includes names that appear 3+ times
+   * - Filters common English stopwords
+   * - Confidence is scored from frequency (higher frequency = higher confidence)
    */
   static detectCharacters(
     lines: readonly string[],
     text: string
   ): readonly DetectedCharacter[] {
-    const candidates = new Map<string, {
-      occurrences: number;
-      firstSeen: number;
-      contexts: string[];
-      contextTypes: Set<'dialogue' | 'action' | 'sentence-start'>;
-    }>();
+    const frequencyMap = new Map<string, number>();
+    const firstSeenMap = new Map<string, number>();
 
-    // First pass: Collect all candidates with context tracking
+    // Match capitalized proper nouns: one or more words, each Capitalized (e.g. "Mary", "Mary Jane")
+    const properNounPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/g;
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      
-      // Pattern 1: Dialogue patterns: "Name said" or 'Name said'
-      const dialoguePattern = /["']([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)["']\s+(?:said|says|asked|asks|replied|replies|whispered|shouted|exclaimed)/gi;
-      let dialogueMatch;
-      while ((dialogueMatch = dialoguePattern.exec(line)) !== null) {
-        const name = dialogueMatch[1].trim();
-        if (this.isValidCharacterName(name)) {
-          this.addCandidateWithContext(candidates, name, i, line, 'dialogue');
-        }
-      }
-
-      // Pattern 2: "Name said" pattern (without quotes) - HIGH CONFIDENCE
-      const saidPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:said|says|asked|asks|replied|replies|whispered|shouted|exclaimed|thought|thinks)/gi;
-      let saidMatch;
-      while ((saidMatch = saidPattern.exec(line)) !== null) {
-        const name = saidMatch[1].trim();
-        if (this.isValidCharacterName(name)) {
-          this.addCandidateWithContext(candidates, name, i, line, 'action');
-        }
-      }
-
-      // Pattern 3: Name followed by action verb (walked, looked, ran, etc.)
-      const actionPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:walked|ran|stood|sat|looked|glanced|stared|smiled|frowned|nodded|shook|turned|moved|went|came|entered|left|opened|closed|picked|put|threw|caught|grabbed|reached|pushed|pulled|stepped|jumped|fell|rose|woke|slept|ate|drank|spoke|whispered|shouted|laughed|cried|sighed|breathed|gasped|screamed|whispered|murmured|muttered|stammered|stuttered)/gi;
-      let actionMatch;
-      while ((actionMatch = actionPattern.exec(line)) !== null) {
-        const name = actionMatch[1].trim();
-        if (this.isValidCharacterName(name)) {
-          this.addCandidateWithContext(candidates, name, i, line, 'action');
-        }
-      }
-
-      // Pattern 4: Name as subject (Name was/were/is/are/had/has/will/would/could/should)
-      // This catches names that appear as sentence subjects even if not at sentence start
-      const subjectPattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:was|were|is|are|had|has|will|would|could|should|felt|feels|seems|seemed|appears|appeared|becomes|became|remains|remained|stays|stayed)/gi;
-      let subjectMatch;
-      while ((subjectMatch = subjectPattern.exec(line)) !== null) {
-        const name = subjectMatch[1].trim();
-        if (this.isValidCharacterName(name)) {
-          this.addCandidateWithContext(candidates, name, i, line, 'action');
-        }
-      }
-
-      // Pattern 5: Capitalized words at sentence start - LOW CONFIDENCE, only if not already found
-      // Only check if we haven't seen this word in dialogue/action contexts
-      const sentenceStartPattern = /(?:^|\.\s+|!\s+|\?\s+)([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g;
       let match;
-      while ((match = sentenceStartPattern.exec(line)) !== null) {
-        const potentialName = match[1].trim();
-        // Only add sentence-start candidates if they're not already in the map
-        // This prevents common words from being added just because they start sentences
-        if (this.isValidCharacterName(potentialName) && !candidates.has(potentialName)) {
-          this.addCandidateWithContext(candidates, potentialName, i, line, 'sentence-start');
-        }
-      }
-      
-      // Special logging for known character names (Alma, Deek)
-      const knownNames = ['Alma', 'Deek'];
-      for (const knownName of knownNames) {
-        if (line.includes(knownName)) {
-        }
+      const re = new RegExp(properNounPattern.source, 'g');
+      while ((match = re.exec(line)) !== null) {
+        const name = match[1].trim();
+        if (name.length < 2 || name.length > 40) continue;
+        if (this.isStopwordOrInvalid(name)) continue;
+        const count = (frequencyMap.get(name) ?? 0) + 1;
+        frequencyMap.set(name, count);
+        if (!firstSeenMap.has(name)) firstSeenMap.set(name, i);
       }
     }
 
-    // Second pass: Check if candidates appear in lowercase (common words do, names don't)
-    const lowerText = text.toLowerCase();
-    for (const [name, data] of candidates.entries()) {
-      const lowerName = name.toLowerCase();
-      const appearsInLowercase = lowerText.includes(lowerName) &&
-        !lowerText.includes(name); // Appears lowercase but not capitalized
-
-      // If it appears in lowercase, it's likely a common word, not a name
-      if (appearsInLowercase && !data.contextTypes.has('dialogue') && !data.contextTypes.has('action')) {
-        // Only remove if it doesn't appear in dialogue/action contexts
-        candidates.delete(name);
-      }
-    }
-
-    // Convert to DetectedCharacter array with confidence scores
     const detected: DetectedCharacter[] = [];
-    
-    for (const [name, data] of candidates.entries()) {
-      // Calculate confidence based on:
-      // - Context type (dialogue/action = high, sentence-start = low)
-      // - Number of occurrences (more = higher confidence)
-      // - Length (2-3 words typical for names)
-      const wordCount = name.split(/\s+/).length;
-      const occurrenceScore = Math.min(data.occurrences / 10, 1.0); // Cap at 10 occurrences
-      const lengthScore = wordCount >= 1 && wordCount <= 3 ? 1.0 : 0.7;
-      
-      // Context score: dialogue/action = high confidence, sentence-start only = low confidence
-      let contextScore = 0.3; // Default low for sentence-start only
-      if (data.contextTypes.has('dialogue')) {
-        contextScore = 1.0; // Highest confidence for dialogue
-      } else if (data.contextTypes.has('action')) {
-        contextScore = 0.9; // High confidence for action verbs
-      } else if (data.contextTypes.has('sentence-start')) {
-        contextScore = 0.2; // Very low confidence for sentence-start only
-      }
 
-      const confidence = (occurrenceScore * 0.3 + lengthScore * 0.2 + contextScore * 0.5);
-
-      // Stricter requirements:
-      // - Must have dialogue/action context OR appear 3+ times (lowered from 5 for sentence-start)
-      // - Confidence must be >= 0.5 (raised from 0.4)
-      // - Must appear at least 2 times
-      const hasStrongContext = data.contextTypes.has('dialogue') || data.contextTypes.has('action');
-      const meetsOccurrenceThreshold = data.occurrences >= (hasStrongContext ? 2 : 3); // Lowered from 5 to 3
-      
-      // Special check for known character names (Alma, Deek) - lower threshold
-      const knownNames = ['Alma', 'Deek'];
-      const isKnownName = knownNames.includes(name);
-      const adjustedConfidenceThreshold = isKnownName ? 0.4 : 0.5; // Lower threshold for known names
-      const adjustedOccurrenceThreshold = isKnownName ? 1 : (hasStrongContext ? 2 : 3); // Lower for known names
-      
-      if (confidence >= adjustedConfidenceThreshold && data.occurrences >= adjustedOccurrenceThreshold) {
-        detected.push({
-          name,
-          confidence,
-          occurrences: data.occurrences,
-          firstSeen: data.firstSeen,
-        });
-      } else {
-      }
+    for (const [name, frequency] of frequencyMap.entries()) {
+      if (frequency < MIN_CHARACTER_FREQUENCY) continue;
+      const confidence = this.confidenceFromFrequency(frequency);
+      detected.push({
+        name,
+        frequency,
+        confidence,
+        occurrences: frequency,
+        firstSeen: firstSeenMap.get(name) ?? 0,
+      });
     }
 
-    // Sort by confidence (highest first), then by occurrences
     return detected.sort((a, b) => {
-      if (b.confidence !== a.confidence) {
-        return b.confidence - a.confidence;
-      }
-      return b.occurrences - a.occurrences;
+      if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+      return b.frequency - a.frequency;
     });
+  }
+
+  /**
+   * Score confidence from frequency (0–1). Higher frequency = higher confidence.
+   */
+  private static confidenceFromFrequency(frequency: number): number {
+    if (frequency < MIN_CHARACTER_FREQUENCY) return 0;
+    const t = (frequency - MIN_CHARACTER_FREQUENCY) / (FREQUENCY_FOR_FULL_CONFIDENCE - MIN_CHARACTER_FREQUENCY);
+    return Math.min(1, Math.max(0, 0.3 + 0.7 * t));
+  }
+
+  /**
+   * True if the candidate is a stopword or fails basic name validation.
+   */
+  private static isStopwordOrInvalid(name: string): boolean {
+    const words = name.split(/\s+/);
+    const firstWord = words[0]!.toLowerCase();
+    if (CharacterDetector.STOPWORDS.has(firstWord)) return true;
+    for (let i = 1; i < words.length; i++) {
+      if (CharacterDetector.STOPWORDS.has(words[i]!.toLowerCase())) return true;
+    }
+    if (words.length === 1 && words[0]!.length < 3) return true;
+    if (!/^[A-Za-z\s\-']+$/.test(name)) return true;
+    const titles = ['mr', 'mrs', 'ms', 'dr', 'prof', 'sir', 'madam', 'lord', 'lady'];
+    if (titles.includes(firstWord)) return true;
+    return false;
   }
 
   /**
@@ -1086,38 +1027,6 @@ export class CharacterDetector {
     return 'Unknown reason';
   }
 
-  /**
-   * Add a candidate name to the map with context type tracking
-   */
-  private static addCandidateWithContext(
-    candidates: Map<string, { 
-      occurrences: number; 
-      firstSeen: number; 
-      contexts: string[];
-      contextTypes: Set<'dialogue' | 'action' | 'sentence-start'>;
-    }>,
-    name: string,
-    lineIndex: number,
-    line: string,
-    contextType: 'dialogue' | 'action' | 'sentence-start'
-  ): void {
-    const normalized = name.trim();
-    if (!candidates.has(normalized)) {
-      candidates.set(normalized, {
-        occurrences: 0,
-        firstSeen: lineIndex,
-        contexts: [],
-        contextTypes: new Set(),
-      });
-    }
-    
-    const candidate = candidates.get(normalized)!;
-    candidate.occurrences++;
-    candidate.contextTypes.add(contextType);
-    if (candidate.contexts.length < 3) {
-      candidate.contexts.push(line.substring(0, 100));
-    }
-  }
 }
 
 // ============================================================================

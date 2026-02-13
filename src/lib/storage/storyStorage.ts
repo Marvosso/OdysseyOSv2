@@ -170,6 +170,25 @@ export class StoryStorage {
     this.saveCharacters([]);
   }
 
+  /**
+   * Initialize a new story from API create response (id + title). Use after POST /api/stories/create success.
+   */
+  static initNewStoryFromApi(id: string, title: string): void {
+    this.clearAll();
+    const now = new Date();
+    const story: Story = {
+      id,
+      title: title || 'Untitled Story',
+      scenes: [],
+      characters: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.saveStory(story);
+    this.saveScenes([]);
+    this.saveCharacters([]);
+  }
+
   // Export data as JSON
   static exportAsJSON(): string {
     const data = this.loadAll();

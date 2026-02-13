@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { BookOpen, Upload, PlusCircle, FileText, Users, Globe, PenLine } from 'lucide-react';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import { supabase } from '@/lib/supabaseClient';
+import UpgradeModal from './UpgradeModal';
 
 const ENTERED_PROJECT_KEY = 'odysseyos_entered_project';
 
@@ -33,6 +36,8 @@ interface StorySelectorProps {
 export default function StorySelector({ currentStoryTitle, onContinue, onNewStory }: StorySelectorProps) {
   const router = useRouter();
   const hasStory = !!currentStoryTitle;
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const handleContinue = () => {
     setEnteredProject();
@@ -43,11 +48,52 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
     router.push('/dashboard/import');
   };
 
-  const handleNewStory = () => {
-    StoryStorage.initNewStory();
-    setEnteredProject();
-    window.dispatchEvent(new Event('storage'));
-    onNewStory();
+  const handleNewStory = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.access_token) {
+      StoryStorage.initNewStory();
+      setEnteredProject();
+      window.dispatchEvent(new Event('storage'));
+      onNewStory();
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const res = await fetch('/api/stories/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ title: 'Untitled Story' }),
+      });
+
+      if (res.status === 403) {
+        setShowUpgradeModal(true);
+        return;
+      }
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('[StorySelector] Create failed:', err);
+        return;
+      }
+
+      const json = await res.json();
+      const id = json?.data?.id ?? `story-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+      const title = json?.data?.title ?? 'Untitled Story';
+
+      StoryStorage.initNewStoryFromApi(id, title);
+      setEnteredProject();
+      window.dispatchEvent(new Event('storage'));
+      onNewStory();
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -99,17 +145,20 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
 
         <button
           onClick={handleNewStory}
-          className="w-full flex items-center gap-4 p-5 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl text-left transition-colors group"
+          disabled={creating}
+          className="w-full flex items-center gap-4 p-5 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl text-left transition-colors group disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <div className="p-3 bg-gray-700/50 rounded-lg group-hover:bg-gray-600/50">
             <PlusCircle className="w-6 h-6 text-gray-300" />
           </div>
           <div className="flex-1">
-            <div className="font-semibold text-white">Start new story</div>
+            <div className="font-semibold text-white">{creating ? 'Creating…' : 'Start new story'}</div>
             <div className="text-sm text-gray-400">Create a blank project and build outline, characters, and world first</div>
           </div>
         </button>
       </motion.div>
+
+      <UpgradeModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
 
       <motion.div
         initial={{ opacity: 0 }}

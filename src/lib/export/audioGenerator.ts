@@ -44,47 +44,29 @@ export interface GenerationProgress {
   isCancelled: boolean;
 }
 
+/** Minimal voice descriptor for compatibility; browser speech removed in favor of server TTS */
+export interface VoiceOption {
+  name: string;
+  lang?: string;
+}
+
 export class AudioGenerator {
   private audioContext: AudioContext | null = null;
   private mediaStreamDestination: MediaStreamAudioDestinationNode | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
-  private synthesis: SpeechSynthesis | null = null;
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
   private isPaused: boolean = false;
   private isCancelled: boolean = false;
   private progressCallback: ((progress: GenerationProgress) => void) | null = null;
 
-  /**
-   * Get available browser voices
-   */
-  static getAvailableVoices(): SpeechSynthesisVoice[] {
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
-      return [];
-    }
-    return window.speechSynthesis.getVoices();
+  /** Browser speech removed; use server-side TTS. Returns empty list. */
+  static getAvailableVoices(): VoiceOption[] {
+    return [];
   }
 
-  /**
-   * Wait for voices to load
-   */
-  static async waitForVoices(): Promise<SpeechSynthesisVoice[]> {
-    return new Promise((resolve) => {
-      if (typeof window === 'undefined' || !window.speechSynthesis) {
-        resolve([]);
-        return;
-      }
-
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        resolve(voices);
-        return;
-      }
-
-      window.speechSynthesis.onvoiceschanged = () => {
-        resolve(window.speechSynthesis.getVoices());
-      };
-    });
+  /** Browser speech removed; use server-side TTS. Resolves with empty list. */
+  static async waitForVoices(): Promise<VoiceOption[]> {
+    return [];
   }
 
   /**
@@ -321,42 +303,20 @@ export class AudioGenerator {
     return webmBlob;
   }
 
-  /**
-   * Pause generation
-   */
+  /** Pause generation (browser speech removed; only state flag). */
   pause(): void {
     this.isPaused = true;
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.pause();
-      }
-    }
   }
 
-  /**
-   * Resume generation
-   */
+  /** Resume generation. */
   resume(): void {
     this.isPaused = false;
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
-      }
-    }
   }
 
-  /**
-   * Cancel generation
-   */
+  /** Cancel generation. */
   cancel(): void {
     this.isCancelled = true;
     this.isPaused = false;
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      // Cancel all speech synthesis
-      window.speechSynthesis.cancel();
-      // Clear current utterance reference
-      this.currentUtterance = null;
-    }
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
     }
@@ -383,6 +343,5 @@ export class AudioGenerator {
     }
     this.mediaRecorder = null;
     this.recordedChunks = [];
-    this.currentUtterance = null;
   }
 }

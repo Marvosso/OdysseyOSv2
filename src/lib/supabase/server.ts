@@ -23,6 +23,22 @@ function getSupabaseClient() {
 }
 
 /**
+ * Server Supabase client with service role for API routes.
+ * Bypasses RLS; use only server-side and never expose the key.
+ * Returns null if SUPABASE_SERVICE_ROLE_KEY is not set.
+ */
+export function getSupabaseServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
+
+/**
  * Check if user has an active session by checking for Supabase auth cookies
  * 
  * Supabase stores session in cookies with names like:

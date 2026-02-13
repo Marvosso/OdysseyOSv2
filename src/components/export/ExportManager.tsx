@@ -18,12 +18,14 @@ import {
 } from 'lucide-react';
 import type { Story } from '@/types/story';
 import { format } from 'date-fns';
+import { supabase } from '@/lib/supabaseClient';
 // AudioExportPanel disabled - narration feature temporarily disabled
 // import AudioExportPanel from './AudioExportPanel';
 import SocialMediaExports from './SocialMediaExports';
 import PublishingExports from './PublishingExports';
 import AnalysisExports from './AnalysisExports';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import UpgradeModal from '@/components/session/UpgradeModal';
 
 interface ExportManagerProps {
   story: Story;
@@ -34,6 +36,8 @@ const EXPORT_FORMATS = [
   { id: 'md', label: 'Markdown', icon: FileCode, description: 'For documentation and notes' },
   { id: 'json', label: 'JSON', icon: FileJson, description: 'For developers and backups' },
   { id: 'html', label: 'HTML', icon: Globe, description: 'For web publishing' },
+  { id: 'pdf', label: 'PDF', icon: Book, description: 'Pro / Studio' },
+  { id: 'docx', label: 'DOCX', icon: BookOpen, description: 'Pro / Studio' },
 ];
 
 interface ExportStats {
@@ -43,12 +47,16 @@ interface ExportStats {
   estimatedReadTime: number;
 }
 
+const SERVER_EXPORT_FORMATS = ['pdf', 'docx'];
+
 export default function ExportManager({ story }: ExportManagerProps) {
   const [selectedFormat, setSelectedFormat] = useState('txt');
   const [includeCharacters, setIncludeCharacters] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   const [activeTab, setActiveTab] = useState<'text' | 'social' | 'publishing' | 'analysis'>('text');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const stats = calculateStats(story);
 
@@ -65,13 +73,71 @@ export default function ExportManager({ story }: ExportManagerProps) {
   };
 
   const handleDownload = async () => {
+    setExportError(null);
     setIsExporting(true);
-    
+
+    if (SERVER_EXPORT_FORMATS.includes(selectedFormat)) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          setExportError('Sign in to export PDF or DOCX.');
+          setIsExporting(false);
+          return;
+        }
+        const res = await fetch('/api/export', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            format: selectedFormat,
+            story: {
+              id: story.id,
+              title: story.title,
+              scenes: story.scenes,
+              characters: story.characters,
+              createdAt: story.createdAt instanceof Date ? story.createdAt.toISOString() : story.createdAt,
+              updatedAt: story.updatedAt instanceof Date ? story.updatedAt.toISOString() : story.updatedAt,
+            },
+          }),
+        });
+        if (res.status === 403) {
+          setShowUpgradeModal(true);
+          setIsExporting(false);
+          return;
+        }
+        if (res.status === 501) {
+          setExportError('PDF/DOCX export is coming soon.');
+          setIsExporting(false);
+          return;
+        }
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setExportError((err?.error?.message as string) || 'Export failed.');
+          setIsExporting(false);
+          return;
+        }
+        const blob = await res.blob();
+        const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
+        const filename = `${story.title.replace(/\s+/g, '_')}_${timestamp}.${selectedFormat}`;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } finally {
+        setIsExporting(false);
+      }
+      return;
+    }
+
     const content = generateExportContent(selectedFormat);
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
     const filename = `${story.title.replace(/\s+/g, '_')}_${timestamp}.${selectedFormat}`;
-    
-    // Create blob and download
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -81,7 +147,6 @@ export default function ExportManager({ story }: ExportManagerProps) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
     setIsExporting(false);
   };
 
@@ -95,6 +160,9 @@ export default function ExportManager({ story }: ExportManagerProps) {
         return generateJSON();
       case 'html':
         return generateHTML();
+      case 'pdf':
+      case 'docx':
+        return generatePlainText();
       default:
         return generatePlainText();
     }
@@ -469,6 +537,14 @@ export default function ExportManager({ story }: ExportManagerProps) {
           </pre>
         </div>
       </div>
+
+      {exportError && (
+        <p className="text-sm text-amber-400" role="alert">
+          {exportError}
+        </p>
+      )}
+
+      <UpgradeModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
 
       {/* Download Button */}
       <button

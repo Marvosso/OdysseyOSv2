@@ -7,7 +7,7 @@
  * Wraps all dashboard feature pages
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import {
@@ -37,6 +37,8 @@ import { clearEnteredProject } from '@/components/session/StorySelector';
 import KeyboardShortcutsProvider, { openCheatsheet } from '@/components/shortcuts/KeyboardShortcutsProvider';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 import { cloudSync } from '@/lib/cloud/minimalCloudSync';
+import { useUserTier } from '@/hooks/useUserTier';
+import { syncService } from '@/lib/sync/syncService';
 
 const navigationItems = [
   { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome' },
@@ -71,6 +73,9 @@ export default function DashboardLayout({
   const [currentStoryTitle, setCurrentStoryTitle] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
+
+  const { tier, loading: tierLoading } = useUserTier();
+  const hasPulledOnLoadRef = useRef(false);
 
   useEffect(() => {
     document.title = 'OdysseyOS · latest';
@@ -194,6 +199,29 @@ export default function DashboardLayout({
       subscription.unsubscribe();
     };
   }, [router]);
+
+  /**
+   * Pro/Studio: once after auth is confirmed, pull stories from Supabase and replace localStorage.
+   */
+  useEffect(() => {
+    if (loading || tierLoading || !user) return;
+    if (tier !== 'pro' && tier !== 'studio') return;
+    if (hasPulledOnLoadRef.current) return;
+    hasPulledOnLoadRef.current = true;
+
+    const run = async () => {
+      const localStory = StoryStorage.loadStory();
+      if (localStory) {
+        await syncService.pullFromCloud();
+      } else {
+        const cloudStories = await cloudSync.getCloudStories();
+        if (cloudStories.length > 0) {
+          await cloudSync.loadStoryFromCloud(cloudStories[0].id);
+        }
+      }
+    };
+    run();
+  }, [loading, tierLoading, user, tier]);
 
   /**
    * Handle keyboard shortcut for search (Cmd/Ctrl + K)
