@@ -140,7 +140,9 @@ export async function POST(request: NextRequest) {
 
     if (format === 'txt') {
       const text = buildPlainText(story);
-      const filename = `${story.title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}.txt`;
+      const iso = new Date().toISOString().slice(0, 19);
+const safeDate = iso.replace(/-/g, '').replace(/:/g, '').replace('T', '');
+const filename = `${story.title.replace(/\s+/g, '_')}_${safeDate}.txt`;
       return new NextResponse(text, {
         status: 200,
         headers: {
