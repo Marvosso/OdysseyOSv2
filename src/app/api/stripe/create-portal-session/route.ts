@@ -26,8 +26,12 @@ export async function POST(request: NextRequest) {
 
     const key = getStripeSecretKey();
     if (!key) {
+      const hint =
+        process.env.VERCEL === '1'
+          ? 'Set STRIPE_SECRET_KEY in Vercel → Project → Settings → Environment Variables.'
+          : 'Add STRIPE_SECRET_KEY to .env.local (project root) and restart the dev server.';
       return NextResponse.json(
-        { error: 'Stripe is not configured. Add STRIPE_SECRET_KEY to .env.local.' },
+        { error: `Stripe is not configured. ${hint}` },
         { status: 503 }
       );
     }
@@ -65,9 +69,15 @@ export async function POST(request: NextRequest) {
         );
     }
 
+    // Use explicit default config so the live portal matches Dashboard (update/cancel/switch plan)
+    const configId =
+      process.env.STRIPE_PORTAL_CONFIGURATION_ID ||
+      (await stripe.billingPortal.configurations.list({ is_default: true, limit: 1 }).then((list) => list.data[0]?.id));
+
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
       return_url: `${origin}/dashboard`,
+      ...(configId && { configuration: configId }),
     });
 
     return NextResponse.json({ url: session.url });

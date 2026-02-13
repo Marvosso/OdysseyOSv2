@@ -12,7 +12,8 @@ export const stripePublishableKey =
 
 /** Server-only: secret key for Stripe API (webhook, create checkout). */
 export function getStripeSecretKey(): string | null {
-  return process.env.STRIPE_SECRET_KEY ?? null;
+  const key = process.env.STRIPE_SECRET_KEY;
+  return key && key.trim().length > 0 ? key.trim() : null;
 }
 
 /** Server-only: webhook signing secret. */
