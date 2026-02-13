@@ -17,8 +17,6 @@ import {
   Download,
   FileText,
   Globe,
-  Target,
-  Music,
   Share2,
   BarChart3,
   Upload,
@@ -30,6 +28,8 @@ import {
   Keyboard,
   CloudUpload,
   Check,
+  CreditCard,
+  Loader2,
 } from 'lucide-react';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import GuestManager from '@/components/session/GuestManager';
@@ -44,13 +44,13 @@ const navigationItems = [
   { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome' },
   { id: 'import', label: 'Import', icon: Upload, path: '/dashboard/import' },
   { id: 'stories', label: 'Stories', icon: BookOpen, path: '/dashboard' },
+  { id: 'export', label: 'Export', icon: Download, path: '/dashboard/export' },
   { id: 'characters', label: 'Characters', icon: Users, path: '/dashboard/characters' },
   { id: 'outline', label: 'Outline', icon: FileText, path: '/dashboard/outline' },
   { id: 'world', label: 'World', icon: Globe, path: '/dashboard/world' },
   { id: 'ai', label: 'AI Tools', icon: Sparkles, path: '/dashboard/ai' },
   { id: 'beats', label: 'Beats', icon: BarChart3, path: '/dashboard/beats' },
   { id: 'analytics', label: 'Analytics', icon: TrendingUp, path: '/dashboard/analytics' },
-  { id: 'export', label: 'Export', icon: Download, path: '/dashboard/export' },
   { id: 'publish', label: 'Publish', icon: Share2, path: '/dashboard/publish' },
 ];
 
@@ -73,6 +73,7 @@ export default function DashboardLayout({
   const [currentStoryTitle, setCurrentStoryTitle] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const { tier, loading: tierLoading } = useUserTier();
   const hasPulledOnLoadRef = useRef(false);
@@ -342,7 +343,7 @@ export default function DashboardLayout({
             </div>
           )}
           
-          {/* Signed-in user: show email; session/backup still available via icon */}
+          {/* Signed-in user: show email, tier, and profile/session */}
           {user && (
             <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
               <div className="flex items-center justify-between mb-1">
@@ -350,7 +351,7 @@ export default function DashboardLayout({
                 <button
                   onClick={() => setShowGuestModal(true)}
                   className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                  title="Session & backup"
+                  title="Session, backup & subscription"
                 >
                   <User className="w-3 h-3" />
                 </button>
@@ -358,6 +359,11 @@ export default function DashboardLayout({
               <div className="text-xs font-medium text-white truncate" title={user.email}>
                 {user.email || 'Signed in'}
               </div>
+              {!tierLoading && (
+                <div className="text-xs text-gray-400 mt-0.5 capitalize" title="Your plan">
+                  Plan: {tier}
+                </div>
+              )}
             </div>
           )}
 
@@ -388,7 +394,7 @@ export default function DashboardLayout({
           </button>
         </div>
         
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto min-h-0">
           {navigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.path ||
@@ -456,7 +462,7 @@ export default function DashboardLayout({
             <div className="sticky top-0 bg-gray-800 border-b border-gray-700 p-6 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <User className="w-5 h-5 text-purple-400" />
-                Session & backup
+                Account & subscription
               </h2>
               <button
                 onClick={() => setShowGuestModal(false)}
@@ -465,7 +471,57 @@ export default function DashboardLayout({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 space-y-6">
+              {/* Manage subscription */}
+              <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                <h3 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-purple-400" />
+                  Subscription
+                </h3>
+                <p className="text-xs text-gray-400 mb-3">
+                  Upgrade, downgrade, or manage billing in Stripe.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={async () => {
+                      setPortalLoading(true);
+                      try {
+                        const { data: { session: authSession } } = await supabase.auth.getSession();
+                        if (!authSession?.access_token) return;
+                        const res = await fetch('/api/stripe/create-portal-session', {
+                          method: 'POST',
+                          headers: { Authorization: `Bearer ${authSession.access_token}` },
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (data.url) {
+                          window.location.href = data.url;
+                          return;
+                        }
+                        if (data.needsSubscribe) {
+                          const checkRes = await fetch('/api/stripe/create-checkout-session', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              Authorization: `Bearer ${authSession.access_token}`,
+                            },
+                            body: JSON.stringify({ plan: 'pro' }),
+                          });
+                          const checkData = await checkRes.json().catch(() => ({}));
+                          if (checkData.url) window.location.href = checkData.url;
+                        }
+                      } finally {
+                        setPortalLoading(false);
+                      }
+                    }}
+                    disabled={portalLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+                  >
+                    {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                    {portalLoading ? 'Opening…' : 'Manage subscription'}
+                  </button>
+                </div>
+              </div>
+
               <GuestManager
                 guestId={guestId}
                 onGuestIdChange={(newId) => setGuestId(newId)}

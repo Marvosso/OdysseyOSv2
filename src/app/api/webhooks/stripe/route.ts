@@ -24,23 +24,22 @@ function getStripe(): Stripe {
   return new Stripe(key);
 }
 
-async function setUserTier(userId: string, tier: Tier): Promise<boolean> {
+async function setUserTier(userId: string, tier: Tier, stripeCustomerId?: string | null): Promise<boolean> {
   const db = getSupabaseServiceClient();
   if (!db) {
     console.error('[Stripe webhook] Supabase service client not configured');
     return false;
   }
+  const row: Record<string, unknown> = {
+    id: userId,
+    tier,
+    story_limit: storyLimitForTier(tier),
+    ai_usage_limit: aiUsageLimitForTier(tier),
+  };
+  if (stripeCustomerId) row.stripe_customer_id = stripeCustomerId;
   const { error } = await db
     .from('user_profiles')
-    .upsert(
-      {
-        id: userId,
-        tier,
-        story_limit: storyLimitForTier(tier),
-        ai_usage_limit: aiUsageLimitForTier(tier),
-      },
-      { onConflict: 'id' }
-    );
+    .upsert(row, { onConflict: 'id' });
   if (error) {
     console.error('[Stripe webhook] Failed to update user_profiles:', error);
     return false;
@@ -92,7 +91,8 @@ export async function POST(req: Request) {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
         const priceId = getPriceIdFromSubscription(subscription);
         const tier = tierFromPriceId(priceId);
-        await setUserTier(userId, tier);
+        const customerId = session.customer as string | null;
+        await setUserTier(userId, tier, customerId);
         console.log('[Stripe webhook] checkout.session.completed: tier set to', tier, 'for user', userId);
         break;
       }
