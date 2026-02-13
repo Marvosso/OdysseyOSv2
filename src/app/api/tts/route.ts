@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabaseClient';
+import { getSupabaseServiceClient } from '@/lib/supabase/server';
 
 const VALID_VOICES = ['us-male', 'us-female', 'uk-male', 'uk-female'] as const;
 type ClientVoice = (typeof VALID_VOICES)[number];
@@ -16,6 +18,31 @@ const MAX_TEXT_LENGTH = 4096;
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) {
+      return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
+
+    const db = getSupabaseServiceClient();
+    if (!db) {
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 503 });
+    }
+    const { data: profile } = await db
+      .from('user_profiles')
+      .select('tier')
+      .eq('id', user.id)
+      .maybeSingle();
+    const tier = (profile?.tier ?? 'free') as string;
+    if (tier === 'free') {
+      return NextResponse.json({ error: 'Upgrade required' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { text, voice } = body as { text?: unknown; voice?: unknown };
 
