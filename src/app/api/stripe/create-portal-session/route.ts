@@ -1,8 +1,9 @@
 /**
  * Create Stripe Billing Portal session (manage subscription).
  * Requires Authorization: Bearer <Supabase access_token>.
- * Returns { url } to redirect to Stripe Portal.
- * If the user has no Stripe customer yet, we create one so the portal always opens.
+ * Returns { url } to redirect to Stripe Portal when the customer has a subscription.
+ * Returns { needsSubscribe: true } when the customer has no active subscription — the
+ * portal cannot be used to choose a plan; the app should send them to Checkout instead.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -69,7 +70,16 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // Use explicit default config so the live portal matches Dashboard (update/cancel/switch plan)
+    // Portal is for managing existing subscriptions only. No subscription → send to Checkout to pick a plan.
+    const { data: subscriptions } = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'active',
+      limit: 1,
+    });
+    if (subscriptions.length === 0) {
+      return NextResponse.json({ needsSubscribe: true }, { status: 200 });
+    }
+
     const configId =
       process.env.STRIPE_PORTAL_CONFIGURATION_ID ||
       (await stripe.billingPortal.configurations.list({ is_default: true, limit: 1 }).then((list) => list.data[0]?.id));

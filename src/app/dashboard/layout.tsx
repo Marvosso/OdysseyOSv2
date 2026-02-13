@@ -473,48 +473,140 @@ export default function DashboardLayout({
               </button>
             </div>
             <div className="p-6 space-y-6">
-              {/* Manage subscription */}
+              {/* Subscription: choose plan (free) or manage (pro/studio) */}
               <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
                 <h3 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-purple-400" />
                   Subscription
                 </h3>
                 <p className="text-xs text-gray-400 mb-3">
-                  Upgrade, downgrade, or manage billing in Stripe.
+                  {tier === 'free'
+                    ? 'Choose a plan to subscribe. You can change or cancel later in the billing portal.'
+                    : 'Upgrade, downgrade, or manage billing in Stripe.'}
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={async () => {
-                      setPortalError(null);
-                      setPortalLoading(true);
-                      try {
-                        const { data: { session: authSession } } = await supabase.auth.getSession();
-                        if (!authSession?.access_token) {
-                          setPortalError('Please sign in again.');
-                          return;
+                  {tier === 'free' ? (
+                    <>
+                      <button
+                        onClick={async () => {
+                          setPortalError(null);
+                          setPortalLoading(true);
+                          try {
+                            const { data: { session: authSession } } = await supabase.auth.getSession();
+                            if (!authSession?.access_token) {
+                              setPortalError('Please sign in again.');
+                              return;
+                            }
+                            const res = await fetch('/api/stripe/create-checkout-session', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${authSession.access_token}`,
+                              },
+                              body: JSON.stringify({ plan: 'pro' }),
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            if (data.url) {
+                              window.location.href = data.url;
+                              return;
+                            }
+                            setPortalError(data.error || 'Could not start checkout.');
+                          } finally {
+                            setPortalLoading(false);
+                          }
+                        }}
+                        disabled={portalLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+                      >
+                        {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        Subscribe to Pro
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setPortalError(null);
+                          setPortalLoading(true);
+                          try {
+                            const { data: { session: authSession } } = await supabase.auth.getSession();
+                            if (!authSession?.access_token) {
+                              setPortalError('Please sign in again.');
+                              return;
+                            }
+                            const res = await fetch('/api/stripe/create-checkout-session', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${authSession.access_token}`,
+                              },
+                              body: JSON.stringify({ plan: 'studio' }),
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            if (data.url) {
+                              window.location.href = data.url;
+                              return;
+                            }
+                            setPortalError(data.error || 'Could not start checkout.');
+                          } finally {
+                            setPortalLoading(false);
+                          }
+                        }}
+                        disabled={portalLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-500 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+                      >
+                        {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        Subscribe to Studio
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={async () => {
+                        setPortalError(null);
+                        setPortalLoading(true);
+                        try {
+                          const { data: { session: authSession } } = await supabase.auth.getSession();
+                          if (!authSession?.access_token) {
+                            setPortalError('Please sign in again.');
+                            return;
+                          }
+                          const res = await fetch('/api/stripe/create-portal-session', {
+                            method: 'POST',
+                            headers: { Authorization: `Bearer ${authSession.access_token}` },
+                          });
+                          const data = await res.json().catch(() => ({}));
+                          if (data.url) {
+                            window.location.href = data.url;
+                            return;
+                          }
+                          if (data.needsSubscribe) {
+                            const checkRes = await fetch('/api/stripe/create-checkout-session', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${authSession.access_token}`,
+                              },
+                              body: JSON.stringify({ plan: 'pro' }),
+                            });
+                            const checkData = await checkRes.json().catch(() => ({}));
+                            if (checkData.url) {
+                              window.location.href = checkData.url;
+                              return;
+                            }
+                            setPortalError(checkData.error || 'Could not start checkout.');
+                            return;
+                          }
+                          setPortalError(data.error || 'Could not open billing. Try again.');
+                        } finally {
+                          setPortalLoading(false);
                         }
-                        const res = await fetch('/api/stripe/create-portal-session', {
-                          method: 'POST',
-                          headers: { Authorization: `Bearer ${authSession.access_token}` },
-                        });
-                        const data = await res.json().catch(() => ({}));
-                        if (data.url) {
-                          window.location.href = data.url;
-                          return;
-                        }
-                        setPortalError(data.error || 'Could not open billing. Try again.');
-                      } finally {
-                        setPortalLoading(false);
-                      }
-                    }}
-                    disabled={portalLoading}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
-                  >
-                    {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
-                    {portalLoading ? 'Opening…' : 'Manage subscription'}
-                  </button>
+                      }}
+                      disabled={portalLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+                    >
+                      {portalLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
+                      {portalLoading ? 'Opening…' : 'Manage subscription'}
+                    </button>
+                  )}
                   {portalError && (
-                    <p className="text-xs text-amber-400 mt-2">{portalError}</p>
+                    <p className="text-xs text-amber-400 mt-2 w-full">{portalError}</p>
                   )}
                 </div>
               </div>
