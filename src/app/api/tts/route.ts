@@ -14,7 +14,8 @@ const OPENAI_VOICE_MAP: Record<ClientVoice, string> = {
   'uk-female': 'fable',
 };
 
-const TTS_MODEL = 'gpt-4o-mini-tts';
+const TTS_MODEL_PRIMARY = 'gpt-4o-mini-tts';
+const TTS_MODEL_FALLBACK = 'tts-1-hd';
 const MAX_TEXT_LENGTH = 4096;
 
 export async function POST(request: NextRequest) {
@@ -84,22 +85,30 @@ export async function POST(request: NextRequest) {
     }
 
     const openaiVoice = OPENAI_VOICE_MAP[voice as ClientVoice];
+    const trimmedInput = text.trim();
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:82',message:'Calling OpenAI TTS',data:{voice:openaiVoice,textLen:text.trim().length,hasApiKey:!!apiKey},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:82',message:'Calling OpenAI TTS',data:{voice:openaiVoice,textLen:trimmedInput.length,hasApiKey:!!apiKey},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
     // #endregion
-    const res = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: TTS_MODEL,
-        input: text.trim(),
-        voice: openaiVoice,
-        response_format: 'mp3',
-      }),
-    });
+
+    const tryModel = async (model: string) =>
+      fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          input: trimmedInput,
+          voice: openaiVoice,
+          response_format: 'mp3',
+        }),
+      });
+
+    let res = await tryModel(TTS_MODEL_PRIMARY);
+    if (!res.ok && res.status === 404) {
+      res = await tryModel(TTS_MODEL_FALLBACK);
+    }
 
     if (!res.ok) {
       const errText = await res.text();
@@ -107,8 +116,17 @@ export async function POST(request: NextRequest) {
       fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:99',message:'OpenAI TTS returned non-OK → 502',data:{openaiStatus:res.status,openaiErrorPreview:errText.slice(0,500)},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
       // #endregion
       logError('TTS OpenAI request failed', new Error(`Status ${res.status}: ${errText.slice(0, 200)}`), { user_id: user.id });
+      // Parse OpenAI error for user-friendly message (avoid exposing full API response)
+      let userMessage = 'TTS generation failed.';
+      try {
+        const errJson = JSON.parse(errText) as { error?: { message?: string }; message?: string };
+        const msg = errJson?.error?.message ?? errJson?.message;
+        if (typeof msg === 'string' && msg.length > 0) userMessage = msg;
+      } catch {
+        /* ignore parse errors */
+      }
       return NextResponse.json(
-        { error: 'TTS generation failed.' },
+        { error: userMessage },
         { status: 502 }
       );
     }
