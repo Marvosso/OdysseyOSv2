@@ -18,10 +18,16 @@ const TTS_MODEL = 'gpt-4o-mini-tts';
 const MAX_TEXT_LENGTH = 4096;
 
 export async function POST(request: NextRequest) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:20',message:'TTS route entered',data:{hasAuth:!!request.headers.get('authorization')},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+  // #endregion
   try {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!token) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:26',message:'TTS 401 - no auth token',data:{},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
       return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     }
 
@@ -78,6 +84,9 @@ export async function POST(request: NextRequest) {
     }
 
     const openaiVoice = OPENAI_VOICE_MAP[voice as ClientVoice];
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:82',message:'Calling OpenAI TTS',data:{voice:openaiVoice,textLen:text.trim().length,hasApiKey:!!apiKey},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+    // #endregion
     const res = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST',
       headers: {
@@ -94,6 +103,9 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       const errText = await res.text();
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:99',message:'OpenAI TTS returned non-OK → 502',data:{openaiStatus:res.status,openaiErrorPreview:errText.slice(0,500)},timestamp:Date.now(),hypothesisId:'H1'})}).catch(()=>{});
+      // #endregion
       logError('TTS OpenAI request failed', new Error(`Status ${res.status}: ${errText.slice(0, 200)}`), { user_id: user.id });
       return NextResponse.json(
         { error: 'TTS generation failed.' },
@@ -110,6 +122,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (e) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:118',message:'TTS route exception → 500',data:{errorMsg:e instanceof Error?e.message:String(e)},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
+    // #endregion
     logError('TTS failed', e);
     return NextResponse.json(
       { error: 'An error occurred while generating speech.' },
