@@ -77,11 +77,8 @@ async function main(): Promise<void> {
   console.log('[stressTest] Target user_id =', userId);
 
   console.log('[stressTest] Inserting 1 story:', STORY_ID);
-  const { error: storyErr } = await supabase.from('stories').insert({
-    id: STORY_ID,
-    user_id: userId,
-    title: 'Stress test story',
-  });
+  const storyRow = { id: STORY_ID, user_id: userId, title: 'Stress test story' };
+  const { error: storyErr } = await supabase.from('stories').insert(storyRow as Record<string, unknown>);
   if (storyErr) {
     console.error('[stressTest] Story insert failed:', storyErr.message);
     failures.push(`story: ${storyErr.message}`);
@@ -102,7 +99,7 @@ async function main(): Promise<void> {
     position: i,
   }));
 
-  const { error: sceneErr } = await supabase.from('scenes').insert(sceneRows);
+  const { error: sceneErr } = await supabase.from('scenes').insert(sceneRows as Record<string, unknown>[]);
   if (sceneErr) {
     console.error('[stressTest] Bulk scene insert failed:', sceneErr.message);
     for (let i = 0; i < NUM_SCENES; i++) failures.push(`scene ${i}: ${sceneErr.message}`);

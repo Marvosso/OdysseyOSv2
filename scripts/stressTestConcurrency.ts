@@ -45,19 +45,17 @@ type UserResult = {
 };
 
 async function runUser(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createClient<any, 'public', any>>,
   userIndex: number,
   userId: string
 ): Promise<UserResult> {
   const storyId = randomUuid();
   const failures: string[] = [];
 
-  // Insert story
-  const { error: storyErr } = await supabase.from('stories').insert({
-    id: storyId,
-    user_id: userId,
-    title: `Stress test story (user ${userIndex})`,
-  });
+  // Insert story (standalone script: no generated DB types, so assert to satisfy insert overload)
+  const storyRow = { id: storyId, user_id: userId, title: `Stress test story (user ${userIndex})` };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: storyErr } = await supabase.from('stories').insert(storyRow as any);
 
   if (storyErr) {
     failures.push(`story: ${storyErr.message}`);
@@ -74,7 +72,8 @@ async function runUser(
     position: i,
   }));
 
-  const { error: sceneErr } = await supabase.from('scenes').insert(sceneRows);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: sceneErr } = await supabase.from('scenes').insert(sceneRows as any);
   if (sceneErr) {
     failures.push(`scenes: ${sceneErr.message}`);
   }
