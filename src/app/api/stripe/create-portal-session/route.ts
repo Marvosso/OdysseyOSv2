@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { getSupabaseServiceClient } from '@/lib/supabase/server';
 import { getStripeSecretKey } from '@/lib/stripe/config';
+import { logError, logDbError } from '@/lib/logger';
 import Stripe from 'stripe';
 
 export async function POST(request: NextRequest) {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     const db = getSupabaseServiceClient();
     if (!db) {
       return NextResponse.json(
-        { error: 'Server config missing. Set SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_URL in .env.local.' },
+        { error: 'Server config missing. Set SUPABASE_*_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_*_URL for dev/prod in env.' },
         { status: 503 }
       );
     }
@@ -62,12 +63,15 @@ export async function POST(request: NextRequest) {
         metadata: { user_id: user.id },
       });
       customerId = customer.id;
-      await db
+      const { error: upsertErr } = await db
         .from('user_profiles')
         .upsert(
           { id: user.id, stripe_customer_id: customerId },
           { onConflict: 'id' }
         );
+      if (upsertErr) {
+        logDbError('upsert', 'user_profiles', upsertErr, { user_id: user.id });
+      }
     }
 
     // Portal is for managing existing subscriptions only. No subscription → send to Checkout to pick a plan.
@@ -92,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (e) {
-    console.error('[create-portal-session]', e);
+    logError('create-portal-session failed', e);
     return NextResponse.json({ error: 'Failed to create portal session' }, { status: 500 });
   }
 }

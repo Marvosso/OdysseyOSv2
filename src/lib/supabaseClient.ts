@@ -1,22 +1,20 @@
 /**
  * Supabase Client
- * 
- * Singleton Supabase client for browser and server-side usage
+ *
+ * Singleton Supabase client for browser and server-side usage.
+ * Uses dev or prod config based on NODE_ENV (see lib/supabase/config.ts).
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseAnonKey } from '@/lib/supabase/config';
 
-// Supabase configuration
-// In production, these should come from environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+const supabaseUrl = getSupabaseUrl() || 'https://placeholder.supabase.co';
+const supabaseAnonKey = getSupabaseAnonKey() || 'placeholder-key';
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+if (!getSupabaseUrl() || !getSupabaseAnonKey()) {
   if (typeof window === 'undefined') {
-    // Server-side: Only warn during build, not in runtime
     console.warn(
-      'Supabase URL or Anon Key not configured. ' +
-      'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables.'
+      '[Supabase] URL or Anon Key not configured. Set NEXT_PUBLIC_SUPABASE_DEV_* / NEXT_PUBLIC_SUPABASE_PROD_* (or legacy NEXT_PUBLIC_SUPABASE_*) in env.'
     );
   }
 }

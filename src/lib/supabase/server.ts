@@ -1,19 +1,21 @@
 /**
  * Server-side Supabase Session Check
- * 
- * Helper functions for checking Supabase sessions on the server
- * Uses cookies to detect existing authentication sessions
+ *
+ * Helper functions for checking Supabase sessions on the server.
+ * Uses dev/prod config based on NODE_ENV (service role key is server-only).
  */
 
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
+import { getSupabaseUrl, getSupabaseAnonKey, getSupabaseServiceRoleKey } from '@/lib/supabase/config';
+import { logError } from '@/lib/logger';
 
 /**
- * Get Supabase client for server-side session checking
+ * Get Supabase client for server-side session checking (anon key)
  */
 function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabaseUrl = getSupabaseUrl();
+  const supabaseAnonKey = getSupabaseAnonKey();
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return null;
@@ -25,11 +27,11 @@ function getSupabaseClient() {
 /**
  * Server Supabase client with service role for API routes.
  * Bypasses RLS; use only server-side and never expose the key.
- * Returns null if SUPABASE_SERVICE_ROLE_KEY is not set.
+ * Returns null if service role key is not set.
  */
 export function getSupabaseServiceClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  const supabaseUrl = getSupabaseUrl();
+  const serviceRoleKey = getSupabaseServiceRoleKey();
 
   if (!supabaseUrl || !serviceRoleKey) {
     return null;
@@ -52,7 +54,7 @@ export async function hasActiveSession(): Promise<boolean> {
     
     // Check for Supabase auth cookies
     // Supabase uses cookies with pattern: sb-<project-ref>-auth-token
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseUrl = getSupabaseUrl();
     if (!supabaseUrl) {
       return false;
     }
@@ -80,7 +82,7 @@ export async function hasActiveSession(): Promise<boolean> {
     // For now, presence of the cookie is sufficient
     return true;
   } catch (error) {
-    console.error('Error checking session:', error);
+    logError('Session check failed', error);
     return false;
   }
 }

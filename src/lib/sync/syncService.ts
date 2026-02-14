@@ -8,6 +8,7 @@
 
 import { StoryStorage } from '@/lib/storage/storyStorage';
 import { supabase, getCurrentUser } from '@/lib/supabaseClient';
+import { logDbError, logError } from '@/lib/logger';
 import type { Story, Scene, Character } from '@/types/story';
 
 const DEBOUNCE_MS = 3000;
@@ -181,7 +182,7 @@ class SyncService {
 
       return true;
     } catch (e) {
-      console.error('[SyncService] pullFromCloud error:', e);
+      logError('SyncService pullFromCloud failed', e);
       return false;
     }
   }
@@ -242,7 +243,10 @@ class SyncService {
         },
         { onConflict: 'id' }
       );
-      if (storyError) throw storyError;
+      if (storyError) {
+        logDbError('upsert', 'stories', storyError, { user_id: user.id, story_id: story.id });
+        throw storyError;
+      }
 
       for (const scene of scenes) {
         const sceneWordCount = scene.wordCount ?? (scene.content?.trim() ? scene.content.split(/\s+/).length : 0);
@@ -267,7 +271,10 @@ class SyncService {
           },
           { onConflict: 'id' }
         );
-        if (error) throw error;
+        if (error) {
+          logDbError('upsert', 'scenes', error, { user_id: user.id, story_id: story.id });
+          throw error;
+        }
       }
 
       for (const character of characters) {
@@ -297,12 +304,15 @@ class SyncService {
           },
           { onConflict: 'id' }
         );
-        if (error) throw error;
+        if (error) {
+          logDbError('upsert', 'characters', error, { user_id: user.id, story_id: story.id });
+          throw error;
+        }
       }
 
       return true;
     } catch (e) {
-      console.error('[SyncService] pushToCloud error:', e);
+      logError('SyncService pushToCloud failed', e);
       return false;
     }
   }

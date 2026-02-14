@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { getSupabaseServiceClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/logger';
 
 const VALID_VOICES = ['us-male', 'us-female', 'uk-male', 'uk-female'] as const;
 type ClientVoice = (typeof VALID_VOICES)[number];
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      console.error('[TTS] OPENAI_API_KEY is not set');
+      logError('TTS: OPENAI_API_KEY not set', new Error('Config missing'));
       return NextResponse.json(
         { error: 'TTS is not configured.' },
         { status: 503 }
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error('[TTS] OpenAI error:', res.status, errText);
+      logError('TTS OpenAI request failed', new Error(`Status ${res.status}: ${errText.slice(0, 200)}`), { user_id: user.id });
       return NextResponse.json(
         { error: 'TTS generation failed.' },
         { status: 502 }
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (e) {
-    console.error('[TTS] Error:', e);
+    logError('TTS failed', e);
     return NextResponse.json(
       { error: 'An error occurred while generating speech.' },
       { status: 500 }

@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { getStripeSecretKey } from '@/lib/stripe/config';
+import { logError } from '@/lib/logger';
 import { getStripePriceIdPro, getStripePriceIdStudio } from '@/lib/stripe/tierFromPrice';
 import Stripe from 'stripe';
 
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (e) {
-    console.error('[stripe/checkout]', e);
+    logError('stripe/checkout failed', e);
     return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
   }
 }

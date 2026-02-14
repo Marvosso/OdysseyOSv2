@@ -18,6 +18,7 @@ import {
   aiUsageLimitForTier,
   type Tier,
 } from '@/lib/stripe/tierFromPrice';
+import { logError, logDbError, logStripeWebhookError, logWarn } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +43,7 @@ async function updateUserProfile(
 ): Promise<boolean> {
   const db = getSupabaseServiceClient();
   if (!db) {
-    console.error('[Stripe webhook] Supabase service client not configured');
+    logError('Supabase service client not configured', new Error('Service client null'), { user_id: userId });
     return false;
   }
   const row: Record<string, unknown> = {
@@ -55,7 +56,7 @@ async function updateUserProfile(
   if (updates.stripe_subscription_id !== undefined) row.stripe_subscription_id = updates.stripe_subscription_id;
   const { error } = await db.from('user_profiles').upsert(row, { onConflict: 'id' });
   if (error) {
-    console.error('[Stripe webhook] Failed to update user_profiles:', error);
+    logDbError('upsert', 'user_profiles', error, { user_id: userId });
     return false;
   }
   return true;
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? null;
 
   if (!webhookSecret || !signature) {
-    console.error('[Stripe webhook] Missing STRIPE_WEBHOOK_SECRET or stripe-signature header');
+    logStripeWebhookError('Missing STRIPE_WEBHOOK_SECRET or stripe-signature header', new Error('Config missing'));
     return NextResponse.json({ error: 'Webhook configuration error' }, { status: 500 });
   }
 
@@ -77,8 +78,7 @@ export async function POST(request: NextRequest) {
     const stripe = getStripe();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[Stripe webhook] Signature verification failed:', message);
+    logStripeWebhookError('Signature verification failed', err);
     return NextResponse.json({ error: `Webhook Error: ${message}` }, { status: 400 });
   }
 
@@ -88,14 +88,14 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = (session.metadata?.user_id ?? session.client_reference_id) as string | null;
         if (!userId) {
-          console.warn('[Stripe webhook] checkout.session.completed: no metadata.user_id or client_reference_id');
+          logWarn('checkout.session.completed: no metadata.user_id or client_reference_id');
           return NextResponse.json({ received: true }, { status: 200 });
         }
         const subscriptionId = typeof session.subscription === 'string'
           ? session.subscription
           : session.subscription?.id ?? null;
         if (!subscriptionId) {
-          console.warn('[Stripe webhook] checkout.session.completed: no subscription id');
+          logWarn('checkout.session.completed: no subscription id');
           return NextResponse.json({ received: true }, { status: 200 });
         }
         const stripe = getStripe();
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         const subscription = event.data.object as Stripe.Subscription;
         const userId = subscription.metadata?.user_id as string | null;
         if (!userId) {
-          console.warn('[Stripe webhook] customer.subscription.deleted: no metadata.user_id');
+          logWarn('customer.subscription.deleted: no metadata.user_id');
           return NextResponse.json({ received: true }, { status: 200 });
         }
         await updateUserProfile(userId, {
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         break;
     }
   } catch (err) {
-    console.error('[Stripe webhook] Handler error:', err);
+    logStripeWebhookError('Handler error', err);
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
   }
 

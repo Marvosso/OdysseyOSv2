@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { getSupabaseServiceClient } from '@/lib/supabase/server';
+import { logError } from '@/lib/logger';
 
 type ExportFormat = 'txt' | 'pdf' | 'docx';
 
@@ -164,7 +165,7 @@ const filename = `${story.title.replace(/\s+/g, '_')}_${safeDate}.txt`;
       { status: 400 }
     );
   } catch (e) {
-    console.error('[api/export] Error:', e);
+    logError('api/export failed', e);
     return NextResponse.json(
       { error: { code: 'INTERNAL_ERROR', message: 'An error occurred.' } },
       { status: 500 }

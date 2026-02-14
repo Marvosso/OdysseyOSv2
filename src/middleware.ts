@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getSupabaseUrl } from '@/lib/supabase/config';
 
 // Lazy import rate limiting to prevent build failures
 let rateLimitModule: typeof import('@/lib/api/rateLimit') | null = null;
@@ -61,7 +62,7 @@ function getRateLimitConfig(pathname: string): 'strict' | 'standard' {
  * Check if user has an active Supabase session by checking cookies
  */
 function hasSupabaseSession(request: NextRequest): boolean {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseUrl = getSupabaseUrl();
   if (!supabaseUrl) {
     return false;
   }

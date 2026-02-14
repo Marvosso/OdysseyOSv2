@@ -12,8 +12,10 @@ import { NextRequest } from 'next/server';
 import { createSuccessResponse, createErrorResponse, parseJsonBody } from '@/lib/api/response';
 import { supabase } from '@/lib/supabaseClient';
 import { getSupabaseServiceClient } from '@/lib/supabase/server';
+import { logError, logDbError } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
+  let userId: string | undefined;
   try {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -36,6 +38,7 @@ export async function POST(request: NextRequest) {
         { statusCode: 401 }
       );
     }
+    userId = user.id;
 
     const db = getSupabaseServiceClient();
     if (!db) {
@@ -88,7 +91,7 @@ export async function POST(request: NextRequest) {
           { statusCode: 409 }
         );
       }
-      console.error('[api/stories/create] Insert error:', insertError);
+      logDbError('insert', 'stories', insertError, { user_id: user.id, story_id: id });
       return createErrorResponse(
         { code: 'STORAGE_ERROR', message: 'Failed to create story' },
         { statusCode: 500 }
@@ -106,7 +109,7 @@ export async function POST(request: NextRequest) {
         { statusCode: 400 }
       );
     }
-    console.error('[api/stories/create] Error:', e);
+    logError('api/stories/create failed', e, { user_id: userId });
     return createErrorResponse(
       { code: 'INTERNAL_ERROR', message: 'An error occurred' },
       { statusCode: 500 }

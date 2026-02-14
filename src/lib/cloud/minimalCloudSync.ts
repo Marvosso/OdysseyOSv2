@@ -15,6 +15,7 @@
 
 import { StoryStorage } from '@/lib/storage/storyStorage';
 import { supabase, getCurrentUser } from '@/lib/supabaseClient';
+import { logDbError, logError } from '@/lib/logger';
 import type { Story, Scene, Character } from '@/types/story';
 
 // Cloud row types (Supabase schema)
@@ -111,7 +112,7 @@ export class MinimalCloudSync {
       console.log('[Cloud] Sync completed successfully');
       return true;
     } catch (error) {
-      console.error('[Cloud] Sync error:', error);
+      logError('Cloud sync failed', error);
       return false;
     } finally {
       this.isSyncing = false;
@@ -141,7 +142,10 @@ export class MinimalCloudSync {
       },
       { onConflict: 'id' }
     );
-    if (error) throw error;
+    if (error) {
+      logDbError('upsert', 'stories', error, { user_id: userId, story_id: story.id });
+      throw error;
+    }
   }
 
   private async pushSceneToCloud(userId: string, storyId: string, scene: Scene): Promise<void> {
@@ -167,7 +171,10 @@ export class MinimalCloudSync {
       },
       { onConflict: 'id' }
     );
-    if (error) throw error;
+    if (error) {
+      logDbError('upsert', 'scenes', error, { user_id: userId, story_id: storyId });
+      throw error;
+    }
   }
 
   private async pushCharacterToCloud(
@@ -201,7 +208,10 @@ export class MinimalCloudSync {
       },
       { onConflict: 'id' }
     );
-    if (error) throw error;
+    if (error) {
+      logDbError('upsert', 'characters', error, { user_id: userId, story_id: storyId });
+      throw error;
+    }
   }
 
   /**
@@ -298,7 +308,7 @@ export class MinimalCloudSync {
       });
       return true;
     } catch (error) {
-      console.error('[Cloud] Load error:', error);
+      logError('Cloud load failed', error);
       return false;
     }
   }
@@ -332,7 +342,7 @@ export class MinimalCloudSync {
       if (error) throw error;
       return (data as CloudStoryRow[]) ?? [];
     } catch (error) {
-      console.error('[Cloud] Get stories error:', error);
+      logError('Cloud get stories failed', error);
       return [];
     }
   }
