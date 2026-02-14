@@ -7,7 +7,7 @@
  * 
  * Features:
  * 1. Signs up new users using Supabase email/password authentication
- * 2. Automatically creates linked row in profiles table after signup
+   * 2. Creates user_profiles row after signup
  * 3. Logs in existing users using email/password
  * 4. Displays simple error messages on failure
  * 5. Uses hooks and modern React best practices
@@ -60,16 +60,10 @@ export default function AuthComponent() {
         throw new Error('Sign up failed: No user data returned');
       }
 
-      // Step 2: Automatically create linked row in profiles table
-      // The profile.id links to auth.users.id (foreign key relationship)
+      // Step 2: Create user_profiles row linked to auth.users.id (tier, story_limit have defaults)
       const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id, // Links to auth.users.id
-          email: authData.user.email,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
+        .from('user_profiles')
+        .insert({ id: authData.user.id });
 
       // Handle profile creation errors
       if (profileError) {

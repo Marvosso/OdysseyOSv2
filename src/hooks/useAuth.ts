@@ -103,12 +103,9 @@ export function useAuth(): UseAuthResult {
         return { user: null, error };
       }
 
-      // Create profile
-      const { error: profileError } = await supabase.from('profiles').insert({
+      // Create user_profiles row (tier, story_limit have defaults)
+      const { error: profileError } = await supabase.from('user_profiles').insert({
         id: data.user.id,
-        email: data.user.email,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
       });
 
       if (profileError && profileError.code !== '23505') {

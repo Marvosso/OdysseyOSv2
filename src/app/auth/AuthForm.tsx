@@ -36,7 +36,7 @@ export default function AuthForm() {
    * 
    * Steps:
    * 1. Sign up user with Supabase Auth using email/password
-   * 2. On success, automatically create a linked row in profiles table
+   * 2. On success, create a user_profiles row
    * 3. Handle errors and display user-friendly messages
    */
   const handleSignUp = async (e: FormEvent<HTMLFormElement>) => {
@@ -62,16 +62,10 @@ export default function AuthForm() {
         throw new Error('Sign up failed: No user data returned');
       }
 
-      // Step 2: Automatically create linked row in profiles table
-      // The profile.id links to auth.users.id (foreign key relationship)
+      // Step 2: Create user_profiles row linked to auth.users.id (tier, story_limit have defaults)
       const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id, // Links to auth.users.id
-          email: authData.user.email,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
+        .from('user_profiles')
+        .insert({ id: authData.user.id });
 
       // Handle profile creation errors
       if (profileError) {

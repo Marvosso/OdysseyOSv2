@@ -95,7 +95,7 @@ export default function AuthPage() {
    * 
    * Steps:
    * 1. Sign up with email/password using Supabase Auth
-   * 2. On success, create a profile row in the profiles table
+   * 2. On success, create a user_profiles row
    * 3. Handle errors gracefully
    */
   const handleSignUp = async (e: FormEvent<HTMLFormElement>) => {
@@ -124,18 +124,10 @@ export default function AuthPage() {
         throw new Error('Sign up failed: No user data returned');
       }
 
-      // Step 2: Create profile row linked to auth.users.id
+      // Step 2: Create user_profiles row linked to auth.users.id (id, tier, story_limit have defaults)
       const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id, // Link to auth.users.id
-          email: authData.user.email,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          // Add any other profile fields your schema requires
-          // full_name: null,
-          // avatar_url: null,
-        });
+        .from('user_profiles')
+        .insert({ id: authData.user.id });
 
       // Handle profile creation errors
       if (profileError) {
