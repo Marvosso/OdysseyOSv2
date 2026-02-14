@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY ?? process.env.NEXT_PUBLIC_OPENAI_API_KEY;
     if (!apiKey) {
       logError('TTS: OPENAI_API_KEY not set', new Error('Config missing'));
       return NextResponse.json(
