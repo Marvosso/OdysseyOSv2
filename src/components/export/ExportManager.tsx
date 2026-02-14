@@ -14,13 +14,13 @@ import {
   Loader2,
   Twitter,
   Book,
-  BarChart3
+  BarChart3,
+  Volume2
 } from 'lucide-react';
 import type { Story } from '@/types/story';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabaseClient';
-// AudioExportPanel disabled - narration feature temporarily disabled
-// import AudioExportPanel from './AudioExportPanel';
+import NarratePanel from './NarratePanel';
 import SocialMediaExports from './SocialMediaExports';
 import PublishingExports from './PublishingExports';
 import AnalysisExports from './AnalysisExports';
@@ -54,11 +54,21 @@ export default function ExportManager({ story }: ExportManagerProps) {
   const [includeCharacters, setIncludeCharacters] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
-  const [activeTab, setActiveTab] = useState<'text' | 'social' | 'publishing' | 'analysis'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'narrate' | 'social' | 'publishing' | 'analysis'>('text');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
-  const stats = calculateStats(story);
+  // Load actual story from storage when Export page uses default story
+  const actualStory = story.id === 'default' ? (() => {
+    const savedStory = StoryStorage.loadStory();
+    const savedScenes = StoryStorage.loadScenes();
+    if (savedStory) {
+      return { ...savedStory, scenes: savedScenes.length > 0 ? savedScenes : savedStory.scenes };
+    }
+    return story;
+  })() : story;
+
+  const stats = calculateStats(actualStory);
 
   const handleFormatChange = (format: string) => {
     setSelectedFormat(format);
@@ -93,12 +103,12 @@ export default function ExportManager({ story }: ExportManagerProps) {
           body: JSON.stringify({
             format: selectedFormat,
             story: {
-              id: story.id,
-              title: story.title,
-              scenes: story.scenes,
-              characters: story.characters,
-              createdAt: story.createdAt instanceof Date ? story.createdAt.toISOString() : story.createdAt,
-              updatedAt: story.updatedAt instanceof Date ? story.updatedAt.toISOString() : story.updatedAt,
+              id: actualStory.id,
+              title: actualStory.title,
+              scenes: actualStory.scenes,
+              characters: actualStory.characters,
+              createdAt: actualStory.createdAt instanceof Date ? actualStory.createdAt.toISOString() : actualStory.createdAt,
+              updatedAt: actualStory.updatedAt instanceof Date ? actualStory.updatedAt.toISOString() : actualStory.updatedAt,
             },
           }),
         });
@@ -120,7 +130,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
         }
         const blob = await res.blob();
         const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-        const filename = `${story.title.replace(/\s+/g, '_')}_${timestamp}.${selectedFormat}`;
+        const filename = `${actualStory.title.replace(/\s+/g, '_')}_${timestamp}.${selectedFormat}`;
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -137,7 +147,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
 
     const content = generateExportContent(selectedFormat);
     const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm-ss');
-    const filename = `${story.title.replace(/\s+/g, '_')}_${timestamp}.${selectedFormat}`;
+    const filename = `${actualStory.title.replace(/\s+/g, '_')}_${timestamp}.${selectedFormat}`;
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -169,14 +179,14 @@ export default function ExportManager({ story }: ExportManagerProps) {
   };
 
   const generatePlainText = (): string => {
-    let content = `${story.title}\n`;
-    content += `${'='.repeat(story.title.length)}\n\n`;
-    content += `Last Updated: ${format(story.updatedAt, 'MMMM d, yyyy')}\n\n`;
+    let content = `${actualStory.title}\n`;
+    content += `${'='.repeat(actualStory.title.length)}\n\n`;
+    content += `Last Updated: ${format(actualStory.updatedAt, 'MMMM d, yyyy')}\n\n`;
     
-    if (includeCharacters && story.characters.length > 0) {
+    if (includeCharacters && actualStory.characters.length > 0) {
       content += 'CHARACTERS\n';
       content += `${'-'.repeat(10)}\n\n`;
-      story.characters.forEach(char => {
+      actualStory.characters.forEach(char => {
         content += `${char.name}\n`;
         content += `${char.description}\n`;
         if (char.goals.length > 0) {
@@ -192,7 +202,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
     
     content += 'SCENES\n';
     content += `${'-'.repeat(6)}\n\n`;
-    story.scenes.forEach((scene, index) => {
+    actualStory.scenes.forEach((scene, index) => {
       content += `[Scene ${index + 1}: ${scene.title}]\n`;
       content += `Emotion: ${scene.emotion}\n\n`;
       content += `${scene.content}\n\n`;
@@ -203,12 +213,12 @@ export default function ExportManager({ story }: ExportManagerProps) {
   };
 
   const generateMarkdown = (): string => {
-    let content = `# ${story.title}\n\n`;
-    content += `*Last Updated: ${format(story.updatedAt, 'MMMM d, yyyy')}*\n\n`;
+    let content = `# ${actualStory.title}\n\n`;
+    content += `*Last Updated: ${format(actualStory.updatedAt, 'MMMM d, yyyy')}*\n\n`;
     
-    if (includeCharacters && story.characters.length > 0) {
+    if (includeCharacters && actualStory.characters.length > 0) {
       content += '## Characters\n\n';
-      story.characters.forEach(char => {
+      actualStory.characters.forEach(char => {
         content += `### ${char.name}\n\n`;
         content += `${char.description}\n\n`;
         if (char.goals.length > 0) {
@@ -230,7 +240,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
     }
     
     content += '## Scenes\n\n';
-    story.scenes.forEach((scene, index) => {
+    actualStory.scenes.forEach((scene, index) => {
       content += `### Scene ${index + 1}: ${scene.title}\n\n`;
       content += `*Emotion: ${scene.emotion}*\n\n`;
       content += `${scene.content}\n\n`;
@@ -243,9 +253,9 @@ export default function ExportManager({ story }: ExportManagerProps) {
   const generateJSON = (): string => {
     const exportData = {
       metadata: {
-        title: story.title,
-        createdAt: story.createdAt.toISOString(),
-        updatedAt: story.updatedAt.toISOString(),
+        title: actualStory.title,
+        createdAt: actualStory.createdAt instanceof Date ? actualStory.createdAt.toISOString() : String(actualStory.createdAt),
+        updatedAt: actualStory.updatedAt instanceof Date ? actualStory.updatedAt.toISOString() : String(actualStory.updatedAt),
         version: '1.0',
       },
       stats: {
@@ -254,8 +264,8 @@ export default function ExportManager({ story }: ExportManagerProps) {
         totalScenes: stats.totalScenes,
         estimatedReadTime: stats.estimatedReadTime,
       },
-      characters: includeCharacters ? story.characters : [],
-      scenes: story.scenes.map(scene => ({
+      characters: includeCharacters ? actualStory.characters : [],
+      scenes: actualStory.scenes.map(scene => ({
         id: scene.id,
         title: scene.title,
         content: scene.content,
@@ -274,7 +284,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${story.title}</title>
+  <title>${actualStory.title}</title>
   <style>
     body {
       font-family: Georgia, serif;
@@ -297,20 +307,20 @@ export default function ExportManager({ story }: ExportManagerProps) {
   </style>
 </head>
 <body>
-  <h1>${story.title}</h1>
-  <p class="metadata">Last Updated: ${format(story.updatedAt, 'MMMM d, yyyy')}</p>
+  <h1>${actualStory.title}</h1>
+  <p class="metadata">Last Updated: ${format(actualStory.updatedAt, 'MMMM d, yyyy')}</p>
   
   <div class="stats">
     <div><strong>Word Count:</strong> ${stats.totalWords}</div>
     <div><strong>Scenes:</strong> ${stats.totalScenes}</div>
-    <div><strong>Characters:</strong> ${story.characters.length}</div>
+    <div><strong>Characters:</strong> ${actualStory.characters.length}</div>
     <div><strong>Read Time:</strong> ~${stats.estimatedReadTime} min</div>
   </div>
 `;
     
-    if (includeCharacters && story.characters.length > 0) {
+    if (includeCharacters && actualStory.characters.length > 0) {
       content += '  <h2>Characters</h2>\n';
-      story.characters.forEach(char => {
+      actualStory.characters.forEach(char => {
         content += `  <div class="character">
     <div class="character-name">${char.name}</div>
     <div>${char.description}</div>`;
@@ -325,7 +335,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
     }
     
     content += '  <h2>Scenes</h2>\n';
-    story.scenes.forEach((scene, index) => {
+    actualStory.scenes.forEach((scene, index) => {
       content += `  <div class="scene">
     <div class="scene-header">
       <span>Scene ${index + 1}</span>
@@ -340,16 +350,6 @@ export default function ExportManager({ story }: ExportManagerProps) {
     
     return content;
   };
-
-  // Load actual story from storage
-  const actualStory = story.id === 'default' ? (() => {
-    const savedStory = StoryStorage.loadStory();
-    const savedScenes = StoryStorage.loadScenes();
-    if (savedStory) {
-      return { ...savedStory, scenes: savedScenes.length > 0 ? savedScenes : savedStory.scenes };
-    }
-    return story;
-  })() : story;
 
   return (
     <motion.div
@@ -371,6 +371,17 @@ export default function ExportManager({ story }: ExportManagerProps) {
         >
           <FileText className="w-4 h-4 inline mr-2" />
           Text Export
+        </button>
+        <button
+          onClick={() => setActiveTab('narrate')}
+          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+            activeTab === 'narrate'
+              ? 'text-purple-400 border-purple-400'
+              : 'text-gray-400 border-transparent hover:text-white'
+          }`}
+        >
+          <Volume2 className="w-4 h-4 inline mr-2" />
+          Narrate
         </button>
         <button
           onClick={() => setActiveTab('social')}
@@ -406,6 +417,11 @@ export default function ExportManager({ story }: ExportManagerProps) {
           Analysis
         </button>
       </div>
+
+      {/* Narrate Tab */}
+      {activeTab === 'narrate' && (
+        <NarratePanel story={actualStory} />
+      )}
 
       {/* Social Media Export Tab */}
       {activeTab === 'social' && (
