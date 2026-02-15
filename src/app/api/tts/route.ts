@@ -1,18 +1,20 @@
 /**
- * TTS API - TTSOpenAI (docs: https://docs-tts.ainnate.com/getting-started)
- * POST /api/tts - Generate speech from text using TTSOpenAI (api.ttsopenai.com)
- * Auth: x-api-key header, key from tts.ainnate.com (tts-...)
- * Request: { text: string, voice: "us-male" | "us-female" | "uk-male" | "uk-female" }
+ * TTS API - AI Innate / TTSOpenAI (api.ttsopenai.com)
+ * POST /api/tts - Create TTS job; returns { uuid } for async webhook flow
+ * Auth: Bearer token required
+ * Request: { text: string, voice?: "us-male" | "us-female" | "uk-male" | "uk-female" }
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { getSupabaseServiceClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logger';
 
+export const runtime = 'nodejs';
+export const maxDuration = 10;
+
 const VALID_VOICES = ['us-male', 'us-female', 'uk-male', 'uk-female'] as const;
 type ClientVoice = (typeof VALID_VOICES)[number];
 
-/** TTSOpenAI voice_id per https://docs-tts.ainnate.com/resources/tts-text - see Voice Library at ttsopenai.com */
 const TTSOPENAI_VOICE_MAP: Record<ClientVoice, string> = {
   'us-male': 'OA001',
   'us-female': 'OA002',
@@ -20,22 +22,28 @@ const TTSOPENAI_VOICE_MAP: Record<ClientVoice, string> = {
   'uk-female': 'OA004',
 };
 
-const MAX_TEXT_LENGTH = 10000; // per docs: max 10,000 chars
-const TTSOPENAI_BASE = 'https://api.ttsopenai.com/uapi/v1'; // docs-tts.ainnate.com
-
-export const maxDuration = 15; // allow up to 15s (Vercel Pro); Hobby defaults to 10s
+const MAX_TEXT_LENGTH = 10000;
+const AINNATE_API_BASE = 'https://api.ttsopenai.com/uapi/v1';
+const UPSTREAM_TIMEOUT_MS = 10_000;
 
 export async function POST(request: NextRequest) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:20',message:'TTS route entered',data:{hasAuth:!!request.headers.get('authorization')},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-  // #endregion
   try {
+    const apiKey =
+      process.env.AINNATE_API_KEY ??
+      process.env.TTSOPENAI_API_KEY ??
+      process.env.OPENAPI_API_KEY;
+
+    if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
+      console.error('[TTS] AINNATE_API_KEY is missing or empty');
+      return NextResponse.json(
+        { error: 'TTS is not configured. Set AINNATE_API_KEY in environment.' },
+        { status: 503 }
+      );
+    }
+
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!token) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:26',message:'TTS 401 - no auth token',data:{},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
-      // #endregion
       return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     }
 
@@ -46,8 +54,13 @@ export async function POST(request: NextRequest) {
 
     const db = getSupabaseServiceClient();
     if (!db) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 503 });
+      console.error('[TTS] Supabase service client unavailable');
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 503 }
+      );
     }
+
     const { data: profile } = await db
       .from('user_profiles')
       .select('tier')
@@ -58,135 +71,169 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Upgrade required' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { text, voice } = body as { text?: unknown; voice?: unknown };
-
-    if (typeof text !== 'string' || !text.trim()) {
+    let body: { text?: unknown; voice?: unknown };
+    try {
+      body = (await request.json()) as { text?: unknown; voice?: unknown };
+    } catch {
       return NextResponse.json(
-        { error: 'Missing or invalid text. Body must be { text: string, voice: "us-male" | "us-female" | "uk-male" | "uk-female" }.' },
+        { error: 'Invalid JSON body' },
         { status: 400 }
       );
     }
 
-    if (text.length > MAX_TEXT_LENGTH) {
+    const text = body?.text;
+    const voice = body?.voice ?? 'uk-female';
+
+    if (typeof text !== 'string' || !text.trim()) {
+      return NextResponse.json(
+        { error: 'Missing or invalid text. Body must be { text: string, voice?: string }.' },
+        { status: 400 }
+      );
+    }
+
+    const trimmedInput = text.trim();
+    if (trimmedInput.length > MAX_TEXT_LENGTH) {
       return NextResponse.json(
         { error: `Text exceeds maximum length of ${MAX_TEXT_LENGTH} characters.` },
         { status: 400 }
       );
     }
 
-    if (!VALID_VOICES.includes(voice as ClientVoice)) {
-      return NextResponse.json(
-        { error: 'Invalid voice. Must be one of: us-male, us-female, uk-male, uk-female.' },
-        { status: 400 }
-      );
-    }
+    const voiceId = VALID_VOICES.includes(voice as ClientVoice)
+      ? TTSOPENAI_VOICE_MAP[voice as ClientVoice]
+      : TTSOPENAI_VOICE_MAP['uk-female'];
 
-    const apiKey = process.env.TTSOPENAI_API_KEY ?? process.env.OPENAI_API_KEY ?? process.env.NEXT_PUBLIC_OPENAI_API_KEY;
-    if (!apiKey) {
-      logError('TTS: API key not set', new Error('Config missing'));
-      return NextResponse.json(
-        { error: 'TTS is not configured. Set TTSOPENAI_API_KEY (tts-... key from tts.ainnate.com).' },
-        { status: 503 }
-      );
-    }
-    if (!apiKey.startsWith('tts-')) {
-      return NextResponse.json(
-        { error: 'TTS requires a tts- API key from tts.ainnate.com. Set TTSOPENAI_API_KEY.' },
-        { status: 503 }
-      );
-    }
+    const payload = {
+      model: 'tts-1',
+      input: trimmedInput,
+      voice_id: voiceId,
+      speed: 1,
+    };
 
-    const trimmedInput = text.trim();
-    {
-      // TTSOpenAI / Ainnate (tts.ainnate.com, api.ttsopenai.com) - uses x-api-key header
-      const voiceId = TTSOPENAI_VOICE_MAP[voice as ClientVoice];
-      const createRes = await fetch(`${TTSOPENAI_BASE}/text-to-speech`, {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+
+    let createRes: Response;
+    try {
+      createRes = await fetch(`${AINNATE_API_BASE}/text-to-speech`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': apiKey,
         },
-        body: JSON.stringify({
-          model: 'tts-1',
-          voice_id: voiceId,
-          speed: 1,
-          input: trimmedInput,
-        }),
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      const isTimeout = fetchErr instanceof Error && fetchErr.name === 'AbortError';
+      console.error('[TTS] Upstream fetch failed:', msg);
+      logError('TTS upstream fetch failed', fetchErr instanceof Error ? fetchErr : new Error(msg), {
+        user_id: user.id,
+        timeout: isTimeout,
+      });
+      return NextResponse.json(
+        {
+          error: isTimeout
+            ? 'TTS service timed out. Please try again.'
+            : 'TTS service unavailable.',
+          upstream_error: msg,
+        },
+        { status: 502 }
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    if (!createRes.ok) {
+      let errText: string;
+      try {
+        errText = await createRes.text();
+      } catch {
+        errText = '';
+      }
+      const safeErrText = errText.slice(0, 500);
+      console.error('[TTS] Upstream error:', createRes.status, safeErrText);
+      logError('TTS upstream error', new Error(`Status ${createRes.status}: ${safeErrText}`), {
+        user_id: user.id,
+        status: createRes.status,
       });
 
-      if (!createRes.ok) {
-        const errText = await createRes.text();
-        logError('TTS TTSOpenAI request failed', new Error(`Status ${createRes.status}: ${errText.slice(0, 200)}`), { user_id: user.id });
-        let userMessage = 'TTS generation failed.';
-        try {
-          const errJson = JSON.parse(errText) as { detail?: { message?: string; error_code?: string }; message?: string; error?: string };
-          const msg = errJson?.detail?.message ?? errJson?.message ?? errJson?.error;
-          if (typeof msg === 'string' && msg.length > 0) userMessage = msg;
-          else if (errJson?.detail?.error_code === 'API_KEY_NOT_FOUND') userMessage = 'Invalid TTS API key. Check your key at tts.ainnate.com.';
-          else if (errJson?.detail?.error_code === 'NOT_ENOUGH_CREDIT') userMessage = 'Insufficient TTS credits. Top up at tts.ainnate.com.';
-        } catch {
-          /* ignore */
-        }
-        return NextResponse.json({ error: userMessage }, { status: 502 });
+      let userMessage = 'TTS generation failed.';
+      try {
+        const errJson = JSON.parse(errText) as {
+          detail?: { message?: string; error_code?: string };
+          message?: string;
+          error?: string;
+        };
+        const msg =
+          errJson?.detail?.message ?? errJson?.message ?? errJson?.error;
+        if (typeof msg === 'string' && msg.length > 0) userMessage = msg;
+        else if (errJson?.detail?.error_code === 'API_KEY_NOT_FOUND')
+          userMessage = 'Invalid TTS API key.';
+        else if (errJson?.detail?.error_code === 'NOT_ENOUGH_CREDIT')
+          userMessage = 'Insufficient TTS credits.';
+        else if (errJson?.detail?.error_code === 'PREMIUM_PLAN_REQUIRED')
+          userMessage = 'TTS Premium plan required.';
+      } catch {
+        /* use default userMessage */
       }
 
-      const createData = (await createRes.json()) as { success?: boolean; result?: { uuid?: string; status?: number; media_url?: string } };
-      const uuid = createData?.result?.uuid;
-      if (!uuid) {
-        logError('TTS TTSOpenAI no uuid in response', new Error(JSON.stringify(createData).slice(0, 200)), { user_id: user.id });
-        return NextResponse.json({ error: 'TTS service did not return a task ID.' }, { status: 502 });
-      }
-
-      // Poll for result (TTSOpenAI is async; status 2 = Completed)
-      // Keep under Vercel Hobby 10s timeout: ~2s POST + 12*0.5s = ~8s
-      const maxAttempts = 12;
-      const pollIntervalMs = 500;
-      const resultPaths = [
-        `/text-to-speech/${uuid}`,
-        `/text-to-speech/result/${uuid}`,
-        `/result/${uuid}`,
-      ];
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise((r) => setTimeout(r, pollIntervalMs));
-        let resultRes: Response | null = null;
-        for (const path of resultPaths) {
-          resultRes = await fetch(`${TTSOPENAI_BASE}${path}`, {
-            headers: { 'x-api-key': apiKey },
-          });
-          if (resultRes.ok) break;
-        }
-        if (!resultRes || !resultRes.ok) continue;
-        const resultData = (await resultRes.json()) as { success?: boolean; result?: { status?: number; media_url?: string; error_message?: string } };
-        const status = resultData?.result?.status;
-        if (status === 2) {
-          const mediaUrl = resultData?.result?.media_url;
-          if (mediaUrl) {
-            const audioRes = await fetch(mediaUrl);
-            if (audioRes.ok) {
-              const contentType = audioRes.headers.get('content-type') || 'audio/mpeg';
-              return new NextResponse(audioRes.body ?? undefined, {
-                status: 200,
-                headers: { 'Content-Type': contentType, 'Cache-Control': 'no-store' },
-              });
-            }
-          }
-          break;
-        }
-        if (status === 3) {
-          const errMsg = resultData?.result?.error_message ?? 'TTS conversion failed.';
-          return NextResponse.json({ error: errMsg }, { status: 502 });
-        }
-      }
-      return NextResponse.json({
-        error: 'TTS conversion timed out. Per docs-tts.ainnate.com, set up webhooks at tts.ainnate.com/profile/integration/webhook for async results.',
-      }, { status: 502 });
+      return NextResponse.json(
+        {
+          error: userMessage,
+          upstream_status: createRes.status,
+          upstream_response: safeErrText,
+        },
+        { status: 502 }
+      );
     }
+
+    let createData: { result?: { uuid?: string } };
+    try {
+      createData = (await createRes.json()) as { result?: { uuid?: string } };
+    } catch (parseErr) {
+      console.error('[TTS] Failed to parse upstream JSON:', parseErr);
+      return NextResponse.json(
+        { error: 'Invalid response from TTS service.' },
+        { status: 502 }
+      );
+    }
+
+    const uuid = createData?.result?.uuid;
+    if (!uuid || typeof uuid !== 'string') {
+      console.error('[TTS] No uuid in upstream response:', JSON.stringify(createData).slice(0, 300));
+      logError('TTS no uuid in response', new Error(JSON.stringify(createData).slice(0, 300)), {
+        user_id: user.id,
+      });
+      return NextResponse.json(
+        { error: 'TTS service did not return a task ID.' },
+        { status: 502 }
+      );
+    }
+
+    const { error: insertErr } = await db
+      .from('tts_jobs')
+      .upsert(
+        { job_uuid: uuid, user_id: user.id, status: 'pending' },
+        { onConflict: 'job_uuid' }
+      );
+
+    if (insertErr) {
+      console.error('[TTS] Failed to store job:', insertErr.message);
+      logError('TTS failed to store job', new Error(insertErr.message), { user_id: user.id });
+      return NextResponse.json(
+        { error: 'Failed to register TTS job. Please try again.' },
+        { status: 503 }
+      );
+    }
+
+    return NextResponse.json({ uuid });
   } catch (e) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:118',message:'TTS route exception → 500',data:{errorMsg:e instanceof Error?e.message:String(e)},timestamp:Date.now(),hypothesisId:'H4'})}).catch(()=>{});
-    // #endregion
-    logError('TTS failed', e);
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('[TTS] Route exception:', msg);
+    logError('TTS route exception', e instanceof Error ? e : new Error(msg));
     return NextResponse.json(
       { error: 'An error occurred while generating speech.' },
       { status: 500 }

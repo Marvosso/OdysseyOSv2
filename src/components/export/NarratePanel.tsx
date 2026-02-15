@@ -81,20 +81,22 @@ export default function NarratePanel({ story }: NarratePanelProps) {
       }
       if (rest) chunks.push(rest);
 
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      };
+
       try {
         for (let i = 0; i < chunks.length; i++) {
-          const res = await fetch('/api/tts', {
+          const createRes = await fetch('/api/tts', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
-            },
+            headers: authHeaders,
             body: JSON.stringify({ text: chunks[i], voice: selectedVoice }),
           });
 
-          if (!res.ok) {
-            const rawText = await res.text();
-            let msg = res.statusText || 'Narration failed.';
+          if (!createRes.ok) {
+            const rawText = await createRes.text();
+            let msg = createRes.statusText || 'Narration failed.';
             try {
               const data = JSON.parse(rawText) as { error?: string };
               if (typeof data?.error === 'string') msg = data.error;
@@ -106,7 +108,46 @@ export default function NarratePanel({ story }: NarratePanelProps) {
             return;
           }
 
-          const blob = await res.blob();
+          const { uuid } = (await createRes.json()) as { uuid?: string };
+          if (!uuid) {
+            setError('No job ID returned.');
+            setPlayingSceneIndex(null);
+            return;
+          }
+
+          let data: { status: string; media_url?: string; error_message?: string } = { status: 'pending' };
+          const maxPolls = 120;
+          const pollMs = 500;
+          for (let p = 0; p < maxPolls; p++) {
+            await new Promise((r) => setTimeout(r, pollMs));
+            const statusRes = await fetch(`/api/tts/status?uuid=${encodeURIComponent(uuid)}`, {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            data = (await statusRes.json()) as { status: string; media_url?: string; error_message?: string };
+            if (data.status === 'completed' || data.status === 'failed') break;
+          }
+
+          if (data.status === 'failed') {
+            setError(data.error_message ?? 'Narration failed.');
+            setPlayingSceneIndex(null);
+            return;
+          }
+          if (data.status !== 'completed') {
+            setError('Narration timed out. Please try again.');
+            setPlayingSceneIndex(null);
+            return;
+          }
+
+          const audioRes = await fetch(`/api/tts/audio?uuid=${encodeURIComponent(uuid)}`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          if (!audioRes.ok) {
+            setError('Could not load audio.');
+            setPlayingSceneIndex(null);
+            return;
+          }
+
+          const blob = await audioRes.blob();
           const url = URL.createObjectURL(blob);
           objectUrlRef.current = url;
 
