@@ -3,7 +3,7 @@
 /**
  * Narrate Panel
  *
- * Premium feature: narrate your story with OpenAI TTS. Shows presence for all users;
+ * Premium feature: narrate your story with TTSOpenAI (tts.ainnate.com). Shows presence for all users;
  * free users see an upgrade CTA, Pro/Studio users get full narration.
  */
 
@@ -139,7 +139,7 @@ export default function NarratePanel({ story }: NarratePanelProps) {
           <h3 className="text-lg font-semibold text-white mb-2">Voice narration</h3>
           <p className="text-gray-400 text-sm mb-4 max-w-md mx-auto">
             Hear your story come to life with AI-powered narration. Choose from multiple voices
-            and listen scene by scene or play the full story. Powered by OpenAI TTS.
+            and listen scene by scene or play the full story. Powered by TTSOpenAI.
           </p>
           <button
             onClick={() => setShowUpgradeModal(true)}
@@ -235,7 +235,7 @@ export default function NarratePanel({ story }: NarratePanelProps) {
       )}
 
       <p className="text-xs text-gray-500">
-        Powered by OpenAI TTS. Narration is a Pro/Studio feature.
+        Powered by TTSOpenAI. Narration is a Pro/Studio feature.
       </p>
     </div>
   );
