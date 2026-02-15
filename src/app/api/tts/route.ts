@@ -1,6 +1,6 @@
 /**
  * TTS API - Async flow
- * POST /api/tts - Accept { text }, call Ainnate, return { job_id }
+ * POST /api/tts - Accept { text, voice? }, call Ainnate, return { job_id }
  */
 import { supabase } from "@/lib/supabaseClient";
 import { getSupabaseServiceClient } from "@/lib/supabase/server";
@@ -9,6 +9,10 @@ export const runtime = "nodejs";
 
 const AINNATE_TTS_URL = process.env.AINNATE_TTS_URL ?? "https://api.ttsopenai.com/uapi/v1/text-to-speech";
 const UPSTREAM_TIMEOUT_MS = 8_000;
+
+const VALID_VOICES = ["onyx", "nova"] as const;
+type ClientVoice = (typeof VALID_VOICES)[number];
+const DEFAULT_VOICE: ClientVoice = "nova";
 
 export async function POST(req: Request) {
   try {
@@ -45,12 +49,12 @@ export async function POST(req: Request) {
       );
     }
 
-    let body: { text?: unknown };
+    let body: { text?: unknown; voice?: unknown };
     try {
-      body = (await req.json()) as { text?: unknown };
+      body = (await req.json()) as { text?: unknown; voice?: unknown };
     } catch {
       return Response.json(
-        { error: "Invalid JSON body. Expected { text: string }." },
+        { error: "Invalid JSON body. Expected { text: string, voice?: string }." },
         { status: 400 }
       );
     }
@@ -71,6 +75,16 @@ export async function POST(req: Request) {
       );
     }
 
+    const rawVoice = body?.voice;
+    const voiceKey =
+      typeof rawVoice === "string" && rawVoice.trim()
+        ? rawVoice.trim().toLowerCase()
+        : "";
+    const voice: ClientVoice =
+      voiceKey === "onyx" || voiceKey === "nova" ? voiceKey : DEFAULT_VOICE;
+
+    console.log("[TTS] selected voice:", voice);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
 
@@ -83,10 +97,9 @@ export async function POST(req: Request) {
           "x-api-key": apiKey,
         },
         body: JSON.stringify({
-          model: "tts-1",
-          voice_id: "OA001",
-          speed: 1,
+          model: "gpt-4o-mini-tts",
           input: trimmedInput,
+          voice,
         }),
         signal: controller.signal,
       });

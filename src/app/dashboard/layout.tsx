@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import GuestManager from '@/components/session/GuestManager';
+import FeedbackButton from '@/components/feedback/FeedbackButton';
 import { clearEnteredProject } from '@/components/session/StorySelector';
 import KeyboardShortcutsProvider, { openCheatsheet } from '@/components/shortcuts/KeyboardShortcutsProvider';
 import { StoryStorage } from '@/lib/storage/storyStorage';
@@ -622,6 +623,8 @@ export default function DashboardLayout({
       )}
 
       </div>
+
+      <FeedbackButton />
     </KeyboardShortcutsProvider>
   );
 }

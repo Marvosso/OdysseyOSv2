@@ -15,10 +15,8 @@ import { supabase } from '@/lib/supabaseClient';
 import UpgradeModal from '@/components/session/UpgradeModal';
 
 const VOICES = [
-  { id: 'us-male' as const, label: 'US Male' },
-  { id: 'us-female' as const, label: 'US Female' },
-  { id: 'uk-male' as const, label: 'UK Male' },
-  { id: 'uk-female' as const, label: 'UK Female' },
+  { id: 'onyx' as const, label: 'Onyx (Male)' },
+  { id: 'nova' as const, label: 'Nova (Female)' },
 ] as const;
 
 type VoiceId = (typeof VOICES)[number]['id'];
@@ -32,7 +30,7 @@ interface NarratePanelProps {
 export default function NarratePanel({ story }: NarratePanelProps) {
   const { tier, isPro, isStudio, loading: tierLoading } = useUserTier();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState<VoiceId>('uk-female');
+  const [selectedVoice, setSelectedVoice] = useState<VoiceId>('nova');
   const [playingSceneIndex, setPlayingSceneIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -89,7 +87,7 @@ export default function NarratePanel({ story }: NarratePanelProps) {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${session.access_token}`,
             },
-            body: JSON.stringify({ text: chunks[i] }),
+            body: JSON.stringify({ text: chunks[i], voice: selectedVoice }),
           });
 
           if (!createRes.ok) {
@@ -153,12 +151,12 @@ export default function NarratePanel({ story }: NarratePanelProps) {
         setPlayingSceneIndex(null);
       }
     },
-    [stopCurrent]
+    [selectedVoice, stopCurrent]
   );
 
   useEffect(() => {
     return () => stopCurrent();
-  }, [stopCurrent]);
+  }, [selectedVoice, stopCurrent]);
 
   // Loading or free users: teaser with upgrade CTA
   if (tierLoading || (!isPro && !isStudio)) {
