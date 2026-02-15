@@ -118,9 +118,11 @@ export async function POST(request: NextRequest) {
         logError('TTS TTSOpenAI request failed', new Error(`Status ${createRes.status}: ${errText.slice(0, 200)}`), { user_id: user.id });
         let userMessage = 'TTS generation failed.';
         try {
-          const errJson = JSON.parse(errText) as { message?: string; error?: string };
-          const msg = errJson?.message ?? errJson?.error;
+          const errJson = JSON.parse(errText) as { detail?: { message?: string; error_code?: string }; message?: string; error?: string };
+          const msg = errJson?.detail?.message ?? errJson?.message ?? errJson?.error;
           if (typeof msg === 'string' && msg.length > 0) userMessage = msg;
+          else if (errJson?.detail?.error_code === 'API_KEY_NOT_FOUND') userMessage = 'Invalid TTS API key. Check your key at tts.ainnate.com.';
+          else if (errJson?.detail?.error_code === 'NOT_ENOUGH_CREDIT') userMessage = 'Insufficient TTS credits. Top up at tts.ainnate.com.';
         } catch {
           /* ignore */
         }
@@ -137,12 +139,17 @@ export async function POST(request: NextRequest) {
       // Poll for result (TTSOpenAI is async; status 2 = Completed)
       const maxAttempts = 60;
       const pollIntervalMs = 500;
+      const resultPaths = [`/result/${uuid}`, `/text-to-speech/result/${uuid}`];
       for (let i = 0; i < maxAttempts; i++) {
         await new Promise((r) => setTimeout(r, pollIntervalMs));
-        const resultRes = await fetch(`${TTSOPENAI_BASE}/result/${uuid}`, {
-          headers: { 'x-api-key': apiKey },
-        });
-        if (!resultRes.ok) continue;
+        let resultRes: Response | null = null;
+        for (const path of resultPaths) {
+          resultRes = await fetch(`${TTSOPENAI_BASE}${path}`, {
+            headers: { 'x-api-key': apiKey },
+          });
+          if (resultRes.ok) break;
+        }
+        if (!resultRes || !resultRes.ok) continue;
         const resultData = (await resultRes.json()) as { success?: boolean; result?: { status?: number; media_url?: string; error_message?: string } };
         const status = resultData?.result?.status;
         if (status === 2) {
@@ -164,7 +171,9 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: errMsg }, { status: 502 });
         }
       }
-      return NextResponse.json({ error: 'TTS conversion timed out. Please try again.' }, { status: 502 });
+      return NextResponse.json({
+        error: 'TTS conversion timed out. TTSOpenAI (tts.ainnate.com) uses webhooks for async results. Try an official OpenAI key (sk-...) from platform.openai.com for instant TTS.',
+      }, { status: 502 });
     }
 
     // Official OpenAI API (sk-... keys)
