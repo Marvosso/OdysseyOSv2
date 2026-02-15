@@ -93,8 +93,14 @@ export default function NarratePanel({ story }: NarratePanelProps) {
           });
 
           if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            const msg = (data?.error as string) || res.statusText || 'Narration failed.';
+            const rawText = await res.text();
+            let msg = res.statusText || 'Narration failed.';
+            try {
+              const data = JSON.parse(rawText) as { error?: string };
+              if (typeof data?.error === 'string') msg = data.error;
+            } catch {
+              if (rawText.trim().length > 0 && rawText.length < 200) msg = rawText;
+            }
             setError(msg);
             setPlayingSceneIndex(null);
             return;

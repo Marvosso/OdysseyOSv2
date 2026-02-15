@@ -23,6 +23,8 @@ const TTSOPENAI_VOICE_MAP: Record<ClientVoice, string> = {
 const MAX_TEXT_LENGTH = 10000; // per docs: max 10,000 chars
 const TTSOPENAI_BASE = 'https://api.ttsopenai.com/uapi/v1'; // docs-tts.ainnate.com
 
+export const maxDuration = 15; // allow up to 15s (Vercel Pro); Hobby defaults to 10s
+
 export async function POST(request: NextRequest) {
   // #region agent log
   fetch('http://127.0.0.1:7242/ingest/af5ba99f-ac6d-4d74-90ad-b7fd9297bb22',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/tts/route.ts:20',message:'TTS route entered',data:{hasAuth:!!request.headers.get('authorization')},timestamp:Date.now(),hypothesisId:'H5'})}).catch(()=>{});
@@ -140,7 +142,11 @@ export async function POST(request: NextRequest) {
       // Keep under Vercel Hobby 10s timeout: ~2s POST + 12*0.5s = ~8s
       const maxAttempts = 12;
       const pollIntervalMs = 500;
-      const resultPaths = [`/result/${uuid}`, `/text-to-speech/result/${uuid}`];
+      const resultPaths = [
+        `/text-to-speech/${uuid}`,
+        `/text-to-speech/result/${uuid}`,
+        `/result/${uuid}`,
+      ];
       for (let i = 0; i < maxAttempts; i++) {
         await new Promise((r) => setTimeout(r, pollIntervalMs));
         let resultRes: Response | null = null;
