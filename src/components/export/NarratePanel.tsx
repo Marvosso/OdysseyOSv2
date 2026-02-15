@@ -81,17 +81,15 @@ export default function NarratePanel({ story }: NarratePanelProps) {
       }
       if (rest) chunks.push(rest);
 
-      const authHeaders = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      };
-
       try {
         for (let i = 0; i < chunks.length; i++) {
           const createRes = await fetch('/api/tts', {
             method: 'POST',
-            headers: authHeaders,
-            body: JSON.stringify({ text: chunks[i], voice: selectedVoice }),
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ text: chunks[i] }),
           });
 
           if (!createRes.ok) {
@@ -108,55 +106,40 @@ export default function NarratePanel({ story }: NarratePanelProps) {
             return;
           }
 
-          const { uuid } = (await createRes.json()) as { uuid?: string };
-          if (!uuid) {
-            setError('No job ID returned.');
+          const { job_id } = (await createRes.json()) as { job_id?: string };
+          if (!job_id) {
+            setError('No job_id returned.');
             setPlayingSceneIndex(null);
             return;
           }
 
-          let data: { status: string; media_url?: string; error_message?: string } = { status: 'pending' };
-          const maxPolls = 120;
-          const pollMs = 500;
+          const maxPolls = 60;
+          const pollMs = 2000;
+          let statusData: { status: string; audio_url?: string } = { status: 'processing' };
           for (let p = 0; p < maxPolls; p++) {
             await new Promise((r) => setTimeout(r, pollMs));
-            const statusRes = await fetch(`/api/tts/status?uuid=${encodeURIComponent(uuid)}`, {
+            const statusRes = await fetch(`/api/tts/status?job_id=${encodeURIComponent(job_id)}`, {
               headers: { Authorization: `Bearer ${session.access_token}` },
             });
-            data = (await statusRes.json()) as { status: string; media_url?: string; error_message?: string };
-            if (data.status === 'completed' || data.status === 'failed') break;
+            statusData = (await statusRes.json()) as { status: string; audio_url?: string };
+            if (statusData.status === 'completed' || statusData.status === 'failed') break;
           }
 
-          if (data.status === 'failed') {
-            setError(data.error_message ?? 'Narration failed.');
+          if (statusData.status === 'failed') {
+            setError('Narration failed.');
             setPlayingSceneIndex(null);
             return;
           }
-          if (data.status !== 'completed') {
+          if (statusData.status !== 'completed' || !statusData.audio_url) {
             setError('Narration timed out. Please try again.');
             setPlayingSceneIndex(null);
             return;
           }
 
-          const audioRes = await fetch(`/api/tts/audio?uuid=${encodeURIComponent(uuid)}`, {
-            headers: { Authorization: `Bearer ${session.access_token}` },
-          });
-          if (!audioRes.ok) {
-            setError('Could not load audio.');
-            setPlayingSceneIndex(null);
-            return;
-          }
-
-          const blob = await audioRes.blob();
-          const url = URL.createObjectURL(blob);
-          objectUrlRef.current = url;
-
+          const audio = new Audio(statusData.audio_url);
+          audioRef.current = audio;
           await new Promise<void>((resolve, reject) => {
-            const audio = new Audio(url);
-            audioRef.current = audio;
             audio.onended = () => {
-              URL.revokeObjectURL(url);
-              objectUrlRef.current = null;
               audioRef.current = null;
               resolve();
             };
@@ -170,7 +153,7 @@ export default function NarratePanel({ story }: NarratePanelProps) {
         setPlayingSceneIndex(null);
       }
     },
-    [selectedVoice, stopCurrent]
+    [stopCurrent]
   );
 
   useEffect(() => {

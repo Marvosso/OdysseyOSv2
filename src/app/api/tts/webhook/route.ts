@@ -1,73 +1,74 @@
 /**
- * TTSOpenAI webhook - receives callbacks when TTS jobs complete
- * Register URL at https://ttsopenai.com/profile/integration/webhooks
- * Events: TTS_TEXT_SUCCESS, TTS_TEXT_FAILED
+ * TTS Webhook - Receives callbacks from Ainnate when TTS completes
+ * Register URL at ttsopenai.com/profile/integration/webhooks
  */
-import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseServiceClient } from '@/lib/supabase/server';
-import { logError } from '@/lib/logger';
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseServiceClient } from "@/lib/supabase/server";
+import { logError } from "@/lib/logger";
 
 type WebhookPayload = {
   event?: string;
   data?: {
     uuid?: string;
-    status?: number;
+    job_id?: string;
+    status?: string | number;
     media_url?: string;
-    error_message?: string;
+    audio_url?: string;
   };
 };
 
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as WebhookPayload;
-    const event = body?.event;
     const data = body?.data;
-    const uuid = data?.uuid;
+    const jobId = data?.job_id ?? data?.uuid;
+    const status = data?.status;
+    const audioUrl = data?.audio_url ?? data?.media_url ?? null;
 
-    if (!uuid) {
+    if (!jobId) {
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
     const db = getSupabaseServiceClient();
     if (!db) {
-      logError('TTS webhook: no Supabase client', new Error('Config'));
+      logError("TTS webhook: no Supabase client", new Error("Config"));
       return NextResponse.json({ received: true }, { status: 200 });
     }
 
-    if (event === 'TTS_TEXT_SUCCESS') {
-      const mediaUrl = data?.media_url ?? null;
+    const isCompleted =
+      status === "completed" ||
+      status === 2 ||
+      body?.event === "TTS_TEXT_SUCCESS";
+
+    if (isCompleted && audioUrl) {
       const { error } = await db
-        .from('tts_jobs')
+        .from("tts_jobs")
         .update({
-          status: 'completed',
-          media_url: mediaUrl,
+          status: "completed",
+          media_url: audioUrl,
           error_message: null,
           updated_at: new Date().toISOString(),
         })
-        .eq('job_uuid', uuid);
+        .eq("job_uuid", jobId);
 
       if (error) {
-        logError('TTS webhook: update failed', new Error(error.message), { job_uuid: uuid });
+        logError("TTS webhook: update failed", new Error(error.message), { job_id: jobId });
       }
-    } else if (event === 'TTS_TEXT_FAILED') {
-      const errMsg = data?.error_message ?? 'TTS conversion failed';
-      const { error } = await db
-        .from('tts_jobs')
+    } else if (body?.event === "TTS_TEXT_FAILED" || status === "failed" || status === 3) {
+      const errMsg = (data as { error_message?: string })?.error_message ?? "TTS conversion failed";
+      await db
+        .from("tts_jobs")
         .update({
-          status: 'failed',
+          status: "failed",
           error_message: errMsg,
           updated_at: new Date().toISOString(),
         })
-        .eq('job_uuid', uuid);
-
-      if (error) {
-        logError('TTS webhook: update failed', new Error(error.message), { job_uuid: uuid });
-      }
+        .eq("job_uuid", jobId);
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (e) {
-    logError('TTS webhook failed', e);
+    logError("TTS webhook failed", e);
     return NextResponse.json({ received: true }, { status: 200 });
   }
 }
