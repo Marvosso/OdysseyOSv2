@@ -19,7 +19,7 @@ const defaultStory: Story = {
 
 export default function ExportPage() {
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto w-full overflow-x-hidden">
       <ExportManager story={defaultStory} />
     </div>
   );

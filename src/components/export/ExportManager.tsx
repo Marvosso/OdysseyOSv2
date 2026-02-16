@@ -355,18 +355,16 @@ export default function ExportManager({ story }: ExportManagerProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-4"
+      className="space-y-4 overflow-x-hidden"
     >
-      {/* Tab Selection */}
-      <div className="flex items-center gap-2 border-b border-gray-700 pb-2 overflow-x-auto">
+      {/* Tab Selection - single column scroll on mobile, touch-friendly */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 border-b border-gray-700 pb-2 gap-1 sm:overflow-x-auto">
         <button
-          onClick={() => {
-            setActiveTab('text');
-          }}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+          onClick={() => setActiveTab('text')}
+          className={`min-h-[44px] px-4 py-2.5 font-medium transition-colors border-b-2 sm:border-b-2 whitespace-nowrap text-left sm:text-center rounded-t-lg sm:rounded-t ${
             activeTab === 'text'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
+              ? 'text-purple-400 border-purple-400 bg-purple-500/10'
+              : 'text-gray-400 border-transparent hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <FileText className="w-4 h-4 inline mr-2" />
@@ -374,10 +372,10 @@ export default function ExportManager({ story }: ExportManagerProps) {
         </button>
         <button
           onClick={() => setActiveTab('narrate')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+          className={`min-h-[44px] px-4 py-2.5 font-medium transition-colors border-b-2 whitespace-nowrap text-left sm:text-center rounded-t-lg sm:rounded-t ${
             activeTab === 'narrate'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
+              ? 'text-purple-400 border-purple-400 bg-purple-500/10'
+              : 'text-gray-400 border-transparent hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <Volume2 className="w-4 h-4 inline mr-2" />
@@ -385,10 +383,10 @@ export default function ExportManager({ story }: ExportManagerProps) {
         </button>
         <button
           onClick={() => setActiveTab('social')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+          className={`min-h-[44px] px-4 py-2.5 font-medium transition-colors border-b-2 whitespace-nowrap text-left sm:text-center rounded-t-lg sm:rounded-t ${
             activeTab === 'social'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
+              ? 'text-purple-400 border-purple-400 bg-purple-500/10'
+              : 'text-gray-400 border-transparent hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <Twitter className="w-4 h-4 inline mr-2" />
@@ -396,10 +394,10 @@ export default function ExportManager({ story }: ExportManagerProps) {
         </button>
         <button
           onClick={() => setActiveTab('publishing')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+          className={`min-h-[44px] px-4 py-2.5 font-medium transition-colors border-b-2 whitespace-nowrap text-left sm:text-center rounded-t-lg sm:rounded-t ${
             activeTab === 'publishing'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
+              ? 'text-purple-400 border-purple-400 bg-purple-500/10'
+              : 'text-gray-400 border-transparent hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <Book className="w-4 h-4 inline mr-2" />
@@ -407,10 +405,10 @@ export default function ExportManager({ story }: ExportManagerProps) {
         </button>
         <button
           onClick={() => setActiveTab('analysis')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 whitespace-nowrap ${
+          className={`min-h-[44px] px-4 py-2.5 font-medium transition-colors border-b-2 whitespace-nowrap text-left sm:text-center rounded-t-lg sm:rounded-t ${
             activeTab === 'analysis'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
+              ? 'text-purple-400 border-purple-400 bg-purple-500/10'
+              : 'text-gray-400 border-transparent hover:text-white hover:bg-gray-800/50'
           }`}
         >
           <BarChart3 className="w-4 h-4 inline mr-2" />
@@ -441,8 +439,8 @@ export default function ExportManager({ story }: ExportManagerProps) {
       {/* Text Export Tab */}
       {activeTab === 'text' && (
         <>
-      {/* Stats Dashboard */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Stats Dashboard - single column on mobile */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700">
           <div className="flex items-center gap-2 mb-1">
             <BookOpen size={16} className="text-green-400" />
@@ -487,7 +485,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
       {/* Export Format Selection */}
       <div>
         <h4 className="text-sm font-medium text-gray-400 mb-2">Export Format</h4>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {EXPORT_FORMATS.map((format) => (
             <button
               key={format.id}
@@ -546,7 +544,7 @@ export default function ExportManager({ story }: ExportManagerProps) {
             )}
           </button>
         </div>
-        <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 max-h-48 overflow-y-auto">
+        <div className="p-3 bg-gray-800/50 rounded-lg border border-gray-700 max-h-48 min-h-0 overflow-y-auto">
           <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono">
             {generateExportContent(selectedFormat).slice(0, 500)}
             {generateExportContent(selectedFormat).length > 500 ? '\n\n... (truncated)' : ''}
@@ -562,11 +560,11 @@ export default function ExportManager({ story }: ExportManagerProps) {
 
       <UpgradeModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
 
-      {/* Download Button */}
+      {/* Download Button - touch-friendly */}
       <button
         onClick={handleDownload}
         disabled={isExporting}
-        className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        className="w-full min-h-[44px] py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isExporting ? (
           <>

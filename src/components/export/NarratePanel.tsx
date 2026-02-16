@@ -192,59 +192,66 @@ export default function NarratePanel({ story }: NarratePanelProps) {
     );
   }
 
+  const voiceControls = (
+    <div>
+      <label className="block text-sm font-medium text-gray-400 mb-2">Voice</label>
+      <div className="flex flex-wrap gap-2">
+        {VOICES.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setSelectedVoice(id)}
+            className={`min-h-[44px] px-4 py-2.5 rounded-lg border text-sm transition-colors ${
+              selectedVoice === id
+                ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                : 'border-gray-600 bg-gray-800/50 text-gray-300 hover:border-gray-500'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-400 mb-2">Voice</label>
-        <div className="flex flex-wrap gap-2">
-          {VOICES.map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setSelectedVoice(id)}
-              className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                selectedVoice === id
-                  ? 'border-purple-500 bg-purple-500/20 text-purple-300'
-                  : 'border-gray-600 bg-gray-800/50 text-gray-300 hover:border-gray-500'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-4 pb-24 md:pb-0">
+      {/* Voice: desktop top, mobile in sticky bottom bar */}
+      <div className="hidden md:block">
+        {voiceControls}
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-400 mb-2">Scenes</label>
-        <div className="space-y-2 max-h-64 overflow-y-auto">
+        <div className="space-y-2 max-h-[50vh] md:max-h-64 min-h-0 overflow-y-auto">
           {story.scenes.map((scene, index) => {
             const isPlaying = playingSceneIndex === index;
             return (
               <div
                 key={scene.id}
-                className="flex items-center gap-3 p-3 rounded-lg border border-gray-700 bg-gray-800/50"
+                className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border border-gray-700 bg-gray-800/50"
               >
-                <span className="text-xs text-gray-500 w-8">#{index + 1}</span>
-                <span className="flex-1 truncate text-sm text-white" title={scene.title || `Scene ${index + 1}`}>
+                <span className="text-xs text-gray-500 sm:w-8">#{index + 1}</span>
+                <span className="flex-1 truncate text-sm text-white min-w-0" title={scene.title || `Scene ${index + 1}`}>
                   {scene.title || `Scene ${index + 1}`}
                 </span>
                 <button
                   type="button"
                   onClick={() => (isPlaying ? stopCurrent() : playText(scene.content, index))}
                   disabled={tierLoading || (!isPro && !isStudio)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-colors"
+                  className="flex items-center justify-center gap-1.5 min-h-[44px] px-4 py-2.5 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm transition-colors flex-shrink-0"
                 >
                   {isPlaying ? (
                     <>
-                      <Square className="w-3.5 h-3.5" />
+                      <Square className="w-4 h-4" />
                       Stop
                     </>
                   ) : (
                     <>
                       {playingSceneIndex !== null && !isPlaying ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <Play className="w-3.5 h-3.5" />
+                        <Play className="w-4 h-4" />
                       )}
                       Narrate
                     </>
@@ -257,14 +264,19 @@ export default function NarratePanel({ story }: NarratePanelProps) {
       </div>
 
       {error && (
-        <p className="text-sm text-amber-400" role="alert">
+        <p className="text-sm text-amber-400 max-w-prose mx-auto" role="alert">
           {error}
         </p>
       )}
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 max-w-prose mx-auto">
         Powered by TTSOpenAI. Narration is a Pro/Studio feature.
       </p>
+
+      {/* Mobile: sticky voice bar at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900 border-t border-gray-700 p-4 md:hidden">
+        {voiceControls}
+      </div>
     </div>
   );
 }

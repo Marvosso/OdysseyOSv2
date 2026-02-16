@@ -24,6 +24,7 @@ import {
   Info,
   User,
   X,
+  Menu,
   TrendingUp,
   Keyboard,
   CloudUpload,
@@ -76,6 +77,7 @@ export default function DashboardLayout({
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { tier, loading: tierLoading } = useUserTier();
   const hasPulledOnLoadRef = useRef(false);
@@ -300,15 +302,28 @@ export default function DashboardLayout({
 
   return (
     <KeyboardShortcutsProvider onAction={handleShortcutAction}>
-      <div className="min-h-screen bg-gray-900 flex">
+      <div className="min-h-screen bg-gray-900 flex flex-col md:flex-row">
         {/* Global Search */}
         <GlobalSearch
           isOpen={isSearchOpen}
           onClose={() => setIsSearchOpen(false)}
         />
 
-      {/* Sidebar - fixed so nothing can cover it; full-page links so nav always works */}
-      <aside className="fixed left-0 top-0 bottom-0 z-[9999] w-64 flex flex-col bg-gray-800/95 border-r border-gray-700 pointer-events-auto">
+        {/* Mobile sidebar backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 z-[9998] md:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden
+          />
+        )}
+
+      {/* Sidebar - drawer on mobile, fixed on desktop */}
+      <aside
+        className={`fixed left-0 top-0 bottom-0 z-[9999] w-64 flex flex-col bg-gray-800/95 border-r border-gray-700 pointer-events-auto transition-transform duration-200 ease-out md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="p-6 border-b border-gray-700">
           <h1 className="text-xl font-bold text-white mb-3">OdysseyOS · latest</h1>
           {currentStoryTitle && (
@@ -408,7 +423,8 @@ export default function DashboardLayout({
                 href={item.path}
                 target="_self"
                 rel="noopener noreferrer"
-                className={`block w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                onClick={() => setSidebarOpen(false)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left min-h-[44px] ${
                   isActive
                     ? 'bg-purple-600 text-white'
                     : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
@@ -428,7 +444,7 @@ export default function DashboardLayout({
               await supabase.auth.signOut();
               router.replace('/auth');
             }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors min-h-[44px]"
           >
             <span className="font-medium">Sign Out</span>
           </button>
@@ -439,13 +455,29 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main content - offset so fixed sidebar doesn't overlap */}
-      <main className="relative z-0 flex-1 overflow-auto ml-64">
-        <div className="p-6">
+      <main className="relative z-0 flex-1 min-w-0 overflow-auto ml-0 md:ml-64">
+        <div className="px-4 py-4 md:p-6">
+          {/* Mobile: menu button */}
+          <div className="flex items-center gap-2 mb-4 md:hidden">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <span className="text-sm font-medium text-gray-400 truncate">
+              {currentStoryTitle || 'OdysseyOS'}
+            </span>
+          </div>
           {/* If you see this banner, you are on the latest deployment */}
-          <div className="mb-4 rounded-lg border-2 border-amber-500 bg-amber-950/50 px-4 py-2 text-center text-sm font-semibold text-amber-200">
+          <div className="mb-4 rounded-lg border-2 border-amber-500 bg-amber-950/50 px-4 py-2 text-center text-sm font-semibold text-amber-200 max-w-prose mx-auto">
             ✓ LATEST BUILD — No migration wizard when signed in. Sidebar shows your email. If you don’t see this, you’re on an old deployment or cache.
           </div>
-          {children}
+          <div className="max-w-prose md:max-w-none mx-auto md:mx-0">
+            {children}
+          </div>
         </div>
       </main>
 
