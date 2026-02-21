@@ -217,23 +217,23 @@ export default function StoryCanvas({
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full min-w-0">
       {/* Story Header */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-6 mb-6 border border-gray-700">
+      <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-700">
         <input
           type="text"
           value={story.title}
           onChange={handleTitleChange}
-          className="text-3xl font-bold bg-transparent border-none outline-none text-white w-full"
+          className="text-xl sm:text-3xl font-bold bg-transparent border-none outline-none text-white w-full min-w-0 break-words placeholder:text-gray-500"
           placeholder="Story Title"
         />
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-4 text-sm text-gray-400">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 sm:mt-2">
+          <div className="flex items-center gap-2 sm:gap-4 text-sm text-gray-400 flex-shrink-0">
             <span>{story.scenes.length} scenes</span>
             <span>•</span>
             <span>{story.characters.length} characters</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowWritingRoom(!showWritingRoom)}
               className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
@@ -243,7 +243,7 @@ export default function StoryCanvas({
               }`}
               title="Collaborative Writing Room"
             >
-              <Users className="w-4 h-4" />
+              <Users className="w-4 h-4 flex-shrink-0" />
               Collaborate
             </button>
             <button
@@ -255,7 +255,7 @@ export default function StoryCanvas({
               }`}
               title="Writing Sprint Timer"
             >
-              <Timer className="w-4 h-4" />
+              <Timer className="w-4 h-4 flex-shrink-0" />
               Sprint
             </button>
             <button
@@ -267,7 +267,7 @@ export default function StoryCanvas({
               }`}
               title="Consistency Checker"
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               Consistency
             </button>
           </div>
@@ -296,14 +296,14 @@ export default function StoryCanvas({
               onDragLeave={handleSceneDragLeave}
               onDrop={(e) => handleSceneDrop(e, scene.id)}
             >
-              <div className="p-4 bg-gray-800/50 border-b border-gray-700">
+              <div className="p-3 sm:p-4 bg-gray-800/50 border-b border-gray-700 min-w-0">
                 {/* Header Row */}
-                <div className="flex items-center gap-4 mb-2">
+                <div className="flex items-center gap-2 sm:gap-4 mb-2 min-w-0">
                   <div
                     draggable
                     onDragStart={(e) => handleSceneDragStart(e, scene.id)}
                     onDragEnd={handleSceneDragEnd}
-                    className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 rounded hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors"
+                    className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 rounded hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0"
                     title="Drag to reorder"
                   >
                     <GripVertical size={20} aria-hidden />
@@ -319,10 +319,10 @@ export default function StoryCanvas({
                       setStory(updated);
                       onStoryChange?.(updated);
                     }}
-                    className="flex-1 bg-transparent border-none outline-none text-lg font-semibold text-white"
+                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-base sm:text-lg font-semibold text-white break-words placeholder:text-gray-500"
                     placeholder="Scene Title"
                   />
-                  <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300 capitalize">
+                  <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300 capitalize flex-shrink-0">
                     {scene.emotion}
                   </span>
                   <button
@@ -332,7 +332,7 @@ export default function StoryCanvas({
                       setStory(updated);
                       onStoryChange?.(updated);
                     }}
-                    className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                    className="p-1 text-gray-500 hover:text-red-400 transition-colors flex-shrink-0"
                     aria-label="Delete scene"
                   >
                     <Trash2 size={16} />
@@ -410,7 +410,7 @@ export default function StoryCanvas({
                         [scene.id]: !expandedMetadata[scene.id],
                       });
                     }}
-                    className="ml-auto text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors"
+                    className="sm:ml-auto text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors w-full sm:w-auto"
                   >
                     {expandedMetadata[scene.id] ? (
                       <>
@@ -434,7 +434,7 @@ export default function StoryCanvas({
                     exit={{ opacity: 0, height: 0 }}
                     className="mt-3 pt-3 border-t border-gray-700 space-y-2"
                   >
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* POV Character */}
                       <div>
                         <label className="block text-xs text-gray-400 mb-1">POV Character</label>

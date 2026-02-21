@@ -40,7 +40,7 @@ export default function StoriesPage() {
 
   if (showSelector) {
     return (
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full max-w-7xl mx-auto px-4 overflow-x-hidden">
         <StorySelector
           currentStoryTitle={storyTitle}
           onContinue={handleContinue}
@@ -51,7 +51,7 @@ export default function StoriesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto px-4 overflow-x-hidden">
       <StoryCanvas />
     </div>
   );
