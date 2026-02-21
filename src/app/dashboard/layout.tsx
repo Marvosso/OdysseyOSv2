@@ -31,6 +31,7 @@ import {
   Check,
   CreditCard,
   Loader2,
+  PlusCircle,
 } from 'lucide-react';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import GuestManager from '@/components/session/GuestManager';
@@ -44,22 +45,42 @@ import { syncService } from '@/lib/sync/syncService';
 import { ProjectsProvider, useProjectsContext } from '@/contexts/ProjectsContext';
 
 function SwitchProjectModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
   const ctx = useProjectsContext();
   const [switching, setSwitching] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [limitError, setLimitError] = useState<string | null>(null);
   if (!ctx) return null;
-  const { projects, loading, activeProjectId, switchProject, refreshProjects } = ctx;
+  const { projects, loading, activeProjectId, switchProject, refreshProjects, createNewProject } = ctx;
   useEffect(() => {
     refreshProjects();
   }, [refreshProjects]);
   const handleSelect = async (id: string) => {
     if (id === activeProjectId) { onClose(); return; }
     setSwitching(true);
+    setLimitError(null);
     const ok = await switchProject(id);
     setSwitching(false);
     if (ok) {
       onClose();
       window.dispatchEvent(new Event('storage'));
     }
+  };
+  const handleStartNew = async () => {
+    setLimitError(null);
+    setCreating(true);
+    const result = await createNewProject('Untitled Story');
+    setCreating(false);
+    if (result.success) {
+      onClose();
+      window.dispatchEvent(new Event('storage'));
+    } else if (result.error?.code === 'PROJECT_LIMIT_REACHED') {
+      setLimitError(result.error.message);
+    }
+  };
+  const handleImport = () => {
+    onClose();
+    router.push('/dashboard/import');
   };
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={onClose} role="dialog" aria-modal="true">
@@ -72,7 +93,7 @@ function SwitchProjectModal({ onClose }: { onClose: () => void }) {
           {loading ? (
             <p className="text-gray-400 text-sm">Loading…</p>
           ) : projects.length === 0 ? (
-            <p className="text-gray-400 text-sm">No projects yet. Create one from the Stories tab.</p>
+            <p className="text-gray-400 text-sm">No projects yet. Create one below or import a story.</p>
           ) : (
             <ul className="space-y-1">
               {projects.map((p) => (
@@ -92,6 +113,31 @@ function SwitchProjectModal({ onClose }: { onClose: () => void }) {
               ))}
             </ul>
           )}
+          {limitError && (
+            <p className="mt-2 px-3 py-2 text-sm text-amber-200 bg-amber-900/30 border border-amber-600/40 rounded-lg">
+              {limitError}
+            </p>
+          )}
+        </div>
+        <div className="p-3 border-t border-gray-700 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={handleStartNew}
+            disabled={creating || switching}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors disabled:opacity-60"
+          >
+            <PlusCircle className="w-4 h-4" />
+            {creating ? 'Creating…' : 'Start new story'}
+          </button>
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={switching}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium transition-colors disabled:opacity-60"
+          >
+            <Upload className="w-4 h-4" />
+            Import story
+          </button>
         </div>
       </div>
     </div>
