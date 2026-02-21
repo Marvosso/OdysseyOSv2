@@ -64,7 +64,7 @@ export function logError(
  * Log a DB insert/update failure.
  */
 export function logDbError(
-  operation: 'insert' | 'update' | 'upsert' | 'delete',
+  operation: 'insert' | 'update' | 'upsert' | 'delete' | 'select',
   table: string,
   err: unknown,
   context: Omit<LogContext, 'operation' | 'table'> = {}
