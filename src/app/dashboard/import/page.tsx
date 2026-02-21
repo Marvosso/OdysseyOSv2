@@ -184,22 +184,23 @@ export default function ImportPage() {
           createdAt: now,
           updatedAt: now,
         };
-        const content = {
+        const contentPayload = {
           story: storyWithProjectId,
           scenes: story.scenes ?? [],
           characters: story.characters ?? [],
-        };
+        } as unknown as Record<string, unknown>;
+        const outlinePayload = outlineFromScenes as unknown as Record<string, unknown>;
         StoryStorage.loadProjectIntoStorage({
           id: project.id,
           title: project.title,
-          content,
-          outline: outlineFromScenes as unknown as Record<string, unknown>,
+          content: contentPayload,
+          outline: outlinePayload,
         });
         StoryStorage.saveOutline(outlineFromScenes);
         await updateProject(project.id, {
           title: project.title,
-          content,
-          outline: outlineFromScenes as unknown,
+          content: contentPayload,
+          outline: outlinePayload,
         });
       } else {
         // Not signed in: local-only (current behavior)
