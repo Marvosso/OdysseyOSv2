@@ -4,7 +4,7 @@
  * PATCH /api/projects/[id] - Update project (auto-save: title, content, outline, template_used)
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSuccessResponse, createErrorResponse, parseJsonBody } from '@/lib/api/response';
 import { supabase } from '@/lib/supabaseClient';
 import { getSupabaseServiceClient } from '@/lib/supabase/server';

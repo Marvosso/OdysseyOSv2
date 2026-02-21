@@ -4,7 +4,7 @@
  * POST /api/projects - Create a new project (tier limit: free = max 2)
  */
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createSuccessResponse, createErrorResponse, parseJsonBody } from '@/lib/api/response';
 import { supabase } from '@/lib/supabaseClient';
 import { getSupabaseServiceClient } from '@/lib/supabase/server';
