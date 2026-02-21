@@ -47,7 +47,10 @@ function SwitchProjectModal({ onClose }: { onClose: () => void }) {
   const ctx = useProjectsContext();
   const [switching, setSwitching] = useState(false);
   if (!ctx) return null;
-  const { projects, loading, activeProjectId, switchProject } = ctx;
+  const { projects, loading, activeProjectId, switchProject, refreshProjects } = ctx;
+  useEffect(() => {
+    refreshProjects();
+  }, [refreshProjects]);
   const handleSelect = async (id: string) => {
     if (id === activeProjectId) { onClose(); return; }
     setSwitching(true);

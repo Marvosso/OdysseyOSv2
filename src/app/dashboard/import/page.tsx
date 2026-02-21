@@ -14,8 +14,11 @@ import { ImportPipeline } from '@/lib/import/importPipeline';
 import { convertToStory } from '@/lib/import/storyConverter';
 import type { ImportResult } from '@/lib/import/importPipeline';
 import type { Story } from '@/types/story';
+import type { StoryOutline } from '@/types/outline';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import { createProject, updateProject } from '@/lib/api/projectsClient';
 import { hasPremiumAccess } from '@/lib/ai/importEnhancer';
 import AIEnhancementPanel from '@/components/import/AIEnhancementPanel';
 import { Sparkles } from 'lucide-react';
@@ -145,22 +148,69 @@ export default function ImportPage() {
     if (!importResult) return;
 
     try {
-      // Convert to Story object
       const story = convertToStory(importResult);
-      
-      // Save using StoryStorage
-      StoryStorage.saveStory(story);
-      StoryStorage.saveScenes(story.scenes);
-      StoryStorage.saveCharacters(story.characters);
-      
-      // Mark this project as selected so dashboard shows story canvas, not selector
+      const title = story.title?.trim() || 'Imported Story';
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Signed in: create a project so the imported story appears in Switch project and can be returned to
+        const result = await createProject(title);
+        if (!result.success) {
+          if (result.error?.code === 'PROJECT_LIMIT_REACHED') {
+            setError('Project limit reached. Upgrade or delete a project to save this import.');
+            return;
+          }
+          setError(result.error?.message ?? 'Failed to create project');
+          return;
+        }
+        const project = result.data;
+        const now = new Date();
+        const storyWithProjectId = { ...story, id: project.id, title: project.title };
+        const outlineFromScenes: StoryOutline = {
+          id: `outline-${project.id}`,
+          storyId: project.id,
+          chapters: (story.scenes ?? []).map((scene, i) => ({
+            id: scene.id ?? `ch-${i}`,
+            title: scene.title ?? `Chapter ${i + 1}`,
+            description: '',
+            points: [],
+            position: i + 1,
+          })),
+          storyPremise: '',
+          theme: '',
+          targetAudience: '',
+          genre: '',
+          estimatedWordCount: (story.scenes ?? []).reduce((sum, s) => sum + (s.wordCount ?? 0), 0),
+          createdAt: now,
+          updatedAt: now,
+        };
+        const content = {
+          story: storyWithProjectId,
+          scenes: story.scenes ?? [],
+          characters: story.characters ?? [],
+        };
+        StoryStorage.loadProjectIntoStorage({
+          id: project.id,
+          title: project.title,
+          content,
+          outline: outlineFromScenes,
+        });
+        StoryStorage.saveOutline(outlineFromScenes);
+        await updateProject(project.id, {
+          title: project.title,
+          content,
+          outline: outlineFromScenes,
+        });
+      } else {
+        // Not signed in: local-only (current behavior)
+        StoryStorage.saveStory(story);
+        StoryStorage.saveScenes(story.scenes);
+        StoryStorage.saveCharacters(story.characters);
+      }
+
       setEnteredProject();
       window.dispatchEvent(new Event('storage'));
-      
-      // Small delay to ensure storage is written
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Redirect to stories page (imported story is now current project; all tabs use it)
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
