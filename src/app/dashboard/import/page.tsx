@@ -197,11 +197,18 @@ export default function ImportPage() {
           outline: outlinePayload,
         });
         StoryStorage.saveOutline(outlineFromScenes);
-        await updateProject(project.id, {
+        const updateResult = await updateProject(project.id, {
           title: project.title,
           content: contentPayload,
           outline: outlinePayload,
         });
+        if (!updateResult.success) {
+          setError(
+            `Project created but cloud sync failed: ${updateResult.error.message}. Please try Save again.`
+          );
+          return;
+        }
+        window.dispatchEvent(new CustomEvent('odysseyos:refresh-projects'));
       } else {
         // Not signed in: local-only (current behavior)
         StoryStorage.saveStory(story);

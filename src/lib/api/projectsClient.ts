@@ -77,16 +77,21 @@ export async function fetchProject(id: string): Promise<ProjectFull | null> {
   return result.success ? result.data : null;
 }
 
+export type UpdateProjectResult =
+  | { success: true }
+  | { success: false; error: { code: string; message: string } };
+
 export async function updateProject(
   id: string,
   payload: { title?: string; content?: unknown; outline?: unknown; templateUsed?: string }
-): Promise<boolean> {
+): Promise<UpdateProjectResult> {
   const base = typeof window !== 'undefined' ? window.location.origin : '';
   const result = await api<unknown>(`${base}/api/projects/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: payload,
   });
-  return result.success;
+  if (result.success) return { success: true };
+  return { success: false, error: result.error };
 }
 
 export async function deleteProject(id: string): Promise<{ success: boolean; error?: { code: string; message: string } }> {

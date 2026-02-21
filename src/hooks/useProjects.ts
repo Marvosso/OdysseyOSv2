@@ -70,9 +70,12 @@ export function useProjects(): UseProjectsResult {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       refreshProjects();
     });
+    const onRefresh = () => refreshProjects();
+    window.addEventListener('odysseyos:refresh-projects', onRefresh);
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      window.removeEventListener('odysseyos:refresh-projects', onRefresh);
     };
   }, [refreshProjects]);
 
