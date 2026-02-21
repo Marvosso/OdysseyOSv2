@@ -412,7 +412,7 @@ export class StoryStorage {
     let story = content?.story;
     const scenes = content?.scenes;
     const characters = content?.characters;
-    const outline = project.outline as StoryOutline | null | undefined;
+    const outline = project.outline as unknown as StoryOutline | null | undefined;
 
     if (story) {
       story = this.normalizeStoryDates(story);

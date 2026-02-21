@@ -98,7 +98,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const body = await parseJsonBody<{ title?: string }>(request).catch(() => ({}));
+  const body = await parseJsonBody<{ title?: string }>(request).catch(
+    (): { title?: string } => ({})
+  );
   const title =
     typeof body.title === 'string' && body.title.trim() ? body.title.trim() : 'Untitled';
 
