@@ -83,7 +83,7 @@ export default function DashboardLayout({
   const hasPulledOnLoadRef = useRef(false);
 
   useEffect(() => {
-    document.title = 'OdysseyOS · latest';
+    document.title = process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS';
     return () => { document.title = 'OdysseyOS'; };
   }, []);
 
@@ -325,7 +325,7 @@ export default function DashboardLayout({
         }`}
       >
         <div className="p-6 border-b border-gray-700">
-          <h1 className="text-xl font-bold text-white mb-3">OdysseyOS · latest</h1>
+          <h1 className="text-xl font-bold text-white mb-3">{process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}</h1>
           {currentStoryTitle && (
             <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
               <div className="text-xs text-gray-400 truncate" title={currentStoryTitle}>
@@ -448,8 +448,8 @@ export default function DashboardLayout({
           >
             <span className="font-medium">Sign Out</span>
           </button>
-          <p className="text-center text-xs text-gray-500" title="Latest build">
-            OdysseyOS · latest
+          <p className="text-center text-xs text-gray-500" title={process.env.NODE_ENV === 'development' ? 'Development build' : undefined}>
+            {process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}
           </p>
         </div>
       </aside>
@@ -471,10 +471,11 @@ export default function DashboardLayout({
               {currentStoryTitle || 'OdysseyOS'}
             </span>
           </div>
-          {/* If you see this banner, you are on the latest deployment */}
-          <div className="mb-4 rounded-lg border-2 border-amber-500 bg-amber-950/50 px-4 py-2 text-center text-sm font-semibold text-amber-200 max-w-prose mx-auto">
-            ✓ LATEST BUILD — No migration wizard when signed in. Sidebar shows your email. If you don’t see this, you’re on an old deployment or cache.
-          </div>
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 rounded-lg border-2 border-amber-500 bg-amber-950/50 px-4 py-2 text-center text-sm font-semibold text-amber-200 max-w-prose mx-auto">
+              ✓ DEV — No migration wizard when signed in. Sidebar shows your email.
+            </div>
+          )}
           <div className="max-w-prose md:max-w-none mx-auto md:mx-0">
             {children}
           </div>

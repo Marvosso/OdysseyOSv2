@@ -16,10 +16,20 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
+const INSTALL_PROMPT_DISMISSED_KEY = 'installPromptDismissed';
+
 export default function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
+
+  // On mount: respect session dismissal so prompt doesn't reappear after "Later"
+  useEffect(() => {
+    const dismissed = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY) : null;
+    if (dismissed === 'true') {
+      setShowPrompt(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Check if already installed
@@ -28,6 +38,8 @@ export default function PWAInstallPrompt() {
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      const dismissed = sessionStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY);
+      if (dismissed === 'true') return;
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowPrompt(true);
     };
@@ -47,6 +59,13 @@ export default function PWAInstallPrompt() {
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
+
+  const handleDismiss = () => {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, 'true');
+    }
+    setShowPrompt(false);
+  };
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -89,8 +108,9 @@ export default function PWAInstallPrompt() {
                 </p>
               </div>
               <button
-                onClick={() => setShowPrompt(false)}
+                onClick={handleDismiss}
                 className="p-1 hover:bg-gray-700 rounded transition-colors"
+                aria-label="Dismiss"
               >
                 <X className="w-4 h-4 text-gray-400" />
               </button>
@@ -104,7 +124,7 @@ export default function PWAInstallPrompt() {
                 Install
               </button>
               <button
-                onClick={() => setShowPrompt(false)}
+                onClick={handleDismiss}
                 className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
               >
                 Later

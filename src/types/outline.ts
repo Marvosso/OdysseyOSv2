@@ -33,5 +33,11 @@ export interface OutlineTemplate {
   id: string;
   name: string;
   description: string;
+  /** One-sentence summary for template selector */
+  shortDescription: string;
+  /** Genres this structure works best for */
+  bestFor: string[];
+  /** Injected into AI system prompt to guide structural beats */
+  internalPromptModifier: string;
   chapters: Omit<Chapter, 'id'>[];
 }

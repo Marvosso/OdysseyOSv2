@@ -263,22 +263,32 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
-              <p className="text-white mb-3">Choose a structure to get started:</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 sm:p-5 bg-purple-900/20 border border-purple-500/30 rounded-xl">
+              <p className="text-white font-medium mb-4 sm:mb-5">Choose a structure to get started</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {outlineTemplates.map((template) => (
                   <motion.button
                     key={template.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
                     onClick={() => handleSelectTemplate(template.id)}
-                    className="p-4 bg-gray-800 hover:bg-purple-900/40 border border-gray-700 hover:border-purple-500/50 rounded-lg text-left transition-all"
+                    className="p-4 sm:p-5 bg-gray-800 hover:bg-purple-900/40 border border-gray-700 hover:border-purple-500/50 rounded-xl text-left transition-all min-h-[120px] flex flex-col"
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Layout className="w-5 h-5 text-purple-400" />
-                      <h3 className="font-semibold text-white">{template.name}</h3>
+                    <div className="flex items-start gap-2 mb-2">
+                      <Layout className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                      <h3 className="font-semibold text-white text-base leading-tight">{template.name}</h3>
                     </div>
-                    <p className="text-sm text-gray-400">{template.description}</p>
+                    <p className="text-sm text-gray-400 flex-1 mb-3 line-clamp-2">{template.shortDescription}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {template.bestFor.slice(0, 4).map((genre) => (
+                        <span
+                          key={genre}
+                          className="px-2 py-0.5 text-xs rounded-full bg-gray-700/80 text-gray-300"
+                        >
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
                   </motion.button>
                 ))}
               </div>

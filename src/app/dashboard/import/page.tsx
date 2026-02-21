@@ -2,11 +2,12 @@
 
 /**
  * Import Story Page
- * 
- * Allows users to import stories from .txt/.md files or paste text
+ *
+ * Allows users to import stories from .txt/.md files or paste text.
+ * Hardened for mobile/slow networks: request timeout (20s), processing guard (60s), always clear loading.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, AlertCircle, CheckCircle, Save, X, Clipboard } from 'lucide-react';
 import { ImportPipeline } from '@/lib/import/importPipeline';
@@ -20,6 +21,15 @@ import AIEnhancementPanel from '@/components/import/AIEnhancementPanel';
 import { Sparkles } from 'lucide-react';
 import { setEnteredProject } from '@/components/session/StorySelector';
 
+const REQUEST_TIMEOUT_MS = 20000;
+const PROCESSING_MAX_MS = 60000;
+
+function timeoutPromise(ms: number): Promise<never> {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('TIMEOUT')), ms);
+  });
+}
+
 export default function ImportPage() {
   const router = useRouter();
   const [isDragging, setIsDragging] = useState(false);
@@ -30,25 +40,46 @@ export default function ImportPage() {
   const [showPasteInput, setShowPasteInput] = useState(false);
   const [enableAI, setEnableAI] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
+  const processingGuardRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearProcessingGuard = useCallback(() => {
+    if (processingGuardRef.current) {
+      clearTimeout(processingGuardRef.current);
+      processingGuardRef.current = null;
+    }
+  }, []);
 
   const handleFile = useCallback(async (file: File, useAI?: boolean) => {
     setError(null);
     setIsProcessing(true);
     setIsEnhancing(false);
+    clearProcessingGuard();
+
+    processingGuardRef.current = setTimeout(() => {
+      processingGuardRef.current = null;
+      setError('Processing took too long. Please try again with a smaller file or paste.');
+      setIsProcessing(false);
+    }, PROCESSING_MAX_MS);
 
     try {
-      const result = await ImportPipeline.execute(file, undefined, useAI);
+      const result = await Promise.race([
+        ImportPipeline.execute(file, undefined, useAI),
+        timeoutPromise(REQUEST_TIMEOUT_MS),
+      ]);
+      clearProcessingGuard();
       setImportResult(result);
       if (useAI) {
         setIsEnhancing(true);
       }
     } catch (err) {
-      setError(`Failed to import file: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const isTimeout = err instanceof Error && err.message === 'TIMEOUT';
+      setError(isTimeout ? 'Request timed out. Please try again.' : `Failed to import file: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error('Import error:', err);
     } finally {
+      clearProcessingGuard();
       setIsProcessing(false);
     }
-  }, []);
+  }, [clearProcessingGuard]);
 
   const handlePaste = useCallback(async () => {
     if (!pastedText.trim()) {
@@ -58,13 +89,23 @@ export default function ImportPage() {
 
     setError(null);
     setIsProcessing(true);
+    clearProcessingGuard();
+
+    processingGuardRef.current = setTimeout(() => {
+      processingGuardRef.current = null;
+      setError('Processing took too long. Please try again with less text.');
+      setIsProcessing(false);
+    }, PROCESSING_MAX_MS);
 
     try {
-      // Create a File object from pasted text
       const blob = new Blob([pastedText], { type: 'text/plain' });
       const file = new File([blob], 'pasted-text.txt', { type: 'text/plain' });
-      
-      const result = await ImportPipeline.execute(file, undefined, enableAI);
+
+      const result = await Promise.race([
+        ImportPipeline.execute(file, undefined, enableAI),
+        timeoutPromise(REQUEST_TIMEOUT_MS),
+      ]);
+      clearProcessingGuard();
       setImportResult(result);
       if (enableAI) {
         setIsEnhancing(true);
@@ -72,12 +113,14 @@ export default function ImportPage() {
       setPastedText('');
       setShowPasteInput(false);
     } catch (err) {
-      setError(`Failed to import text: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      const isTimeout = err instanceof Error && err.message === 'TIMEOUT';
+      setError(isTimeout ? 'Request timed out. Please try again.' : `Failed to import text: ${err instanceof Error ? err.message : 'Unknown error'}`);
       console.error('Import error:', err);
     } finally {
+      clearProcessingGuard();
       setIsProcessing(false);
     }
-  }, [pastedText]);
+  }, [pastedText, enableAI, clearProcessingGuard]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
