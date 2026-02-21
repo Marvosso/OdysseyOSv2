@@ -9,6 +9,7 @@ import { getWorldElementsForScene, findWorldElementByName } from '@/lib/world/wo
 import WorldElementTooltip from '@/components/world/WorldElementTooltip';
 import { useRouter } from 'next/navigation';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import { scheduleProjectSave } from '@/lib/storage/projectSave';
 import ConsistencyPanel from '@/components/analysis/ConsistencyPanel';
 import type { ConsistencyIssue } from '@/lib/analysis/consistencyChecker';
 import SprintTimer from '@/components/writing/SprintTimer';
@@ -142,12 +143,13 @@ export default function StoryCanvas({
     }
   };
 
-  // Save story to storage whenever it changes
+  // Save story to storage whenever it changes; debounce project auto-save to API
   useEffect(() => {
     if (story && story.scenes.length > 0) {
       StoryStorage.saveStory(story);
       StoryStorage.saveScenes(story.scenes);
     }
+    scheduleProjectSave();
   }, [story]);
 
   const addScene = () => {

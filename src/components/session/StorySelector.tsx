@@ -7,6 +7,8 @@ import { BookOpen, Upload, PlusCircle, FileText, Users, Globe, PenLine } from 'l
 import { StoryStorage } from '@/lib/storage/storyStorage';
 import { supabase } from '@/lib/supabaseClient';
 import UpgradeModal from './UpgradeModal';
+import ProjectLimitModal from './ProjectLimitModal';
+import { useProjectsContext } from '@/contexts/ProjectsContext';
 
 const ENTERED_PROJECT_KEY = 'odysseyos_entered_project';
 
@@ -37,7 +39,9 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
   const router = useRouter();
   const hasStory = !!currentStoryTitle;
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showProjectLimitModal, setShowProjectLimitModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const projectsContext = useProjectsContext();
 
   const handleContinue = () => {
     setEnteredProject();
@@ -61,6 +65,29 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
       return;
     }
 
+    // Signed in: use projects API (new project row, no overwrite); tier limit enforced server-side
+    if (projectsContext) {
+      setCreating(true);
+      try {
+        const result = await projectsContext.createNewProject('Untitled Story');
+        if (!result.success) {
+          if (result.error.code === 'PROJECT_LIMIT_REACHED') {
+            setShowProjectLimitModal(true);
+          } else {
+            setShowUpgradeModal(true);
+          }
+          return;
+        }
+        setEnteredProject();
+        window.dispatchEvent(new Event('storage'));
+        onNewStory();
+      } finally {
+        setCreating(false);
+      }
+      return;
+    }
+
+    // Fallback: legacy stories/create (e.g. before projects context mounts)
     setCreating(true);
     try {
       const res = await fetch('/api/stories/create', {
@@ -159,6 +186,33 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
       </motion.div>
 
       <UpgradeModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+
+      <ProjectLimitModal
+        open={showProjectLimitModal}
+        onClose={() => setShowProjectLimitModal(false)}
+        projects={projectsContext?.projects ?? []}
+        onUpgrade={() => {
+          setShowProjectLimitModal(false);
+          setShowUpgradeModal(true);
+        }}
+        onRetry={async () => {
+          if (!projectsContext) return;
+          setCreating(true);
+          try {
+            const r = await projectsContext.createNewProject('Untitled Story');
+            if (r.success) {
+              setEnteredProject();
+              window.dispatchEvent(new Event('storage'));
+              onNewStory();
+              setShowProjectLimitModal(false);
+            }
+          } finally {
+            setCreating(false);
+          }
+        }}
+        onCancel={() => setShowProjectLimitModal(false)}
+        onProjectsChanged={() => projectsContext?.refreshProjects()}
+      />
 
       <motion.div
         initial={{ opacity: 0 }}

@@ -41,6 +41,59 @@ import { StoryStorage } from '@/lib/storage/storyStorage';
 import { cloudSync } from '@/lib/cloud/minimalCloudSync';
 import { useUserTier } from '@/hooks/useUserTier';
 import { syncService } from '@/lib/sync/syncService';
+import { ProjectsProvider, useProjectsContext } from '@/contexts/ProjectsContext';
+
+function SwitchProjectModal({ onClose }: { onClose: () => void }) {
+  const ctx = useProjectsContext();
+  const [switching, setSwitching] = useState(false);
+  if (!ctx) return null;
+  const { projects, loading, activeProjectId, switchProject } = ctx;
+  const handleSelect = async (id: string) => {
+    if (id === activeProjectId) { onClose(); return; }
+    setSwitching(true);
+    const ok = await switchProject(id);
+    setSwitching(false);
+    if (ok) {
+      onClose();
+      window.dispatchEvent(new Event('storage'));
+    }
+  };
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="bg-gray-800 rounded-lg border border-gray-700 max-w-md w-full max-h-[80vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white">Switch project</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">×</button>
+        </div>
+        <div className="p-2 overflow-y-auto flex-1">
+          {loading ? (
+            <p className="text-gray-400 text-sm">Loading…</p>
+          ) : projects.length === 0 ? (
+            <p className="text-gray-400 text-sm">No projects yet. Create one from the Stories tab.</p>
+          ) : (
+            <ul className="space-y-1">
+              {projects.map((p) => (
+                <li key={p.id}>
+                  <button
+                    onClick={() => handleSelect(p.id)}
+                    disabled={switching}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                      p.id === activeProjectId
+                        ? 'bg-purple-600 text-white'
+                        : 'text-gray-300 hover:bg-gray-700'
+                    }`}
+                  >
+                    {p.title || 'Untitled'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const navigationItems = [
   { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome' },
@@ -78,6 +131,7 @@ export default function DashboardLayout({
   const [portalLoading, setPortalLoading] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSwitchProjectModal, setShowSwitchProjectModal] = useState(false);
 
   const { tier, loading: tierLoading } = useUserTier();
   const hasPulledOnLoadRef = useRef(false);
@@ -301,6 +355,7 @@ export default function DashboardLayout({
   };
 
   return (
+    <ProjectsProvider>
     <KeyboardShortcutsProvider onAction={handleShortcutAction}>
       <div className="min-h-screen bg-gray-900 flex flex-col md:flex-row">
         {/* Global Search */}
@@ -348,9 +403,12 @@ export default function DashboardLayout({
                 )}
                 <button
                   onClick={() => {
-                    clearEnteredProject();
-                    router.push('/dashboard');
-                    window.location.reload();
+                    if (user) setShowSwitchProjectModal(true);
+                    else {
+                      clearEnteredProject();
+                      router.push('/dashboard');
+                      window.location.reload();
+                    }
                   }}
                   className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
                 >
@@ -657,7 +715,12 @@ export default function DashboardLayout({
 
       </div>
 
+      {showSwitchProjectModal && user && (
+        <SwitchProjectModal onClose={() => setShowSwitchProjectModal(false)} />
+      )}
+
       <FeedbackButton />
     </KeyboardShortcutsProvider>
+    </ProjectsProvider>
   );
 }

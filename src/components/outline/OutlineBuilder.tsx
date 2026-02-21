@@ -19,6 +19,7 @@ import {
 import type { StoryOutline, Chapter, OutlinePoint } from '@/types/outline';
 import { outlineTemplates, generateOutlineFromTemplate, getOutlineSuggestions } from '@/lib/data/outlineTemplates';
 import { StoryStorage } from '@/lib/storage/storyStorage';
+import { scheduleProjectSave } from '@/lib/storage/projectSave';
 import PlotMap from './PlotMap';
 
 interface OutlineBuilderProps {
@@ -47,12 +48,13 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
     }
   }, []);
 
-  // Auto-save outline when it changes
+  // Auto-save outline when it changes; debounce project save to API
   useEffect(() => {
     if (outline) {
       StoryStorage.saveOutline(outline);
+      scheduleProjectSave({ templateUsed: selectedTemplate ?? undefined });
     }
-  }, [outline]);
+  }, [outline, selectedTemplate]);
 
   const toggleChapter = (chapterId: string) => {
     const newExpanded = new Set(expandedChapters);

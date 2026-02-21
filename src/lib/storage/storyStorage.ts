@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   SCENES: 'odysseyos_scenes',
   SETTINGS: 'odysseyos_settings',
   GUEST_ID: 'odysseyos_guest_id',
+  ACTIVE_PROJECT_ID: 'odysseyos_active_project_id',
 };
 
 export interface SavedData {
@@ -358,5 +359,86 @@ export class StoryStorage {
   static clearGuestSession(): void {
     localStorage.removeItem(STORAGE_KEYS.GUEST_ID);
     this.clearAll();
+  }
+
+  // ============================================================================
+  // Active project (for multi-project persistence when signed in)
+  // ============================================================================
+
+  static getActiveProjectId(): string | null {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.ACTIVE_PROJECT_ID);
+    } catch {
+      return null;
+    }
+  }
+
+  static setActiveProjectId(id: string | null): void {
+    try {
+      if (id == null) localStorage.removeItem(STORAGE_KEYS.ACTIVE_PROJECT_ID);
+      else localStorage.setItem(STORAGE_KEYS.ACTIVE_PROJECT_ID, id);
+    } catch {
+      // ignore
+    }
+  }
+
+  private static normalizeStoryDates(s: Story): Story {
+    return {
+      ...s,
+      createdAt: s.createdAt instanceof Date ? s.createdAt : new Date(s.createdAt as string),
+      updatedAt: s.updatedAt instanceof Date ? s.updatedAt : new Date(s.updatedAt as string),
+      scenes: (s.scenes ?? []).map((sc) => ({
+        ...sc,
+        createdAt: sc.createdAt instanceof Date ? sc.createdAt : new Date((sc as unknown as { createdAt: string }).createdAt),
+      })),
+    };
+  }
+
+  /**
+   * Load a project payload into local storage (story, scenes, characters, outline).
+   * Used after fetching a project from API or after creating a new project.
+   */
+  static loadProjectIntoStorage(project: {
+    id: string;
+    title: string;
+    content: Record<string, unknown>;
+    outline: Record<string, unknown>;
+  }): void {
+    const content = project.content as {
+      story?: Story;
+      scenes?: Scene[];
+      characters?: Character[];
+    };
+    let story = content?.story;
+    const scenes = content?.scenes;
+    const characters = content?.characters;
+    const outline = project.outline as StoryOutline | null | undefined;
+
+    if (story) {
+      story = this.normalizeStoryDates(story);
+      this.saveStory({ ...story, id: project.id, title: project.title });
+    } else {
+      const now = new Date();
+      this.saveStory({
+        id: project.id,
+        title: project.title,
+        scenes: Array.isArray(scenes) ? scenes : [],
+        characters: Array.isArray(characters) ? characters : [],
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    if (Array.isArray(scenes)) this.saveScenes(scenes);
+    else this.saveScenes(story?.scenes ?? []);
+    if (Array.isArray(characters)) this.saveCharacters(characters);
+    else this.saveCharacters(story?.characters ?? []);
+    if (outline && typeof outline === 'object' && Array.isArray(outline.chapters)) {
+      const o = outline as StoryOutline;
+      if (o.createdAt && !(o.createdAt instanceof Date)) (o as unknown as { createdAt: Date }).createdAt = new Date(o.createdAt as unknown as string);
+      if (o.updatedAt && !(o.updatedAt instanceof Date)) (o as unknown as { updatedAt: Date }).updatedAt = new Date(o.updatedAt as unknown as string);
+      this.saveOutline(o);
+    }
+    this.setActiveProjectId(project.id);
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('storage'));
   }
 }
