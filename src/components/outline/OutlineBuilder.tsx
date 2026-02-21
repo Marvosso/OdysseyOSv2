@@ -69,6 +69,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
     if (template) {
       const storyId = story?.id ?? `story-${Date.now()}`;
       const newOutline = generateOutlineFromTemplate(template, storyId);
+      setSelectedTemplate(template.id);
       setOutline(newOutline);
       setShowTemplates(false);
       StoryStorage.saveOutline(newOutline);
@@ -92,6 +93,28 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
       chapters: [...outline.chapters, newChapter],
     });
     setExpandedChapters(new Set([...expandedChapters, newChapter.id]));
+  };
+
+  const handleDeleteChapter = (chapterId: string) => {
+    if (!outline) return;
+    if (outline.chapters.length <= 1) {
+      const confirmed = confirm(
+        'This is the only chapter. Remove it anyway? Your outline will have no chapters until you add one.'
+      );
+      if (!confirmed) return;
+    }
+    const filtered = outline.chapters.filter((c) => c.id !== chapterId);
+    const reindexed = filtered.map((ch, i) => ({ ...ch, position: i + 1 }));
+    setOutline({
+      ...outline,
+      chapters: reindexed,
+      updatedAt: new Date(),
+    });
+    setExpandedChapters((prev) => {
+      const next = new Set(prev);
+      next.delete(chapterId);
+      return next;
+    });
   };
 
   const handleAddPoint = (chapterId: string) => {
@@ -160,6 +183,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
     if (confirm('Are you sure you want to clear your outline? This cannot be undone.')) {
       StoryStorage.clearAll();
       setOutline(null);
+      setSelectedTemplate(null);
       setShowTemplates(true);
       setExpandedChapters(new Set());
     }
@@ -254,6 +278,39 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
           </button>
         </div>
       </div>
+
+      {/* Template selector: always visible on all screen sizes — dropdown when outline exists */}
+      {outline && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+          <label htmlFor="outline-structure-select" className="text-sm font-medium text-gray-300 whitespace-nowrap">
+            Structure:
+          </label>
+          <select
+            id="outline-structure-select"
+            value={selectedTemplate ?? ''}
+            onChange={(e) => {
+              const id = e.target.value;
+              if (id) handleSelectTemplate(id);
+            }}
+            className="flex-1 min-w-[200px] max-w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="">Choose structure…</option>
+            {outlineTemplates.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+          <span className="text-xs text-gray-500 hidden sm:inline">
+            {selectedTemplate ? outlineTemplates.find(t => t.id === selectedTemplate)?.shortDescription : 'Select to regenerate outline'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowTemplates(true)}
+            className="text-sm text-purple-400 hover:text-purple-300 whitespace-nowrap"
+          >
+            Show all templates
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {showTemplates && (
@@ -391,25 +448,39 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                   animate={{ opacity: 1, x: 0 }}
                   className="border border-gray-700 rounded-lg overflow-hidden bg-gray-800/30"
                 >
-                  <button
-                    onClick={() => toggleChapter(chapter.id)}
-                    className="w-full p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 flex-1">
+                  <div className="w-full p-4 flex items-center justify-between gap-2 hover:bg-gray-800/50 transition-colors">
+                    <button
+                      onClick={() => toggleChapter(chapter.id)}
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                    >
                       {expandedChapters.has(chapter.id) ? (
-                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                        <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
                       )}
-                      <div className="text-left flex-1">
+                      <div className="flex-1 min-w-0">
                         <h4 className="text-white font-medium">{chapter.title}</h4>
-                        <p className="text-sm text-gray-400">{chapter.description}</p>
+                        <p className="text-sm text-gray-400 truncate">{chapter.description}</p>
                       </div>
+                    </button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs text-gray-500">
+                        {chapter.points.length} points
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteChapter(chapter.id);
+                        }}
+                        className="p-1.5 rounded-md text-gray-400 hover:text-red-400 hover:bg-red-500/20 transition-colors"
+                        title="Delete chapter"
+                        aria-label="Delete chapter"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {chapter.points.length} points
-                    </span>
-                  </button>
+                  </div>
 
                   <AnimatePresence>
                     {expandedChapters.has(chapter.id) && (
