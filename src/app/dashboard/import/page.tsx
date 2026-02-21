@@ -193,13 +193,13 @@ export default function ImportPage() {
           id: project.id,
           title: project.title,
           content,
-          outline: outlineFromScenes,
+          outline: outlineFromScenes as unknown as Record<string, unknown>,
         });
         StoryStorage.saveOutline(outlineFromScenes);
         await updateProject(project.id, {
           title: project.title,
           content,
-          outline: outlineFromScenes,
+          outline: outlineFromScenes as unknown,
         });
       } else {
         // Not signed in: local-only (current behavior)
