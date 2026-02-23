@@ -145,6 +145,12 @@ export default function StoryCanvas({
     setChapterCount(outline?.chapters?.length ?? 0);
   }, [story.id]);
 
+  const MILESTONES = [500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
+  const totalWords = useMemo(
+    () => story.scenes.reduce((sum, s) => sum + (s.wordCount ?? computeWordCount(s.content || '')), 0),
+    [story.scenes]
+  );
+
   const [milestoneReached, setMilestoneReached] = useState<number | null>(null);
   useEffect(() => {
     const crossed = MILESTONES.filter((m) => totalWords >= m && lastMilestoneRef.current < m);
@@ -181,8 +187,6 @@ export default function StoryCanvas({
     scheduleProjectSave();
   }, [story]);
 
-  const MILESTONES = [500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
-
   const addScene = () => {
     const newScene: Scene = {
       id: `scene-${Date.now()}`,
@@ -205,11 +209,6 @@ export default function StoryCanvas({
     onStoryChange?.(updated);
     playAddSound();
   };
-
-  const totalWords = useMemo(
-    () => story.scenes.reduce((sum, s) => sum + (s.wordCount ?? computeWordCount(s.content || '')), 0),
-    [story.scenes]
-  );
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const updated = { ...story, title: e.target.value, updatedAt: new Date() };
