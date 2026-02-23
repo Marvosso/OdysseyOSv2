@@ -15,7 +15,7 @@ export default function ThemeToggle() {
   ];
 
   return (
-    <div className="flex items-center gap-1 p-1 rounded-lg bg-black/10 dark:bg-white/5 border border-gray-700/50">
+    <div className="flex items-center gap-1 p-1 rounded-lg bg-gray-200/80 dark:bg-white/5 border border-gray-300 dark:border-gray-700/50">
       {options.map(({ value, icon: Icon, label }) => (
         <motion.button
           key={value}
@@ -24,7 +24,7 @@ export default function ThemeToggle() {
           className={`relative flex items-center justify-center w-9 h-9 rounded-md transition-colors ${
             theme === value
               ? 'text-white'
-              : 'text-gray-500 hover:text-gray-300'
+              : 'text-gray-600 dark:text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
           }`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.98 }}

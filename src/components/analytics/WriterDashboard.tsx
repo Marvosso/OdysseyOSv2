@@ -174,8 +174,8 @@ export default function WriterDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Writer Dashboard</h1>
-          <p className="text-gray-400">Track your writing progress and analytics</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Writer Dashboard</h1>
+          <p className="text-gray-600 dark:text-gray-400">Track your writing progress and analytics</p>
         </div>
         <button
           onClick={handleExportReport}
@@ -193,7 +193,7 @@ export default function WriterDashboard() {
           className={`px-4 py-2 font-medium transition-colors border-b-2 ${
             activeTab === 'overview'
               ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
+              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white'
           }`}
         >
           Overview
@@ -203,7 +203,7 @@ export default function WriterDashboard() {
           className={`px-4 py-2 font-medium transition-colors border-b-2 ${
             activeTab === 'goals'
               ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
+              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white'
           }`}
         >
           Goals & Projections
@@ -213,7 +213,7 @@ export default function WriterDashboard() {
           className={`px-4 py-2 font-medium transition-colors border-b-2 ${
             activeTab === 'analytics'
               ? 'text-purple-400 border-purple-400'
-              : 'text-gray-400 border-transparent hover:text-white'
+              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white'
           }`}
         >
           Analytics
@@ -225,22 +225,22 @@ export default function WriterDashboard() {
         <div className="space-y-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
               <div className="flex items-center gap-2 mb-2">
                 <BookOpen className="w-5 h-5 text-blue-400" />
-                <span className="text-sm text-gray-400">Total Words</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Total Words</span>
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {currentStats.totalWords.toLocaleString()}
               </div>
             </div>
 
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
               <div className="flex items-center gap-2 mb-2">
                 <Target className="w-5 h-5 text-green-400" />
-                <span className="text-sm text-gray-400">Today's Goal</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Today's Goal</span>
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {dailyGoalProgress.today} / {dailyGoalProgress.goal?.target || 0}
               </div>
               <div className="text-xs text-gray-500 mt-1">
@@ -248,12 +248,12 @@ export default function WriterDashboard() {
               </div>
             </div>
 
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-5 h-5 text-purple-400" />
-                <span className="text-sm text-gray-400">Avg Daily</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Avg Daily</span>
               </div>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {dailyStats.length > 0
                   ? Math.round(
                       dailyStats.slice(-30).reduce((sum, day) => sum + day.words, 0) /
@@ -263,12 +263,12 @@ export default function WriterDashboard() {
               </div>
             </div>
 
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
               <div className="flex items-center gap-2 mb-2">
                 <Calendar className="w-5 h-5 text-orange-400" />
-                <span className="text-sm text-gray-400">Finish Date</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Finish Date</span>
               </div>
-              <div className="text-lg font-bold text-white">
+              <div className="text-lg font-bold text-gray-900 dark:text-white">
                 {new Date(projection.finishDate).toLocaleDateString()}
               </div>
               <div className="text-xs text-gray-500 mt-1">
@@ -279,29 +279,29 @@ export default function WriterDashboard() {
 
           {/* Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Words per Day</h3>
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Words per Day</h3>
               <WordsPerDayChart data={dailyStats.slice(-30)} />
             </div>
 
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Most Productive Times</h3>
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Most Productive Times</h3>
               <TimeOfDayChart data={timeOfDayStats} />
             </div>
           </div>
 
           {/* Word Frequency */}
           {commonWords.length > 0 && (
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Most Common Words</h3>
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Most Common Words</h3>
               <WordFrequencyChart data={commonWords.slice(0, 15)} />
             </div>
           )}
 
           {/* Writing Speed */}
           {writingSpeed.length > 0 && (
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Writing Speed Over Time</h3>
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Writing Speed Over Time</h3>
               <WritingSpeedChart data={writingSpeed} />
             </div>
           )}
@@ -327,8 +327,8 @@ export default function WriterDashboard() {
       {activeTab === 'analytics' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Weekly Progress</h3>
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Weekly Progress</h3>
               <WordsPerDayChart
                 data={weeklyStats.slice(-12).map((w) => ({
                   date: w.week,
@@ -340,8 +340,8 @@ export default function WriterDashboard() {
               />
             </div>
 
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">Monthly Progress</h3>
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm dark:shadow-none">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Monthly Progress</h3>
               <WordsPerDayChart
                 data={monthlyStats.map((m) => ({
                   date: m.month,

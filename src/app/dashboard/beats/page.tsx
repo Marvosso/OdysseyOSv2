@@ -63,13 +63,13 @@ export default function BeatsPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-4">
       {scenes.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 odyssey-card-gradient border border-gray-700/50 rounded-xl">
-          <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <label className="text-sm text-gray-400 flex-shrink-0">Scene:</label>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 odyssey-card-gradient border border-gray-200 dark:border-gray-700/50 rounded-xl">
+          <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+          <label className="text-sm text-gray-600 dark:text-gray-400 flex-shrink-0">Scene:</label>
           <select
             value={selectedSceneId}
             onChange={(e) => setSelectedSceneId(e.target.value)}
-            className="bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm min-w-[200px]"
+            className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm min-w-[200px]"
           >
             {scenes.map((s) => (
               <option key={s.id} value={s.id}>
@@ -80,8 +80,8 @@ export default function BeatsPage() {
           {selectedScene && (
             <div className="flex items-center gap-2 mt-2 sm:mt-0 sm:ml-auto">
               <BarChart3 className="w-4 h-4 text-orange-400 flex-shrink-0" />
-              <span className="text-xs text-gray-400">Beat timeline</span>
-              <div className="flex-1 min-w-[80px] max-w-[200px] h-2 bg-gray-700 rounded-full overflow-hidden flex">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Beat timeline</span>
+              <div className="flex-1 min-w-[80px] max-w-[200px] h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden flex">
                 {totalDuration > 0 && (
                   <motion.div
                     className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"
@@ -97,7 +97,7 @@ export default function BeatsPage() {
         </div>
       )}
       {scenes.length === 0 && (
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Create or import a story with scenes in the Stories tab, then pick a scene here to edit its beats.
         </p>
       )}

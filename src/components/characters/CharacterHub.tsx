@@ -228,14 +228,14 @@ export default function CharacterHub() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Users className="w-6 h-6 text-purple-400" />
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+          <Users className="w-6 h-6 text-purple-500 dark:text-purple-400" />
           Character Hub
         </h2>
         <button
           type="button"
           onClick={() => setPanelsCollapsed((c) => !c)}
-          className="md:hidden flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 text-sm"
+          className="md:hidden flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm"
         >
           {panelsCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
           {panelsCollapsed ? 'Show stats & prompts' : 'Hide panels'}
@@ -264,36 +264,36 @@ export default function CharacterHub() {
       </div>
 
       <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 transition-all duration-200 ${panelsCollapsed ? 'hidden md:grid' : ''}`}>
-        <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+        <div className="p-4 bg-purple-100 dark:bg-purple-900/20 border border-purple-300 dark:border-purple-500/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <Crown className="w-4 h-4 text-purple-400" />
-            <span className="text-sm text-gray-400">Protagonists</span>
+            <Crown className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">Protagonists</span>
           </div>
-          <div className="text-2xl font-bold text-white">{roleCounts.protagonist}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{roleCounts.protagonist}</div>
         </div>
 
-        <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+        <div className="p-4 bg-red-100 dark:bg-red-900/20 border border-red-300 dark:border-red-500/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="w-4 h-4 text-red-400" />
-            <span className="text-sm text-gray-400">Antagonists</span>
+            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">Antagonists</span>
           </div>
-          <div className="text-2xl font-bold text-white">{roleCounts.antagonist}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{roleCounts.antagonist}</div>
         </div>
 
-        <div className="p-4 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+        <div className="p-4 bg-blue-100 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-500/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <Shield className="w-4 h-4 text-blue-400" />
-            <span className="text-sm text-gray-400">Supporting</span>
+            <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">Supporting</span>
           </div>
-          <div className="text-2xl font-bold text-white">{roleCounts.supporting}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{roleCounts.supporting}</div>
         </div>
 
-        <div className="p-4 bg-green-900/20 border border-green-500/30 rounded-lg">
+        <div className="p-4 bg-green-100 dark:bg-green-900/20 border border-green-300 dark:border-green-500/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
-            <BookOpen className="w-4 h-4 text-green-400" />
-            <span className="text-sm text-gray-400">Mentors</span>
+            <BookOpen className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">Mentors</span>
           </div>
-          <div className="text-2xl font-bold text-white">{roleCounts.mentor}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{roleCounts.mentor}</div>
         </div>
       </div>
 
@@ -304,28 +304,28 @@ export default function CharacterHub() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search characters..."
-          className="w-full bg-gray-800 text-white rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-transparent rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
       </div>
 
       {/* Detected from story - collapsible on mobile */}
       {detectedFromStory.length > 0 && !panelsCollapsed && (
-        <div className="p-4 bg-gray-800/60 border border-purple-500/30 rounded-lg">
-          <h3 className="text-sm font-semibold text-purple-300 flex items-center gap-2 mb-3">
+        <div className="p-4 bg-purple-50 dark:bg-gray-800/60 border border-purple-300 dark:border-purple-500/30 rounded-lg">
+          <h3 className="text-sm font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4" />
             Detected from your story
           </h3>
-          <p className="text-xs text-gray-400 mb-3">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
             Names found in your scenes that aren’t in your character list. Confirm to add and edit details.
           </p>
           <div className="flex flex-wrap gap-2">
             {detectedFromStory.map((d) => (
               <div
                 key={d.name}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg group"
+                className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg group"
               >
-                <span className="font-medium text-white">{d.name}</span>
-                <span className="text-xs text-gray-500">
+                <span className="font-medium text-gray-900 dark:text-white">{d.name}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-500">
                   {d.occurrences}× {d.confidence != null ? `· ${Math.round(d.confidence * 100)}%` : ''}
                 </span>
                 <div className="flex items-center gap-1 ml-1">
@@ -338,7 +338,7 @@ export default function CharacterHub() {
                   </button>
                   <button
                     onClick={() => handleDismissDetected(d.name)}
-                    className="p-1.5 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                    className="p-1.5 rounded text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     title="Dismiss (not a character)"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -356,7 +356,7 @@ export default function CharacterHub() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="p-6 bg-gray-800/80 backdrop-blur-xl border border-gray-700 rounded-lg"
+            className="p-6 bg-white dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg dark:shadow-none"
           >
             <CharacterForm
               key={selectedCharacter?.id ?? 'new'}
@@ -383,9 +383,9 @@ export default function CharacterHub() {
       </AnimatePresence>
 
       {filteredCharacters.length === 0 ? (
-        <div className="p-12 bg-gray-800/50 rounded-lg text-center">
-          <Users className="w-12 h-12 mx-auto text-gray-600 mb-3" />
-          <p className="text-gray-400">Create characters to track their arcs</p>
+        <div className="p-12 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center border border-gray-200 dark:border-transparent">
+          <Users className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-600 mb-3" />
+          <p className="text-gray-600 dark:text-gray-400">Create characters to track their arcs</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
