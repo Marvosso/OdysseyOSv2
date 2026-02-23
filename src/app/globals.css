@@ -2,20 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========== Design tokens: Light ========== */
+/* ========== Design tokens: Light (Cinematic Storytelling) ========== */
 :root,
 [data-theme="light"] {
-  --foreground-rgb: 30, 41, 59;
-  --background-rgb: 248, 250, 252;
-  --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 241, 245, 249;
+  /* Cinematic gradient: #f7f6fb → #eceaf6 */
+  --foreground-rgb: 30, 41, 55;
+  --background-rgb: 247, 246, 251;
+  --background-start-rgb: 247, 246, 251;
+  --background-end-rgb: 236, 234, 246;
   --card-bg: 255, 255, 255;
-  --card-border: 226, 232, 240;
-  --header-gradient-from: 241, 245, 249;
-  --header-gradient-to: 226, 232, 240;
-  --accent-primary: 124, 58, 237;
-  --accent-primary-hover: 109, 40, 217;
-  --accent-glow: 167, 139, 250;
+  --card-border: 229, 225, 218;
+  --header-gradient-from: 252, 251, 249;
+  --header-gradient-to: 245, 242, 236;
+  --accent-primary: 79, 70, 229;
+  --accent-primary-hover: 67, 56, 202;
+  --accent-glow: 99, 102, 241;
   --tab-stories: 99, 102, 241;
   --tab-characters: 236, 72, 153;
   --tab-outline: 34, 197, 94;
@@ -25,32 +26,35 @@
   --tab-analytics: 14, 165, 233;
   --tab-export: 20, 184, 166;
   --tab-publish: 234, 179, 8;
-  --editor-bg: 248, 250, 252;
-  --editor-text: 30, 41, 59;
+  --editor-bg: 255, 255, 255;
+  --editor-text: 30, 41, 55;
   --editor-placeholder: 148, 163, 184;
-  --scrollbar-track: 226, 232, 240;
-  --scrollbar-thumb: 148, 163, 184;
-  --scrollbar-thumb-hover: 100, 116, 139;
+  --scrollbar-track: 245, 242, 236;
+  --scrollbar-thumb: 203, 198, 188;
+  --scrollbar-thumb-hover: 180, 174, 163;
   --font-editor: "Source Serif 4", Georgia, "Times New Roman", serif;
   --font-ui: "DM Sans", system-ui, -apple-system, sans-serif;
   --leading-editor: 1.75;
   --leading-ui: 1.5;
-  --texture-opacity: 0.03;
+  --texture-opacity: 0.025;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-card-hover: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
 }
 
-/* ========== Design tokens: Dark ========== */
+/* ========== Design tokens: Dark (Cinematic) ========== */
 [data-theme="dark"] {
-  --foreground-rgb: 248, 250, 252;
-  --background-rgb: 15, 23, 42;
-  --background-start-rgb: 15, 23, 42;
-  --background-end-rgb: 30, 41, 59;
-  --card-bg: 30, 41, 59;
-  --card-border: 51, 65, 85;
-  --header-gradient-from: 30, 41, 59;
-  --header-gradient-to: 51, 65, 85;
+  /* Deep atmospheric gradient: #0f0f14 → #181826 */
+  --foreground-rgb: 229, 231, 235; /* gray-200 */
+  --background-rgb: 15, 15, 20;
+  --background-start-rgb: 15, 15, 20;
+  --background-end-rgb: 24, 24, 38;
+  --card-bg: 26, 26, 36; /* #1a1a24 */
+  --card-border: 255, 255, 255; /* white/5 via opacity in Tailwind */
+  --header-gradient-from: 26, 26, 36;
+  --header-gradient-to: 30, 30, 42;
   --accent-primary: 167, 139, 250;
   --accent-primary-hover: 196, 181, 253;
-  --accent-glow: 124, 58, 237;
+  --accent-glow: 109, 40, 217;
   --tab-stories: 129, 140, 248;
   --tab-characters: 244, 114, 182;
   --tab-outline: 74, 222, 128;
@@ -60,32 +64,32 @@
   --tab-analytics: 56, 189, 248;
   --tab-export: 45, 212, 191;
   --tab-publish: 250, 204, 21;
-  --editor-bg: 15, 23, 42;
-  --editor-text: 226, 232, 240;
-  --editor-placeholder: 100, 116, 139;
-  --scrollbar-track: 30, 41, 59;
-  --scrollbar-thumb: 71, 85, 105;
-  --scrollbar-thumb-hover: 100, 116, 139;
-  --texture-opacity: 0.06;
+  --editor-bg: 30, 30, 42; /* #1e1e2a */
+  --editor-text: 229, 231, 235; /* gray-200 */
+  --editor-placeholder: 156, 163, 175; /* gray-400 */
+  --scrollbar-track: 24, 24, 38;
+  --scrollbar-thumb: 55, 65, 81;
+  --scrollbar-thumb-hover: 75, 85, 99;
+  --texture-opacity: 0.04;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --foreground-rgb: 248, 250, 252;
-    --background-rgb: 15, 23, 42;
-    --background-start-rgb: 15, 23, 42;
-    --background-end-rgb: 30, 41, 59;
-    --card-bg: 30, 41, 59;
-    --card-border: 51, 65, 85;
-    --header-gradient-from: 30, 41, 59;
-    --header-gradient-to: 51, 65, 85;
+    --foreground-rgb: 229, 231, 235;
+    --background-rgb: 15, 15, 20;
+    --background-start-rgb: 15, 15, 20;
+    --background-end-rgb: 24, 24, 38;
+    --card-bg: 26, 26, 36;
+    --card-border: 255, 255, 255;
+    --header-gradient-from: 26, 26, 36;
+    --header-gradient-to: 30, 30, 42;
     --accent-primary: 167, 139, 250;
     --accent-primary-hover: 196, 181, 253;
-    --editor-bg: 15, 23, 42;
-    --editor-text: 226, 232, 240;
-    --scrollbar-track: 30, 41, 59;
-    --scrollbar-thumb: 71, 85, 105;
-    --texture-opacity: 0.06;
+    --editor-bg: 30, 30, 42;
+    --editor-text: 229, 231, 235;
+    --scrollbar-track: 24, 24, 38;
+    --scrollbar-thumb: 55, 65, 81;
+    --texture-opacity: 0.04;
   }
 }
 
@@ -101,11 +105,34 @@ body {
   line-height: var(--leading-ui);
   min-height: 100vh;
 }
+[data-theme="light"] body {
+  background: linear-gradient(to bottom right, #f7f6fb 0%, #eceaf6 100%);
+}
+[data-theme="light"] .odyssey-dashboard-bg {
+  background: linear-gradient(to bottom right, #f7f6fb 0%, #eceaf6 100%) !important;
+}
+[data-theme="dark"] body {
+  background: linear-gradient(to bottom right, #0f0f14 0%, #181826 100%);
+}
+[data-theme="dark"] .odyssey-dashboard-bg {
+  background: linear-gradient(to bottom right, #0f0f14 0%, #181826 100%) !important;
+}
 
 /* ========== Typography ========== */
 .font-editor {
   font-family: var(--font-editor);
   line-height: var(--leading-editor);
+}
+/* Cinematic storytelling: serif, relaxed, wide tracking, gray-800 */
+.odyssey-cinematic-type {
+  font-family: var(--font-editor);
+  font-size: 1.125rem;
+  line-height: 1.625;
+  letter-spacing: 0.025em;
+  color: rgb(31 41 55); /* gray-800 */
+}
+[data-theme="dark"] .odyssey-cinematic-type {
+  color: rgb(229 231 235); /* gray-200 */
 }
 
 /* ========== Editor area: serif + subtle texture ========== */
@@ -124,7 +151,7 @@ body {
   pointer-events: none;
 }
 
-/* ========== Soft gradient headers ========== */
+/* ========== Soft gradient headers (dark) / white card (light) ========== */
 .odyssey-header-gradient {
   background: linear-gradient(
     135deg,
@@ -132,8 +159,16 @@ body {
     rgb(var(--header-gradient-to)) 100%
   );
 }
+[data-theme="light"] .odyssey-header-gradient {
+  background: rgb(var(--card-bg));
+  box-shadow: var(--shadow-card);
+}
+[data-theme="light"] .odyssey-card-gradient {
+  background: rgb(var(--card-bg));
+  box-shadow: var(--shadow-card);
+}
 
-/* ========== Story card gradient ========== */
+/* ========== Story card gradient (dark) / literary card (light) ========== */
 .odyssey-card-gradient {
   background: linear-gradient(
     135deg,
@@ -141,6 +176,50 @@ body {
     rgb(var(--header-gradient-to)) 100%
   );
   border: 1px solid rgb(var(--card-border));
+}
+
+/* ========== Literary card: white, rounded, subtle shadow (light mode) ========== */
+[data-theme="light"] .odyssey-card,
+.odyssey-card-light {
+  background: rgb(var(--card-bg));
+  border-radius: 1rem;
+  border: 1px solid rgb(var(--card-border));
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+[data-theme="light"] .odyssey-card:hover,
+.odyssey-card-light:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+[data-theme="dark"] .odyssey-card {
+  background: rgb(var(--card-bg));
+  border-radius: 1rem;
+  border: 1px solid rgb(var(--card-border));
+}
+
+/* ========== Editor "page" container: cinematic manuscript focus ========== */
+.odyssey-editor-page {
+  max-width: 48rem; /* max-w-3xl */
+  margin-left: auto;
+  margin-right: auto;
+  padding: 3rem 2.5rem; /* px-10 py-12 */
+}
+@media (min-width: 768px) {
+  .odyssey-editor-page {
+    padding: 3rem 2.5rem;
+  }
+}
+/* ========== Cinematic navigation tabs (light) ========== */
+[data-theme="light"] .odyssey-tab-active {
+  color: rgb(126 34 206); /* purple-700 */
+  border-bottom-width: 2px;
+  border-bottom-color: rgb(147 51 234); /* purple-600 */
+}
+[data-theme="light"] .odyssey-tab-inactive {
+  color: rgb(107 114 128); /* gray-500 */
+}
+[data-theme="light"] .odyssey-tab-inactive:hover {
+  color: rgb(55 65 81); /* gray-700 */
 }
 
 /* ========== Scrollbars ========== */

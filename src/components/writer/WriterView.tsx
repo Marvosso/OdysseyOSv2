@@ -111,14 +111,14 @@ export default function WriterView() {
   const worldElements = (story as { worldElements?: { name: string }[] })?.worldElements ?? [];
 
   return (
-    <div className="flex flex-col h-screen bg-[rgb(var(--editor-bg))] overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden bg-[rgb(var(--background-rgb))]">
       {/* Top bar: Back, title, progress, word count, nav, panels toggle */}
-      <header className="flex-shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 border-b border-gray-300 dark:border-gray-600 bg-[rgb(var(--card-bg))]">
+      <header className="flex-shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#1a1a24] shadow-sm">
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={goBack}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors duration-150"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden sm:inline text-sm font-medium">Stories</span>
@@ -127,10 +127,10 @@ export default function WriterView() {
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="flex-1 min-w-0 max-w-md px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-transparent text-gray-900 dark:text-white font-semibold text-sm sm:text-base placeholder:text-gray-500"
+            className="flex-1 min-w-0 max-w-md px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent text-gray-800 dark:text-gray-200 font-semibold text-sm sm:text-base placeholder:text-gray-400"
             placeholder="Chapter title"
           />
-          <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 tabular-nums">
+          <span className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 px-2 py-1 rounded bg-gray-100 dark:bg-white/10 tabular-nums">
             <FileText className="w-3.5 h-3.5" />
             {wordCount.toLocaleString()} words
           </span>
@@ -177,24 +177,27 @@ export default function WriterView() {
       </header>
 
       <div className="flex flex-1 min-h-0">
-        {/* Main editor – full width when panel closed */}
-        <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          <div className="relative flex-1 p-4 overflow-auto">
-            <div className="absolute inset-4 odyssey-editor-texture rounded-lg pointer-events-none" aria-hidden />
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="odyssey-editor relative w-full h-full min-h-[300px] rounded-lg p-4 border border-gray-300 dark:border-gray-600 focus:border-purple-500 outline-none resize-none text-base"
-              placeholder="Write your chapter here…"
-              spellCheck
-            />
+        {/* Main editor – page feel: centered column, generous padding */}
+        <main className="flex-1 min-w-0 overflow-auto">
+          <div className="odyssey-editor-page min-h-full">
+            <div className="relative rounded-2xl bg-white dark:bg-[#1e1e2a] shadow-xl dark:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.15)] border border-gray-100 dark:border-white/5 overflow-hidden min-h-[320px] focus-within:shadow-2xl dark:focus-within:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.2)] transition-shadow duration-300">
+              <div className="absolute inset-0 odyssey-editor-texture pointer-events-none" aria-hidden />
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="odyssey-editor relative w-full min-h-[320px] px-10 py-12 rounded-2xl border-0 bg-transparent focus:ring-0 outline-none resize-none font-serif text-lg leading-relaxed tracking-wide text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-400"
+                style={{ lineHeight: '1.75' }}
+                placeholder="Write your chapter here…"
+                spellCheck
+              />
+            </div>
           </div>
         </main>
 
         {/* Right side panels – desktop: always visible; mobile: slide-in overlay */}
-        <aside className="hidden md:flex flex-col flex-shrink-0 w-[280px] border-l border-gray-300 dark:border-gray-600 bg-[rgb(var(--card-bg))] overflow-hidden">
-              <div className="p-2 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Reference</span>
+        <aside className="hidden md:flex flex-col flex-shrink-0 w-[280px] border-l border-gray-300 dark:border-white/10 bg-[rgb(var(--card-bg))] dark:bg-[#1a1a24] overflow-hidden">
+              <div className="p-2 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Reference</span>
               </div>
               <div className="flex-1 overflow-y-auto p-2 space-y-2">
                 <PanelSection
@@ -206,7 +209,7 @@ export default function WriterView() {
                   {characters.length === 0 ? (
                     <p className="text-xs text-gray-500 dark:text-gray-400">No characters yet.</p>
                   ) : (
-                    <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-400">
                       {characters.slice(0, 20).map((c) => (
                         <li key={c.id} className="truncate">{c.name}</li>
                       ))}
@@ -225,7 +228,7 @@ export default function WriterView() {
                   {worldElements.length === 0 ? (
                     <p className="text-xs text-gray-500 dark:text-gray-400">No world elements yet.</p>
                   ) : (
-                    <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                    <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-400">
                       {(Array.isArray(worldElements) ? worldElements : []).slice(0, 15).map((el: { name?: string; id?: string }, i: number) => (
                         <li key={el.id ?? i} className="truncate">{el.name ?? '—'}</li>
                       ))}
@@ -259,11 +262,11 @@ export default function WriterView() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="absolute right-0 top-0 bottom-0 w-[280px] bg-[rgb(var(--card-bg))] border-l border-gray-300 dark:border-gray-600 shadow-xl flex flex-col"
+              className="absolute right-0 top-0 bottom-0 w-[280px] bg-[rgb(var(--card-bg))] dark:bg-[#1a1a24] border-l border-gray-300 dark:border-white/10 shadow-xl flex flex-col"
             >
-              <div className="p-3 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
-                <span className="font-medium text-gray-900 dark:text-white">Reference</span>
-                <button type="button" onClick={() => setRightPanelOpen(false)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+              <div className="p-3 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+                <span className="font-medium text-gray-900 dark:text-gray-200">Reference</span>
+                <button type="button" onClick={() => setRightPanelOpen(false)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -345,11 +348,11 @@ function PanelSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+    <div className="rounded-lg border border-gray-200 dark:border-white/10 overflow-hidden">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
       >
         <Icon className="w-4 h-4 flex-shrink-0" />
         {label}

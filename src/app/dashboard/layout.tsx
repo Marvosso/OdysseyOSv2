@@ -411,7 +411,7 @@ export default function DashboardLayout({
     <ProjectsProvider>
     <WritingSessionProvider>
     <KeyboardShortcutsProvider onAction={handleShortcutAction}>
-      <div className="min-h-screen flex flex-col md:flex-row" style={{ background: 'linear-gradient(180deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%)' }}>
+      <div className="odyssey-dashboard-bg min-h-screen flex flex-col md:flex-row" style={{ background: 'linear-gradient(180deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%)' }}>
         {/* Global Search */}
         <GlobalSearch
           isOpen={isSearchOpen}

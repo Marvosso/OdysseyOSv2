@@ -239,12 +239,12 @@ function FeatureModal({ feature, isOpen, onClose }: FeatureModalProps) {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200/80 dark:border-gray-700 rounded-2xl shadow-card-md dark:shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               {/* Header */}
               <div className="flex items-start sm:items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 gap-4">
                 <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                  <div className="p-2 sm:p-3 bg-purple-100 dark:bg-purple-600/20 rounded-lg flex-shrink-0">
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
+                  <div className="p-2 sm:p-3 bg-indigo-100 dark:bg-indigo-600/20 rounded-lg flex-shrink-0">
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{feature.label}</h2>
@@ -270,7 +270,7 @@ function FeatureModal({ feature, isOpen, onClose }: FeatureModalProps) {
                     <ul className="space-y-2">
                       {feature.features.map((item, index) => (
                         <li key={index} className="flex items-start gap-3 text-gray-700 dark:text-gray-300">
-                          <div className="w-1.5 h-1.5 rounded-full bg-purple-500 dark:bg-purple-400 mt-2 flex-shrink-0" />
+                          <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 mt-2 flex-shrink-0" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -282,7 +282,7 @@ function FeatureModal({ feature, isOpen, onClose }: FeatureModalProps) {
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleNavigate}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors duration-200 font-medium shadow-sm"
                   >
                     <span>Go to {feature.label}</span>
                     <ExternalLink className="w-4 h-4" />
@@ -316,8 +316,8 @@ export default function FeatureTour() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-3 bg-purple-100 dark:bg-purple-600/20 rounded-lg">
-          <Info className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+        <div className="p-3 bg-indigo-100 dark:bg-indigo-600/20 rounded-lg">
+          <Info className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
         </div>
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Feature Tour</h1>
@@ -343,16 +343,16 @@ export default function FeatureTour() {
               {/* Feature Card */}
               <motion.button
                 onClick={() => handleFeatureClick(feature)}
-                className="w-full text-left p-6 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-purple-500/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-200 group shadow-sm dark:shadow-none"
+                className="w-full text-left p-6 bg-white dark:bg-gray-800/50 border border-gray-200/80 dark:border-gray-700 rounded-2xl hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:bg-gray-50/80 dark:hover:bg-gray-800 transition-all duration-200 group shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-none"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-purple-100 dark:bg-purple-600/20 rounded-lg group-hover:bg-purple-200 dark:group-hover:bg-purple-600/30 transition-colors">
-                    <Icon className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-600/20 rounded-lg group-hover:bg-indigo-200 dark:group-hover:bg-indigo-600/30 transition-colors">
+                    <Icon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{feature.label}</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{feature.label}</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{feature.shortDescription}</p>
                   </div>
                 </div>
@@ -371,7 +371,7 @@ export default function FeatureTour() {
                       {feature.shortDescription}
                     </p>
                     <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium">Click for details →</p>
+                      <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Click for details →</p>
                     </div>
                   </motion.div>
                 )}
@@ -382,15 +382,15 @@ export default function FeatureTour() {
       </div>
 
       {/* Info Section */}
-      <div className="mt-8 p-6 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm dark:shadow-none">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Getting Started</h2>
+      <div className="mt-8 p-6 bg-white dark:bg-gray-800/50 border border-gray-200/80 dark:border-gray-700 rounded-2xl shadow-card dark:shadow-none">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-3">Getting Started</h2>
         <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
           OdysseyOS is a comprehensive writing platform designed to help you create, organize, and publish your stories. 
           Start by importing an existing story or create a new one in the Stories tab. Use the sidebar to navigate between 
           different features and explore how they can enhance your writing workflow.
         </p>
         <div className="flex flex-wrap gap-2">
-          <span className="px-3 py-1 bg-purple-100 dark:bg-purple-600/20 text-purple-700 dark:text-purple-300 rounded-full text-sm">
+          <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-300 rounded-full text-sm">
             Tip: Hover over any feature for a quick preview
           </span>
           <span className="px-3 py-1 bg-blue-100 dark:bg-blue-600/20 text-blue-700 dark:text-blue-300 rounded-full text-sm">

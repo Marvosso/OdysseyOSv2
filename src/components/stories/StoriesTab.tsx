@@ -152,11 +152,11 @@ export default function StoriesTab() {
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
       {/* Story title – read-only display, editable on blur via hidden input or we show an editable heading */}
-      <div className="odyssey-header-gradient rounded-xl p-4 sm:p-6 border border-gray-700/50 dark:border-gray-600/50">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate">
+      <div className="odyssey-header-gradient rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-white/5 shadow-sm dark:shadow-none">
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-200 truncate tracking-wide">
           {storyTitle}
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
           {localScenes.length} chapter{localScenes.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -164,11 +164,11 @@ export default function StoriesTab() {
       {/* Chapter list – read-only preview, no inline textboxes */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Chapters</h2>
+          <h2 className="font-serif text-lg font-semibold text-gray-800 dark:text-gray-200 tracking-wide leading-relaxed">Chapters</h2>
           <button
             type="button"
             onClick={addChapter}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors duration-200 shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Add chapter
@@ -187,9 +187,9 @@ export default function StoriesTab() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className={`odyssey-card-gradient rounded-xl border overflow-hidden ${
-                    dragOverId === scene.id ? 'ring-2 ring-indigo-500' : ''
-                  } ${draggedId === scene.id ? 'opacity-60' : ''} border-gray-700/50 dark:border-gray-600/50`}
+                  className={`odyssey-card-gradient bg-white dark:bg-[#1a1a24] rounded-xl border overflow-hidden shadow-sm hover:shadow-lg dark:hover:shadow-[0_0_30px_rgba(124,58,237,0.2)] hover:-translate-y-1 transition-all duration-300 ${
+                    dragOverId === scene.id ? 'ring-2 ring-purple-500' : ''
+                  } ${draggedId === scene.id ? 'opacity-60' : ''} border-gray-100 dark:border-white/5 dark:hover:border-purple-600/30 dark:shadow-none`}
                   onDragOver={(e) => {
                     e.preventDefault();
                     if (draggedId && draggedId !== scene.id) setDragOverId(scene.id);
@@ -197,8 +197,10 @@ export default function StoriesTab() {
                   onDragLeave={() => setDragOverId(null)}
                   onDrop={() => draggedId && reorder(draggedId, scene.id)}
                 >
+                  {/* Purple gradient accent line (light) / subtle top edge (dark) */}
+                  <div className="h-1 bg-gradient-to-r from-purple-500 to-purple-300 dark:from-purple-600/50 dark:to-purple-500/30 rounded-t-xl" aria-hidden />
                   <div
-                    className="flex items-stretch gap-2 sm:gap-4 p-4 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                    className="flex items-stretch gap-2 sm:gap-4 p-4 cursor-pointer hover:bg-gray-50/80 dark:hover:bg-white/[0.03] transition-colors duration-150"
                     onClick={() => goToWriter(scene.id)}
                   >
                     <div
@@ -212,17 +214,17 @@ export default function StoriesTab() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-900 dark:text-white truncate">
+                        <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">
                           {scene.title?.trim() || 'Untitled chapter'}
                         </span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 capitalize">
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400 capitalize">
                           {statusLabel}
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
                           {words.toLocaleString()} words
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
                         {previewText(scene.content || '', PREVIEW_LENGTH)}
                       </p>
                     </div>
@@ -250,12 +252,12 @@ export default function StoriesTab() {
         </ul>
 
         {localScenes.length === 0 && (
-          <div className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 p-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">No chapters yet.</p>
+          <div className="rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 p-8 text-center bg-white/50 dark:bg-[#1a1a24]/50">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">No chapters yet.</p>
             <button
               type="button"
               onClick={addChapter}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors duration-200 shadow-sm"
             >
               <Plus className="w-4 h-4" />
               Add first chapter

@@ -186,34 +186,34 @@ export default function WriterDashboard() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-700 pb-2">
+      {/* Tabs – cinematic: active purple-700/600, inactive gray-500 hover gray-700 */}
+      <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+          className={`px-4 py-2 font-medium transition-colors duration-200 border-b-2 -mb-0.5 ${
             activeTab === 'overview'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white'
+              ? 'text-purple-700 dark:text-purple-400 border-purple-600 dark:border-purple-500'
+              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
           Overview
         </button>
         <button
           onClick={() => setActiveTab('goals')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+          className={`px-4 py-2 font-medium transition-colors duration-200 border-b-2 -mb-0.5 ${
             activeTab === 'goals'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white'
+              ? 'text-purple-700 dark:text-purple-400 border-purple-600 dark:border-purple-500'
+              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
           Goals & Projections
         </button>
         <button
           onClick={() => setActiveTab('analytics')}
-          className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+          className={`px-4 py-2 font-medium transition-colors duration-200 border-b-2 -mb-0.5 ${
             activeTab === 'analytics'
-              ? 'text-purple-400 border-purple-400'
-              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white'
+              ? 'text-purple-700 dark:text-purple-400 border-purple-600 dark:border-purple-500'
+              : 'text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
           Analytics

@@ -130,7 +130,7 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
         animate={{ opacity: 1, y: 0 }}
         className="text-center"
       >
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2 break-words">Choose your project</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-2 break-words">Choose your project</h1>
         <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base break-words">
           Work on a saved story, import one, or start fresh. All tabs use this project.
         </p>
@@ -165,17 +165,17 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
         <motion.button
           type="button"
           onClick={handleImport}
-          className="odyssey-card-gradient w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 rounded-xl text-left group min-w-0 border border-gray-300 dark:border-gray-600"
-          whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.15)' }}
+          className="odyssey-card-gradient w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 rounded-2xl text-left group min-w-0 border border-gray-200/80 dark:border-gray-600 shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-none transition-shadow duration-200"
+          whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="p-3 bg-gray-700/50 dark:bg-gray-600/50 rounded-lg w-fit sm:w-auto">
-            <Upload className="w-6 h-6 text-gray-300" />
+          <div className="p-3 bg-ivory-200/80 dark:bg-gray-600/50 rounded-xl w-fit sm:w-auto">
+            <Upload className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="font-semibold text-white break-words">Import story</div>
-            <div className="text-sm text-gray-400 break-words overflow-hidden text-ellipsis line-clamp-2 mt-0.5">Bring in a .txt, .md, or pasted text as your current project</div>
+            <div className="font-semibold text-gray-800 dark:text-white break-words">Import story</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 break-words overflow-hidden text-ellipsis line-clamp-2 mt-0.5">Bring in a .txt, .md, or pasted text as your current project</div>
           </div>
         </motion.button>
 
@@ -183,16 +183,16 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
           type="button"
           onClick={handleNewStory}
           disabled={creating}
-          className="odyssey-card-gradient w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 rounded-xl text-left min-w-0 border border-gray-300 dark:border-gray-600 disabled:opacity-60 disabled:cursor-not-allowed"
-          whileHover={!creating ? { scale: 1.02, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.15)' } : undefined}
+          className="odyssey-card-gradient w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 rounded-2xl text-left min-w-0 border border-gray-200/80 dark:border-gray-600 shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-none transition-shadow duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+          whileHover={!creating ? { scale: 1.01 } : undefined}
           whileTap={!creating ? { scale: 0.99 } : undefined}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="p-3 bg-gray-200/80 dark:bg-gray-600/50 rounded-lg w-fit sm:w-auto">
+          <div className="p-3 bg-ivory-200/80 dark:bg-gray-600/50 rounded-xl w-fit sm:w-auto">
             <PlusCircle className="w-6 h-6 text-gray-600 dark:text-gray-300" />
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="font-semibold text-gray-900 dark:text-white break-words">{creating ? 'Creating…' : 'Start new story'}</div>
+            <div className="font-semibold text-gray-800 dark:text-white break-words">{creating ? 'Creating…' : 'Start new story'}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400 break-words overflow-hidden text-ellipsis line-clamp-2 mt-0.5">Create a blank project and build outline, characters, and world first</div>
           </div>
         </motion.button>
@@ -231,7 +231,7 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="p-4 bg-white/80 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg"
+        className="p-5 bg-white dark:bg-gray-800/50 border border-gray-200/80 dark:border-gray-700 rounded-2xl shadow-card dark:shadow-none"
       >
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Efficient flow:</p>
         <ul className="flex flex-wrap gap-3 text-sm text-gray-700 dark:text-gray-300">
