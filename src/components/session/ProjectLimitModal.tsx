@@ -78,7 +78,7 @@ export default function ProjectLimitModal({
       aria-labelledby="project-limit-modal-title"
     >
       <div
-        className="bg-gray-800 rounded-lg border border-gray-700 max-w-md w-full shadow-xl"
+        className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-w-md w-full shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
@@ -87,20 +87,20 @@ export default function ProjectLimitModal({
               <div className="flex items-center justify-between mb-4">
                 <h2
                   id="project-limit-modal-title"
-                  className="text-xl font-bold text-white flex items-center gap-2"
+                  className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"
                 >
                   <Sparkles className="w-5 h-5 text-amber-400" />
                   Project Limit Reached
                 </h2>
                 <button
                   onClick={onCancel}
-                  className="text-gray-400 hover:text-white transition-colors p-1"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-1"
                   aria-label="Close"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-gray-300 mb-6">
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
                 Free users can save up to 2 projects. To save this project, upgrade to Pro or delete an existing project.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -112,14 +112,14 @@ export default function ProjectLimitModal({
                 </button>
                 <button
                   onClick={() => setStep('delete-list')}
-                  className="flex-1 px-4 py-2.5 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" />
                   Delete a Project
                 </button>
                 <button
                   onClick={onCancel}
-                  className="px-4 py-2.5 text-gray-400 hover:text-white transition-colors"
+                  className="px-4 py-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
@@ -128,16 +128,16 @@ export default function ProjectLimitModal({
           ) : step === 'confirm' && selectedProject ? (
             <>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-white">Confirm delete</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Confirm delete</h2>
                 <button
                   onClick={() => setStep('delete-list')}
-                  className="text-gray-400 hover:text-white p-1"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white p-1"
                   aria-label="Back"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-gray-300 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Delete &quot;{selectedProject.title || 'Untitled'}&quot;? This cannot be undone.
               </p>
               {deleteError && <p className="text-red-400 text-sm mb-3">{deleteError}</p>}
@@ -151,7 +151,7 @@ export default function ProjectLimitModal({
                 </button>
                 <button
                   onClick={() => setStep('delete-list')}
-                  className="px-4 py-2.5 text-gray-400 hover:text-white transition-colors"
+                  className="px-4 py-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
                   Back
                 </button>
@@ -160,20 +160,20 @@ export default function ProjectLimitModal({
           ) : (
             <>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-white">Delete a project</h2>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Delete a project</h2>
                 <button
                   onClick={handleCancelDelete}
-                  className="text-gray-400 hover:text-white p-1"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white p-1"
                   aria-label="Back"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               {projects.length === 0 ? (
-                <p className="text-gray-400 text-sm mb-4">No projects to delete.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">No projects to delete.</p>
               ) : (
                 <>
-                  <p className="text-gray-400 text-sm mb-3">Select a project to delete. This cannot be undone.</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">Select a project to delete. This cannot be undone.</p>
                   <ul className="space-y-1 mb-4 max-h-48 overflow-y-auto">
                     {projects.map((p) => (
                       <li key={p.id}>
@@ -181,7 +181,7 @@ export default function ProjectLimitModal({
                           type="button"
                           onClick={() => setSelectedId(selectedId === p.id ? null : p.id)}
                           className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                            selectedId === p.id ? 'bg-red-600/30 text-white border border-red-500/50' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-transparent'
+                            selectedId === p.id ? 'bg-red-600/30 text-white border border-red-500/50' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-transparent'
                           }`}
                         >
                           {p.title || 'Untitled'}
@@ -202,7 +202,7 @@ export default function ProjectLimitModal({
                     </button>
                     <button
                       onClick={handleCancelDelete}
-                      className="px-4 py-2.5 text-gray-400 hover:text-white transition-colors"
+                      className="px-4 py-2.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                     >
                       Cancel
                     </button>

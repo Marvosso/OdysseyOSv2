@@ -1,54 +1,55 @@
 'use client';
 
 /**
- * Writer Page – Focused full-screen editing of one chapter.
- * Requires WritingSessionProvider and active chapter; redirects to Stories if none.
+ * Writer Page – Dedicated writing workspace.
+ * No redirects: always stays on Writer. Shows empty state or editor with story/chapter dropdowns.
  */
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import WriterView from '@/components/writer/WriterView';
+import WriterEmptyState from '@/components/writer/WriterEmptyState';
 import { useWritingSessionOptional } from '@/contexts/WritingSessionContext';
-import { hasEnteredProject } from '@/components/session/StorySelector';
+const ENTERED_PROJECT_KEY = 'odysseyos_entered_project';
 
 export default function WriterPage() {
-  const router = useRouter();
   const session = useWritingSessionOptional();
 
+  // When we have a story and scenes but no chapter selected, open last-opened or first chapter.
   useEffect(() => {
-    if (!session) return;
-    if (!hasEnteredProject()) {
-      router.replace('/dashboard');
-      return;
+    if (!session?.story || session.scenes.length === 0 || session.activeScene) return;
+    session.selectChapter(session.scenes[0].id);
+  }, [session?.story, session?.scenes.length, session?.activeScene?.id, session?.scenes[0]?.id, session?.selectChapter]);
+
+  // Mark that user has “entered” a project when viewing Writer with a story (so Stories tab shows list).
+  useEffect(() => {
+    if (session?.story && typeof window !== 'undefined') {
+      sessionStorage.setItem(ENTERED_PROJECT_KEY, '1');
     }
-    if (!session.story || session.scenes.length === 0) {
-      router.replace('/dashboard');
-      return;
-    }
-    if (!session.activeSceneId || !session.activeScene) {
-      session.selectChapter(session.scenes[0].id);
-    }
-  }, [session, router]);
+  }, [session?.story]);
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-400">
-        Loading…
+      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--background-rgb))]">
+        <p className="text-gray-500 dark:text-gray-400">Loading…</p>
       </div>
     );
   }
 
-  if (!session.story || session.scenes.length === 0) {
-    return null;
+  // No story at all → CTA to create first story
+  if (!session.story) {
+    return <WriterEmptyState variant="no-story" />;
   }
 
-  if (!session.activeScene) {
+  // Story but no chapters → CTA to add first chapter
+  if (session.scenes.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-gray-400">
-        Loading chapter…
-      </div>
+      <WriterEmptyState
+        variant="no-chapters"
+        storyTitle={session.story.title?.trim() || undefined}
+      />
     );
   }
 
+  // Story + chapters → workspace (with or without activeScene; WriterView handles chapter selector)
   return <WriterView />;
 }
