@@ -21,6 +21,8 @@ import {
   X,
   Info,
   ExternalLink,
+  PenLine,
+  TrendingUp,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -40,14 +42,30 @@ const features: Feature[] = [
     label: 'Stories',
     icon: BookOpen,
     path: '/dashboard',
-    shortDescription: 'Write and organize scenes for your story with real-time editing.',
-    detailedDescription: 'The Stories tab is your main writing workspace. Create, edit, and organize scenes with scene metadata (status, POV character, location), and word count tracking. Link scenes to world elements and characters for a cohesive narrative.',
+    shortDescription: 'Manage your project and chapters: add, reorder, and open chapters for editing.',
+    detailedDescription: 'The Stories tab is your project hub. See your current story and a read-only list of all chapters with title, status, word count, and a short preview. Add, delete, or reorder chapters with drag-and-drop. Click a chapter to open it in the Writer tab for focused editing.',
     features: [
-      'Scene-by-scene writing interface',
-      'Real-time word count tracking',
-      'Scene status management (Draft, Revised, Final)',
-      'POV character and location tracking',
-      'Link scenes to world elements',
+      'Chapter list with status and word count',
+      'Short preview of each chapter',
+      'Add, delete, and reorder chapters',
+      'Click a chapter to open in Writer',
+    ],
+  },
+  {
+    id: 'writer',
+    label: 'Writer',
+    icon: PenLine,
+    path: '/dashboard/writer',
+    shortDescription: 'Full-screen focused editing for one chapter at a time.',
+    detailedDescription: 'The Writer tab gives you a distraction-free editing experience. Edit the current chapter with a full-width editor, collapsible side panels for characters and world elements, word count, and previous/next chapter navigation. Changes autosave as you type.',
+    features: [
+      'Full-width, full-screen text editor',
+      'Editable chapter title',
+      'Collapsible panels: Characters, World, Notes',
+      'Word count and chapter progress (e.g. Chapter 3 of 10)',
+      'Back to Stories, Previous/Next chapter',
+      'Autosave on typing (debounced)',
+      'Optional TTS playback for the chapter',
     ],
   },
   {
@@ -119,6 +137,20 @@ const features: Feature[] = [
       'Pacing analysis',
       'Plot point tracking',
       'Emotional arc management',
+    ],
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: TrendingUp,
+    path: '/dashboard/analytics',
+    shortDescription: 'View writing metrics, goals, and productivity insights.',
+    detailedDescription: 'Track your writing progress with analytics dashboards. See word count over time, writing speed, time-of-day patterns, and goal projections. Use data to build better writing habits.',
+    features: [
+      'Word count and writing speed charts',
+      'Words per day and time-of-day insights',
+      'Goal setting and projections',
+      'Writing habit visualization',
     ],
   },
   {

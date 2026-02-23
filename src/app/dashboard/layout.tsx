@@ -435,10 +435,7 @@ export default function DashboardLayout({
         }`}
       >
         <div className="p-6 border-b border-gray-700">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <h1 className="text-xl font-bold text-white truncate">{process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}</h1>
-            <ThemeToggle />
-          </div>
+          <h1 className="text-xl font-bold text-white truncate mb-3">{process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}</h1>
           {currentStoryTitle && (
             <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
               <div className="text-xs text-gray-400 truncate" title={currentStoryTitle}>
@@ -574,20 +571,27 @@ export default function DashboardLayout({
       {/* Main content - full width on Writer, otherwise offset for sidebar */}
       <main className={`relative z-0 flex-1 min-w-0 overflow-auto ${pathname === '/dashboard/writer' ? 'ml-0' : 'ml-0 md:ml-64'}`}>
         <div className={pathname === '/dashboard/writer' ? 'p-0 h-full' : 'px-4 py-4 md:p-6'}>
-          {/* Mobile: menu button */}
-          <div className="flex items-center gap-2 mb-4 md:hidden">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700"
-              aria-label="Open menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <span className="text-sm font-medium text-gray-400 truncate">
-              {currentStoryTitle || 'OdysseyOS'}
-            </span>
+          {/* Top bar: menu (mobile) and theme toggle — hidden on Writer (Writer has its own header with toggle) */}
+          {pathname !== '/dashboard/writer' && (
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 md:hidden"
+                aria-label="Open menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <span className="text-sm font-medium text-gray-400 truncate md:hidden">
+                {currentStoryTitle || 'OdysseyOS'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0" title="Light / Dark / System">
+              <ThemeToggle />
+            </div>
           </div>
+          )}
           {process.env.NODE_ENV === 'development' && (
             <div className="mb-4 rounded-lg border-2 border-amber-500 bg-amber-950/50 px-4 py-2 text-center text-sm font-semibold text-amber-200 max-w-prose mx-auto">
               ✓ DEV — No migration wizard when signed in. Sidebar shows your email.

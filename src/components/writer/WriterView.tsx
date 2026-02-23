@@ -19,6 +19,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 import { useWritingSession } from '@/contexts/WritingSessionContext';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 import { scheduleProjectSave } from '@/lib/storage/projectSave';
@@ -169,6 +170,9 @@ export default function WriterView() {
           >
             <PanelRightOpen className="w-5 h-5" />
           </button>
+          <div className="pl-2 border-l border-gray-300 dark:border-gray-600" title="Light / Dark / System">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
