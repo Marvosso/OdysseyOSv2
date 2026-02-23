@@ -3,13 +3,15 @@
 /**
  * Beats Page
  * Loads scenes from storage and lets you pick a scene to edit its beats.
+ * Includes interactive beat timeline per story.
  */
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import BeatEditor from '@/components/beat-editor/BeatEditor';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 import type { Scene } from '@/types/story';
-import { FileText } from 'lucide-react';
+import { FileText, BarChart3 } from 'lucide-react';
 
 const FALLBACK_SCENE_ID = 'beats-no-scene';
 
@@ -46,10 +48,22 @@ export default function BeatsPage() {
   const sceneTitle = selectedScene?.title?.trim() || 'Untitled scene';
   const sceneContent = selectedScene?.content ?? '';
 
+  const totalDuration = selectedScene
+    ? (() => {
+        try {
+          const saved = localStorage.getItem(`beats-${selectedScene.id}`);
+          const list = saved ? JSON.parse(saved) : [];
+          return list.reduce((s: number, b: { duration?: number }) => s + (b.duration ?? 0), 0);
+        } catch {
+          return 0;
+        }
+      })()
+    : 0;
+
   return (
     <div className="max-w-7xl mx-auto space-y-4">
       {scenes.length > 0 && (
-        <div className="flex items-center gap-3 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 odyssey-card-gradient border border-gray-700/50 rounded-xl">
           <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
           <label className="text-sm text-gray-400 flex-shrink-0">Scene:</label>
           <select
@@ -63,6 +77,23 @@ export default function BeatsPage() {
               </option>
             ))}
           </select>
+          {selectedScene && (
+            <div className="flex items-center gap-2 mt-2 sm:mt-0 sm:ml-auto">
+              <BarChart3 className="w-4 h-4 text-orange-400 flex-shrink-0" />
+              <span className="text-xs text-gray-400">Beat timeline</span>
+              <div className="flex-1 min-w-[80px] max-w-[200px] h-2 bg-gray-700 rounded-full overflow-hidden flex">
+                {totalDuration > 0 && (
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, (totalDuration / 100) * 100)}%` }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                  />
+                )}
+              </div>
+              <span className="text-xs text-gray-500 tabular-nums">{totalDuration}%</span>
+            </div>
+          )}
         </div>
       )}
       {scenes.length === 0 && (

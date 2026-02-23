@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import PWAInitializer from '@/components/pwa/PWAInitializer';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 export const metadata: Metadata = {
   title: 'OdysseyOS - Story Writing Platform',
@@ -40,10 +41,18 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
+            __html: `(function(){var t=localStorage.getItem('odysseyos_theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t==='light'||t==='dark'?t:d);})();`,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
             __html: `(function(){var f=window.fetch;if(!f)return;window.fetch=function(u,o){var s=typeof u==='string'?u:(u&&u.url||'');if(s.indexOf('7242/ingest')!==-1||s.indexOf('127.0.0.1:7242')!==-1)return Promise.resolve(new Response('',{status:200}));return f.apply(this,arguments);};})();`,
           }}
         />
         <link rel="manifest" href="/manifest.json" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700&display=swap" rel="stylesheet" />
         <meta name="theme-color" content="#9333EA" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -51,8 +60,10 @@ export default function RootLayout({
         {/* ResponsiveVoice disabled - narration feature temporarily disabled */}
       </head>
       <body data-build="odysseyos-v5-2025-02-09">
-        {children}
-        <PWAInitializer />
+        <ThemeProvider>
+          {children}
+          <PWAInitializer />
+        </ThemeProvider>
       </body>
     </html>
   );

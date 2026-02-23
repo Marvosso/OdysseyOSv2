@@ -32,10 +32,12 @@ import {
   CreditCard,
   Loader2,
   PlusCircle,
+  PenLine,
 } from 'lucide-react';
 import GlobalSearch from '@/components/search/GlobalSearch';
 import GuestManager from '@/components/session/GuestManager';
 import FeedbackButton from '@/components/feedback/FeedbackButton';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 import { clearEnteredProject } from '@/components/session/StorySelector';
 import KeyboardShortcutsProvider, { openCheatsheet } from '@/components/shortcuts/KeyboardShortcutsProvider';
 import { StoryStorage } from '@/lib/storage/storyStorage';
@@ -43,6 +45,7 @@ import { cloudSync } from '@/lib/cloud/minimalCloudSync';
 import { useUserTier } from '@/hooks/useUserTier';
 import { syncService } from '@/lib/sync/syncService';
 import { ProjectsProvider, useProjectsContext } from '@/contexts/ProjectsContext';
+import { WritingSessionProvider } from '@/contexts/WritingSessionContext';
 
 function SwitchProjectModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
@@ -144,18 +147,19 @@ function SwitchProjectModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-const navigationItems = [
-  { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome' },
-  { id: 'import', label: 'Import', icon: Upload, path: '/dashboard/import' },
-  { id: 'stories', label: 'Stories', icon: BookOpen, path: '/dashboard' },
-  { id: 'export', label: 'Export', icon: Download, path: '/dashboard/export' },
-  { id: 'characters', label: 'Characters', icon: Users, path: '/dashboard/characters' },
-  { id: 'outline', label: 'Outline', icon: FileText, path: '/dashboard/outline' },
-  { id: 'world', label: 'World', icon: Globe, path: '/dashboard/world' },
-  { id: 'ai', label: 'AI Tools', icon: Sparkles, path: '/dashboard/ai' },
-  { id: 'beats', label: 'Beats', icon: BarChart3, path: '/dashboard/beats' },
-  { id: 'analytics', label: 'Analytics', icon: TrendingUp, path: '/dashboard/analytics' },
-  { id: 'publish', label: 'Publish', icon: Share2, path: '/dashboard/publish' },
+const navigationItems: { id: string; label: string; icon: typeof BookOpen; path: string; accent: string }[] = [
+  { id: 'welcome', label: 'Feature Tour', icon: Info, path: '/dashboard/welcome', accent: 'bg-indigo-600' },
+  { id: 'import', label: 'Import', icon: Upload, path: '/dashboard/import', accent: 'bg-slate-600' },
+  { id: 'stories', label: 'Stories', icon: BookOpen, path: '/dashboard', accent: 'bg-indigo-600' },
+  { id: 'writer', label: 'Writer', icon: PenLine, path: '/dashboard/writer', accent: 'bg-violet-600' },
+  { id: 'export', label: 'Export', icon: Download, path: '/dashboard/export', accent: 'bg-teal-600' },
+  { id: 'characters', label: 'Characters', icon: Users, path: '/dashboard/characters', accent: 'bg-pink-600' },
+  { id: 'outline', label: 'Outline', icon: FileText, path: '/dashboard/outline', accent: 'bg-emerald-600' },
+  { id: 'world', label: 'World', icon: Globe, path: '/dashboard/world', accent: 'bg-blue-600' },
+  { id: 'ai', label: 'AI Tools', icon: Sparkles, path: '/dashboard/ai', accent: 'bg-violet-600' },
+  { id: 'beats', label: 'Beats', icon: BarChart3, path: '/dashboard/beats', accent: 'bg-orange-600' },
+  { id: 'analytics', label: 'Analytics', icon: TrendingUp, path: '/dashboard/analytics', accent: 'bg-cyan-600' },
+  { id: 'publish', label: 'Publish', icon: Share2, path: '/dashboard/publish', accent: 'bg-amber-600' },
 ];
 
 export default function DashboardLayout({
@@ -366,9 +370,9 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'rgb(var(--background-rgb))' }}>
         <div className="text-center">
-          <p className="text-gray-300">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
@@ -405,8 +409,9 @@ export default function DashboardLayout({
 
   return (
     <ProjectsProvider>
+    <WritingSessionProvider>
     <KeyboardShortcutsProvider onAction={handleShortcutAction}>
-      <div className="min-h-screen bg-gray-900 flex flex-col md:flex-row">
+      <div className="min-h-screen flex flex-col md:flex-row" style={{ background: 'linear-gradient(180deg, rgb(var(--background-start-rgb)) 0%, rgb(var(--background-end-rgb)) 100%)' }}>
         {/* Global Search */}
         <GlobalSearch
           isOpen={isSearchOpen}
@@ -414,7 +419,7 @@ export default function DashboardLayout({
         />
 
         {/* Mobile sidebar backdrop */}
-        {sidebarOpen && (
+        {sidebarOpen && pathname !== '/dashboard/writer' && (
           <div
             className="fixed inset-0 bg-black/60 z-[9998] md:hidden"
             onClick={() => setSidebarOpen(false)}
@@ -422,14 +427,18 @@ export default function DashboardLayout({
           />
         )}
 
-      {/* Sidebar - drawer on mobile, fixed on desktop */}
+      {/* Sidebar - hidden on Writer page for full-screen editing */}
+      {pathname !== '/dashboard/writer' && (
       <aside
         className={`fixed left-0 top-0 bottom-0 z-[9999] w-64 flex flex-col bg-gray-800/95 border-r border-gray-700 pointer-events-auto transition-transform duration-200 ease-out md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-6 border-b border-gray-700">
-          <h1 className="text-xl font-bold text-white mb-3">{process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}</h1>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h1 className="text-xl font-bold text-white truncate">{process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}</h1>
+            <ThemeToggle />
+          </div>
           {currentStoryTitle && (
             <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
               <div className="text-xs text-gray-400 truncate" title={currentStoryTitle}>
@@ -531,9 +540,9 @@ export default function DashboardLayout({
                 target="_self"
                 rel="noopener noreferrer"
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left min-h-[44px] ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left min-h-[44px] ${
                   isActive
-                    ? 'bg-purple-600 text-white'
+                    ? `${item.accent} text-white shadow-lg`
                     : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
                 }`}
               >
@@ -560,10 +569,11 @@ export default function DashboardLayout({
           </p>
         </div>
       </aside>
+      )}
 
-      {/* Main content - offset so fixed sidebar doesn't overlap */}
-      <main className="relative z-0 flex-1 min-w-0 overflow-auto ml-0 md:ml-64">
-        <div className="px-4 py-4 md:p-6">
+      {/* Main content - full width on Writer, otherwise offset for sidebar */}
+      <main className={`relative z-0 flex-1 min-w-0 overflow-auto ${pathname === '/dashboard/writer' ? 'ml-0' : 'ml-0 md:ml-64'}`}>
+        <div className={pathname === '/dashboard/writer' ? 'p-0 h-full' : 'px-4 py-4 md:p-6'}>
           {/* Mobile: menu button */}
           <div className="flex items-center gap-2 mb-4 md:hidden">
             <button
@@ -770,6 +780,7 @@ export default function DashboardLayout({
 
       <FeedbackButton />
     </KeyboardShortcutsProvider>
+    </WritingSessionProvider>
     </ProjectsProvider>
   );
 }

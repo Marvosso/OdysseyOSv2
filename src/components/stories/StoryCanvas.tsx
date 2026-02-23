@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GripVertical, Plus, Trash2, ChevronDown, ChevronUp, MapPin, User, FileText, ExternalLink, AlertTriangle, Timer, Users, Brain, GitBranch } from 'lucide-react';
+import { GripVertical, Plus, Trash2, ChevronDown, ChevronUp, MapPin, User, FileText, ExternalLink, AlertTriangle, Timer, Users, Brain, GitBranch, Maximize2, Minimize2, Lightbulb } from 'lucide-react';
 import type { Scene, Story, SceneStatus } from '@/types/story';
 import { computeWordCount } from '@/utils/wordCount';
 import { getWorldElementsForScene, findWorldElementByName } from '@/lib/world/worldLinkHelper';
@@ -16,6 +16,9 @@ import SprintTimer from '@/components/writing/SprintTimer';
 import WritingRoom from '@/components/collaboration/WritingRoom';
 import SceneInsights from '@/components/analysis/SceneInsights';
 import BranchingTool from '@/components/experiment/BranchingTool';
+import WritingProgressBars from '@/components/writing/WritingProgressBars';
+import InspirationPanel from '@/components/writing/InspirationPanel';
+import { playMilestoneSound, playAddSound } from '@/lib/milestoneSound';
 
 // Component to display word count (memoized for performance)
 function SceneWordCount({ content }: { content: string }) {
@@ -104,9 +107,13 @@ export default function StoryCanvas({
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Don't poll while Scene Insights is open - avoids panel flicker
+    // Don't poll while Scene Insights is open - avoids panel flicker; also refresh chapter count from outline
     const interval = setInterval(() => {
-      if (insightsSceneIdRef.current === null) reloadStory();
+      if (insightsSceneIdRef.current === null) {
+        reloadStory();
+        const outline = StoryStorage.loadOutline();
+        setChapterCount(outline?.chapters?.length ?? 0);
+      }
     }, 60000);
 
     return () => {
@@ -124,10 +131,32 @@ export default function StoryCanvas({
   const [insightsSceneId, setInsightsSceneId] = useState<string | null>(null);
   const insightsSceneIdRef = useRef<string | null>(null);
   const [showBranchingTool, setShowBranchingTool] = useState(false);
+  const [fullScreenEditorSceneId, setFullScreenEditorSceneId] = useState<string | null>(null);
+  const [showInspiration, setShowInspiration] = useState(true);
+  const [chapterCount, setChapterCount] = useState(0);
+  const lastMilestoneRef = useRef(0);
 
   useEffect(() => {
     insightsSceneIdRef.current = insightsSceneId;
   }, [insightsSceneId]);
+
+  useEffect(() => {
+    const outline = StoryStorage.loadOutline();
+    setChapterCount(outline?.chapters?.length ?? 0);
+  }, [story.id]);
+
+  const [milestoneReached, setMilestoneReached] = useState<number | null>(null);
+  useEffect(() => {
+    const crossed = MILESTONES.filter((m) => totalWords >= m && lastMilestoneRef.current < m);
+    if (crossed.length > 0) {
+      const top = Math.max(...crossed);
+      lastMilestoneRef.current = top;
+      setMilestoneReached(top);
+      playMilestoneSound();
+      const t = setTimeout(() => setMilestoneReached(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [totalWords]);
 
   const handleIssueClick = (issue: ConsistencyIssue) => {
     if (issue.sceneId) {
@@ -152,6 +181,8 @@ export default function StoryCanvas({
     scheduleProjectSave();
   }, [story]);
 
+  const MILESTONES = [500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
+
   const addScene = () => {
     const newScene: Scene = {
       id: `scene-${Date.now()}`,
@@ -172,7 +203,13 @@ export default function StoryCanvas({
 
     setStory(updated);
     onStoryChange?.(updated);
+    playAddSound();
   };
+
+  const totalWords = useMemo(
+    () => story.scenes.reduce((sum, s) => sum + (s.wordCount ?? computeWordCount(s.content || '')), 0),
+    [story.scenes]
+  );
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const updated = { ...story, title: e.target.value, updatedAt: new Date() };
@@ -220,20 +257,37 @@ export default function StoryCanvas({
 
   return (
     <div className="w-full min-w-0">
-      {/* Story Header */}
-      <div className="bg-gray-800/50 backdrop-blur-sm rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-700">
+      {/* Story Header - soft gradient */}
+      <div className="odyssey-header-gradient backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-700/50 dark:border-gray-600/50 shadow-lg">
         <input
           type="text"
           value={story.title}
           onChange={handleTitleChange}
-          className="text-xl sm:text-3xl font-bold bg-transparent border-none outline-none text-white w-full min-w-0 break-words placeholder:text-gray-500"
+          className="text-xl sm:text-3xl font-bold bg-transparent border-none outline-none text-gray-900 dark:text-white w-full min-w-0 break-words placeholder:text-gray-500"
           placeholder="Story Title"
         />
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 sm:mt-2">
-          <div className="flex items-center gap-2 sm:gap-4 text-sm text-gray-400 flex-shrink-0">
+        <div className="mt-4">
+          <WritingProgressBars
+            scenes={story.scenes}
+            wordGoal={50000}
+            chapterCount={chapterCount}
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
+          <div className="flex items-center gap-2 sm:gap-4 text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
             <span>{story.scenes.length} scenes</span>
             <span>•</span>
             <span>{story.characters.length} characters</span>
+            {showInspiration && (
+              <button
+                type="button"
+                onClick={() => setShowInspiration(false)}
+                className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 hover:underline"
+              >
+                <Lightbulb className="w-4 h-4" />
+                Prompt
+              </button>
+            )}
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -276,6 +330,37 @@ export default function StoryCanvas({
         </div>
       </div>
 
+      {/* Inspiration panel */}
+      {showInspiration && (
+        <div className="mb-4">
+          <InspirationPanel defaultCollapsed={false} />
+        </div>
+      )}
+      {!showInspiration && (
+        <button
+          type="button"
+          onClick={() => setShowInspiration(true)}
+          className="mb-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400"
+        >
+          <Lightbulb className="w-4 h-4" />
+          Show writing prompt
+        </button>
+      )}
+
+      {/* Milestone celebration toast */}
+      <AnimatePresence>
+        {milestoneReached != null && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="odyssey-milestone-glow fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-semibold shadow-lg"
+          >
+            🎉 {milestoneReached.toLocaleString()} words!
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Scenes List */}
       <div className="space-y-4">
         <AnimatePresence>
@@ -283,16 +368,23 @@ export default function StoryCanvas({
             <motion.div
               key={scene.id}
               id={`scene-${scene.id}`}
+              layout
               initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2 }}
-              className={`bg-gray-800/30 backdrop-blur-sm rounded-lg border overflow-hidden transition-colors ${
+              animate={{
+                opacity: 1,
+                y: 0,
+                scale: draggedSceneId === scene.id ? 0.98 : 1,
+                boxShadow: dragOverSceneId === scene.id ? '0 0 0 2px rgba(124, 58, 237, 0.5)' : 'none',
+              }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              whileHover={draggedSceneId ? undefined : { y: -2, boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)' }}
+              className={`odyssey-card-gradient backdrop-blur-sm rounded-xl border overflow-hidden ${
                 dragOverSceneId === scene.id
-                  ? 'border-purple-500 ring-1 ring-purple-500/50'
+                  ? 'border-purple-500 ring-2 ring-purple-500/50'
                   : draggedSceneId === scene.id
-                    ? 'border-gray-600 opacity-60'
-                    : 'border-gray-700'
+                    ? 'border-gray-600 opacity-70'
+                    : 'border-gray-700/50 dark:border-gray-600/50'
               }`}
               onDragOver={(e) => handleSceneDragOver(e, scene.id)}
               onDragLeave={handleSceneDragLeave}
@@ -479,32 +571,75 @@ export default function StoryCanvas({
                 )}
               </div>
               <div className="p-4">
-                {/* Scene Content */}
+                {/* Scene Content - serif font + optional full-screen */}
                 <div className="relative">
-                  <textarea
-                    value={scene.content}
-                    onChange={(e) => {
-                      const wordCount = computeWordCount(e.target.value);
-                      const updatedScenes = story.scenes.map((s) =>
-                        s.id === scene.id ? { ...s, content: e.target.value, wordCount, updatedAt: new Date() } : s
-                      );
-                      const updated = { ...story, scenes: updatedScenes, updatedAt: new Date() };
-                      setStory(updated);
-                      onStoryChange?.(updated);
-                    }}
-                    className="w-full bg-gray-900/50 rounded p-3 text-gray-300 border border-gray-700 focus:border-blue-500 outline-none min-h-[100px] resize-y"
-                    placeholder="Write your scene here..."
-                  />
-                  
-                  {/* Scene Insights Button */}
-                  {scene.content.trim() && (
-                    <button
-                      onClick={() => setInsightsSceneId(insightsSceneId === scene.id ? null : scene.id)}
-                      className="absolute top-2 right-2 p-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg transition-colors z-20"
-                      title="Scene Insights"
-                    >
-                      <Brain className="w-4 h-4" />
-                    </button>
+                  {fullScreenEditorSceneId === scene.id ? (
+                    <div className="odyssey-fullscreen-editor">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{scene.title || 'Scene'}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFullScreenEditorSceneId(null)}
+                          className="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                          aria-label="Exit full screen"
+                        >
+                          <Minimize2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="relative flex-1 min-h-0">
+                        <div className="absolute inset-0 odyssey-editor-texture rounded-lg" aria-hidden />
+                        <textarea
+                          value={scene.content}
+                          onChange={(e) => {
+                            const wordCount = computeWordCount(e.target.value);
+                            const updatedScenes = story.scenes.map((s) =>
+                              s.id === scene.id ? { ...s, content: e.target.value, wordCount, updatedAt: new Date() } : s
+                            );
+                            const updated = { ...story, scenes: updatedScenes, updatedAt: new Date() };
+                            setStory(updated);
+                            onStoryChange?.(updated);
+                          }}
+                          className="odyssey-editor w-full h-full rounded-lg p-4 border border-gray-300 dark:border-gray-600 focus:border-purple-500 outline-none resize-none text-base"
+                          placeholder="Write your scene here..."
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="absolute inset-0 odyssey-editor-texture rounded-lg pointer-events-none" aria-hidden />
+                      <textarea
+                        value={scene.content}
+                        onChange={(e) => {
+                          const wordCount = computeWordCount(e.target.value);
+                          const updatedScenes = story.scenes.map((s) =>
+                            s.id === scene.id ? { ...s, content: e.target.value, wordCount, updatedAt: new Date() } : s
+                          );
+                          const updated = { ...story, scenes: updatedScenes, updatedAt: new Date() };
+                          setStory(updated);
+                          onStoryChange?.(updated);
+                        }}
+                        className="odyssey-editor relative w-full rounded-lg p-3 border border-gray-300 dark:border-gray-600 focus:border-purple-500 outline-none min-h-[120px] resize-y text-[15px]"
+                        placeholder="Write your scene here..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFullScreenEditorSceneId(scene.id)}
+                        className="absolute top-2 right-10 p-2 rounded-lg bg-gray-200/80 dark:bg-gray-700/80 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors z-10"
+                        title="Full-screen editor"
+                        aria-label="Full-screen editor"
+                      >
+                        <Maximize2 className="w-4 h-4" />
+                      </button>
+                      {scene.content.trim() && (
+                        <button
+                          onClick={() => setInsightsSceneId(insightsSceneId === scene.id ? null : scene.id)}
+                          className="absolute top-2 right-2 p-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg transition-colors z-20"
+                          title="Scene Insights"
+                        >
+                          <Brain className="w-4 h-4" />
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
                 

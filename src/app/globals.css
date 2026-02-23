@@ -2,37 +2,153 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
-:root {
-  --foreground-rgb: 0, 0, 0;
+/* ========== Design tokens: Light ========== */
+:root,
+[data-theme="light"] {
+  --foreground-rgb: 30, 41, 59;
+  --background-rgb: 248, 250, 252;
   --background-start-rgb: 255, 255, 255;
-  --background-end-rgb: 255, 255, 255;
+  --background-end-rgb: 241, 245, 249;
+  --card-bg: 255, 255, 255;
+  --card-border: 226, 232, 240;
+  --header-gradient-from: 241, 245, 249;
+  --header-gradient-to: 226, 232, 240;
+  --accent-primary: 124, 58, 237;
+  --accent-primary-hover: 109, 40, 217;
+  --accent-glow: 167, 139, 250;
+  --tab-stories: 99, 102, 241;
+  --tab-characters: 236, 72, 153;
+  --tab-outline: 34, 197, 94;
+  --tab-world: 59, 130, 246;
+  --tab-ai: 168, 85, 247;
+  --tab-beats: 249, 115, 22;
+  --tab-analytics: 14, 165, 233;
+  --tab-export: 20, 184, 166;
+  --tab-publish: 234, 179, 8;
+  --editor-bg: 248, 250, 252;
+  --editor-text: 30, 41, 59;
+  --editor-placeholder: 148, 163, 184;
+  --scrollbar-track: 226, 232, 240;
+  --scrollbar-thumb: 148, 163, 184;
+  --scrollbar-thumb-hover: 100, 116, 139;
+  --font-editor: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-ui: "DM Sans", system-ui, -apple-system, sans-serif;
+  --leading-editor: 1.75;
+  --leading-ui: 1.5;
+  --texture-opacity: 0.03;
+}
+
+/* ========== Design tokens: Dark ========== */
+[data-theme="dark"] {
+  --foreground-rgb: 248, 250, 252;
+  --background-rgb: 15, 23, 42;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 30, 41, 59;
+  --card-bg: 30, 41, 59;
+  --card-border: 51, 65, 85;
+  --header-gradient-from: 30, 41, 59;
+  --header-gradient-to: 51, 65, 85;
+  --accent-primary: 167, 139, 250;
+  --accent-primary-hover: 196, 181, 253;
+  --accent-glow: 124, 58, 237;
+  --tab-stories: 129, 140, 248;
+  --tab-characters: 244, 114, 182;
+  --tab-outline: 74, 222, 128;
+  --tab-world: 96, 165, 250;
+  --tab-ai: 192, 132, 252;
+  --tab-beats: 251, 146, 60;
+  --tab-analytics: 56, 189, 248;
+  --tab-export: 45, 212, 191;
+  --tab-publish: 250, 204, 21;
+  --editor-bg: 15, 23, 42;
+  --editor-text: 226, 232, 240;
+  --editor-placeholder: 100, 116, 139;
+  --scrollbar-track: 30, 41, 59;
+  --scrollbar-thumb: 71, 85, 105;
+  --scrollbar-thumb-hover: 100, 116, 139;
+  --texture-opacity: 0.06;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+  :root:not([data-theme="light"]) {
+    --foreground-rgb: 248, 250, 252;
+    --background-rgb: 15, 23, 42;
+    --background-start-rgb: 15, 23, 42;
+    --background-end-rgb: 30, 41, 59;
+    --card-bg: 30, 41, 59;
+    --card-border: 51, 65, 85;
+    --header-gradient-from: 30, 41, 59;
+    --header-gradient-to: 51, 65, 85;
+    --accent-primary: 167, 139, 250;
+    --accent-primary-hover: 196, 181, 253;
+    --editor-bg: 15, 23, 42;
+    --editor-text: 226, 232, 240;
+    --scrollbar-track: 30, 41, 59;
+    --scrollbar-thumb: 71, 85, 105;
+    --texture-opacity: 0.06;
   }
 }
 
+/* ========== Base ========== */
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+    180deg,
+    rgb(var(--background-start-rgb)) 0%,
+    rgb(var(--background-end-rgb)) 100%
+  );
+  font-family: var(--font-ui);
+  line-height: var(--leading-ui);
+  min-height: 100vh;
 }
 
-/* Dark-theme scrollbars (dashboard / app) – apply to document and all elements so every tab matches */
+/* ========== Typography ========== */
+.font-editor {
+  font-family: var(--font-editor);
+  line-height: var(--leading-editor);
+}
+
+/* ========== Editor area: serif + subtle texture ========== */
+.odyssey-editor {
+  font-family: var(--font-editor);
+  line-height: var(--leading-editor);
+  background-color: rgb(var(--editor-bg));
+  color: rgb(var(--editor-text));
+}
+.odyssey-editor::placeholder {
+  color: rgb(var(--editor-placeholder));
+}
+.odyssey-editor-texture {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: var(--texture-opacity);
+  pointer-events: none;
+}
+
+/* ========== Soft gradient headers ========== */
+.odyssey-header-gradient {
+  background: linear-gradient(
+    135deg,
+    rgb(var(--header-gradient-from)) 0%,
+    rgb(var(--header-gradient-to)) 100%
+  );
+}
+
+/* ========== Story card gradient ========== */
+.odyssey-card-gradient {
+  background: linear-gradient(
+    135deg,
+    rgb(var(--card-bg)) 0%,
+    rgb(var(--header-gradient-to)) 100%
+  );
+  border: 1px solid rgb(var(--card-border));
+}
+
+/* ========== Scrollbars ========== */
 html,
 body,
 * {
   scrollbar-width: thin;
-  scrollbar-color: #4b5563 #1f2937;
+  scrollbar-color: rgb(var(--scrollbar-thumb)) rgb(var(--scrollbar-track));
 }
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
@@ -43,21 +159,41 @@ body::-webkit-scrollbar,
 html::-webkit-scrollbar-track,
 body::-webkit-scrollbar-track,
 *::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: rgb(var(--scrollbar-track));
 }
 html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb,
 *::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: rgb(var(--scrollbar-thumb));
   border-radius: 4px;
 }
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover,
 *::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: rgb(var(--scrollbar-thumb-hover));
 }
-html::-webkit-scrollbar-corner,
-body::-webkit-scrollbar-corner,
-*::-webkit-scrollbar-corner {
-  background: #1f2937;
+
+/* ========== Full-screen editor mode ========== */
+.odyssey-fullscreen-editor {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgb(var(--editor-bg));
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+.odyssey-fullscreen-editor .odyssey-editor {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+}
+
+/* ========== Milestone glow (for celebrations) ========== */
+@keyframes odyssey-glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(var(--accent-glow), 0.3); }
+  50% { box-shadow: 0 0 40px rgba(var(--accent-glow), 0.6); }
+}
+.odyssey-milestone-glow {
+  animation: odyssey-glow-pulse 1.5s ease-in-out 2;
 }

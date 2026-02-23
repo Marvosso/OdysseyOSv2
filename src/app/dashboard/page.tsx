@@ -1,14 +1,15 @@
 'use client';
 
 /**
- * Stories Page - Default Dashboard View
+ * Stories Page - Project management and chapter navigation.
  *
  * Shows story selector (Continue / Import / New) until user has chosen a project,
- * then shows the story canvas. All tabs reference this single current project.
+ * then shows the Stories tab: chapter list (read-only preview), add/delete/reorder.
+ * Clicking a chapter navigates to the Writer tab.
  */
 
 import { useState, useEffect } from 'react';
-import StoryCanvas from '@/components/stories/StoryCanvas';
+import StoriesTab from '@/components/stories/StoriesTab';
 import StorySelector, { hasEnteredProject } from '@/components/session/StorySelector';
 import { StoryStorage } from '@/lib/storage/storyStorage';
 
@@ -52,7 +53,7 @@ export default function StoriesPage() {
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 overflow-x-hidden">
-      <StoryCanvas />
+      <StoriesTab />
     </div>
   );
 }

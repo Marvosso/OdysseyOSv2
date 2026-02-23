@@ -143,46 +143,59 @@ export default function StorySelector({ currentStoryTitle, onContinue, onNewStor
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
       >
         {hasStory && (
-          <button
+          <motion.button
+            type="button"
             onClick={handleContinue}
-            className="w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 bg-purple-600 hover:bg-purple-700 border border-purple-500/50 rounded-xl text-left transition-colors group min-w-0"
+            className="odyssey-card-gradient w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 rounded-xl text-left min-w-0 overflow-hidden relative"
+            style={{ background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.95) 0%, rgba(99, 102, 241, 0.9) 100%)', border: '1px solid rgba(167, 139, 250, 0.4)' }}
+            whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -12px rgba(124, 58, 237, 0.35)' }}
+            whileTap={{ scale: 0.99 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
-            <div className="p-3 bg-purple-500/30 rounded-lg group-hover:bg-purple-500/50 w-fit sm:w-auto">
+            <div className="p-3 bg-white/20 rounded-lg w-fit sm:w-auto">
               <BookOpen className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0 overflow-hidden">
               <div className="font-semibold text-white break-words overflow-hidden text-ellipsis line-clamp-2">{currentStoryTitle}</div>
-              <div className="text-sm text-purple-200 break-words mt-0.5">Continue writing — all tabs use this story</div>
+              <div className="text-sm text-purple-100 break-words mt-0.5">Continue writing — all tabs use this story</div>
             </div>
-          </button>
+          </motion.button>
         )}
 
-        <button
+        <motion.button
+          type="button"
           onClick={handleImport}
-          className="w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl text-left transition-colors group min-w-0"
+          className="odyssey-card-gradient w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 rounded-xl text-left group min-w-0 border border-gray-600 dark:border-gray-600"
+          whileHover={{ scale: 1.02, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.15)' }}
+          whileTap={{ scale: 0.99 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="p-3 bg-gray-700/50 rounded-lg group-hover:bg-gray-600/50 w-fit sm:w-auto">
+          <div className="p-3 bg-gray-700/50 dark:bg-gray-600/50 rounded-lg w-fit sm:w-auto">
             <Upload className="w-6 h-6 text-gray-300" />
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="font-semibold text-white break-words">Import story</div>
             <div className="text-sm text-gray-400 break-words overflow-hidden text-ellipsis line-clamp-2 mt-0.5">Bring in a .txt, .md, or pasted text as your current project</div>
           </div>
-        </button>
+        </motion.button>
 
-        <button
+        <motion.button
+          type="button"
           onClick={handleNewStory}
           disabled={creating}
-          className="w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl text-left transition-colors group disabled:opacity-60 disabled:cursor-not-allowed min-w-0"
+          className="odyssey-card-gradient w-full flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-5 rounded-xl text-left min-w-0 border border-gray-600 dark:border-gray-600 disabled:opacity-60 disabled:cursor-not-allowed"
+          whileHover={!creating ? { scale: 1.02, boxShadow: '0 20px 40px -12px rgba(0,0,0,0.15)' } : undefined}
+          whileTap={!creating ? { scale: 0.99 } : undefined}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
         >
-          <div className="p-3 bg-gray-700/50 rounded-lg group-hover:bg-gray-600/50 w-fit sm:w-auto">
+          <div className="p-3 bg-gray-700/50 dark:bg-gray-600/50 rounded-lg w-fit sm:w-auto">
             <PlusCircle className="w-6 h-6 text-gray-300" />
           </div>
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="font-semibold text-white break-words">{creating ? 'Creating…' : 'Start new story'}</div>
             <div className="text-sm text-gray-400 break-words overflow-hidden text-ellipsis line-clamp-2 mt-0.5">Create a blank project and build outline, characters, and world first</div>
           </div>
-        </button>
+        </motion.button>
       </motion.div>
 
       <UpgradeModal open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />

@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
   SETTINGS: 'odysseyos_settings',
   GUEST_ID: 'odysseyos_guest_id',
   ACTIVE_PROJECT_ID: 'odysseyos_active_project_id',
+  ACTIVE_SCENE_ID: 'odysseyos_active_scene_id',
 };
 
 export interface SavedData {
@@ -377,6 +378,25 @@ export class StoryStorage {
     try {
       if (id == null) localStorage.removeItem(STORAGE_KEYS.ACTIVE_PROJECT_ID);
       else localStorage.setItem(STORAGE_KEYS.ACTIVE_PROJECT_ID, id);
+    } catch {
+      // ignore
+    }
+  }
+
+  /** Active chapter (scene) id for Writer tab. Persisted in sessionStorage so it resets per tab. */
+  static getActiveSceneId(): string | null {
+    try {
+      return typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(STORAGE_KEYS.ACTIVE_SCENE_ID) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  static setActiveSceneId(id: string | null): void {
+    try {
+      if (typeof sessionStorage === 'undefined') return;
+      if (id == null) sessionStorage.removeItem(STORAGE_KEYS.ACTIVE_SCENE_ID);
+      else sessionStorage.setItem(STORAGE_KEYS.ACTIVE_SCENE_ID, id);
     } catch {
       // ignore
     }

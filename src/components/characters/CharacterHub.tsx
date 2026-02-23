@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Plus, Crown, Shield, Heart, BookOpen, Sparkles, AlertCircle, Search, UserPlus, X } from 'lucide-react';
+import { Users, Plus, Crown, Shield, Heart, BookOpen, Sparkles, AlertCircle, Search, UserPlus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import CharacterForm from './CharacterForm';
 import CharacterCard from './CharacterCard';
 import { StoryStorage } from '@/lib/storage/storyStorage';
@@ -101,6 +101,7 @@ export default function CharacterHub() {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dismissedDetected, setDismissedDetected] = useState<Set<string>>(() => new Set());
+  const [panelsCollapsed, setPanelsCollapsed] = useState(false);
 
   // Load scenes and characters from StoryStorage on mount, storage change, and when tab becomes visible
   // Use both loadScenes() and story.scenes so we get content regardless of which key was last written
@@ -226,11 +227,19 @@ export default function CharacterHub() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-2xl font-bold text-white flex items-center gap-2">
           <Users className="w-6 h-6 text-purple-400" />
           Character Hub
         </h2>
+        <button
+          type="button"
+          onClick={() => setPanelsCollapsed((c) => !c)}
+          className="md:hidden flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-gray-800 border border-gray-700 text-gray-300 text-sm"
+        >
+          {panelsCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+          {panelsCollapsed ? 'Show stats & prompts' : 'Hide panels'}
+        </button>
         <button
           onClick={() => {
             setSelectedCharacter({
@@ -254,7 +263,7 @@ export default function CharacterHub() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 transition-all duration-200 ${panelsCollapsed ? 'hidden md:grid' : ''}`}>
         <div className="p-4 bg-purple-900/20 border border-purple-500/30 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
             <Crown className="w-4 h-4 text-purple-400" />
@@ -288,7 +297,7 @@ export default function CharacterHub() {
         </div>
       </div>
 
-      <div className="relative">
+      <div className={`relative ${panelsCollapsed ? 'hidden md:block' : ''}`}>
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
@@ -299,8 +308,8 @@ export default function CharacterHub() {
         />
       </div>
 
-      {/* Detected from story */}
-      {detectedFromStory.length > 0 && (
+      {/* Detected from story - collapsible on mobile */}
+      {detectedFromStory.length > 0 && !panelsCollapsed && (
         <div className="p-4 bg-gray-800/60 border border-purple-500/30 rounded-lg">
           <h3 className="text-sm font-semibold text-purple-300 flex items-center gap-2 mb-3">
             <Sparkles className="w-4 h-4" />
