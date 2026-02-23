@@ -257,7 +257,7 @@ export default function StoryCanvas({
   return (
     <div className="w-full min-w-0">
       {/* Story Header - soft gradient */}
-      <div className="odyssey-header-gradient backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-700/50 dark:border-gray-600/50 shadow-lg">
+      <div className="odyssey-header-gradient backdrop-blur-sm rounded-xl p-4 sm:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-gray-700/50 shadow-lg">
         <input
           type="text"
           value={story.title}
@@ -294,7 +294,7 @@ export default function StoryCanvas({
               className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
                 showWritingRoom
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                  : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-300'
               }`}
               title="Collaborative Writing Room"
             >
@@ -306,7 +306,7 @@ export default function StoryCanvas({
               className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
                 showSprintTimer
                   ? 'bg-purple-600 text-white'
-                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                  : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-300'
               }`}
               title="Writing Sprint Timer"
             >
@@ -318,7 +318,7 @@ export default function StoryCanvas({
               className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 transition-colors ${
                 showConsistencyPanel
                   ? 'bg-yellow-600 text-white'
-                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                  : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-300'
               }`}
               title="Consistency Checker"
             >
@@ -382,21 +382,21 @@ export default function StoryCanvas({
                 dragOverSceneId === scene.id
                   ? 'border-purple-500 ring-2 ring-purple-500/50'
                   : draggedSceneId === scene.id
-                    ? 'border-gray-600 opacity-70'
-                    : 'border-gray-700/50 dark:border-gray-600/50'
+                    ? 'border-gray-400 dark:border-gray-600 opacity-70'
+                    : 'border-gray-200 dark:border-gray-700/50'
               }`}
               onDragOver={(e) => handleSceneDragOver(e, scene.id)}
               onDragLeave={handleSceneDragLeave}
               onDrop={(e) => handleSceneDrop(e, scene.id)}
             >
-              <div className="p-3 sm:p-4 bg-gray-800/50 border-b border-gray-700 min-w-0">
+              <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 min-w-0">
                 {/* Header Row */}
                 <div className="flex items-center gap-2 sm:gap-4 mb-2 min-w-0">
                   <div
                     draggable
                     onDragStart={(e) => handleSceneDragStart(e, scene.id)}
                     onDragEnd={handleSceneDragEnd}
-                    className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 rounded hover:bg-gray-700/50 text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0"
+                    className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700/50 text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex-shrink-0"
                     title="Drag to reorder"
                   >
                     <GripVertical size={20} aria-hidden />
@@ -412,10 +412,10 @@ export default function StoryCanvas({
                       setStory(updated);
                       onStoryChange?.(updated);
                     }}
-                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-base sm:text-lg font-semibold text-white break-words placeholder:text-gray-500"
+                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-base sm:text-lg font-semibold text-gray-900 dark:text-white break-words placeholder:text-gray-500"
                     placeholder="Scene Title"
                   />
-                  <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300 capitalize flex-shrink-0">
+                  <span className="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 capitalize flex-shrink-0">
                     {scene.emotion}
                   </span>
                   <button
@@ -425,7 +425,7 @@ export default function StoryCanvas({
                       setStory(updated);
                       onStoryChange?.(updated);
                     }}
-                    className="p-1 text-gray-500 hover:text-red-400 transition-colors flex-shrink-0"
+                    className="p-1 text-gray-500 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors flex-shrink-0"
                     aria-label="Delete scene"
                   >
                     <Trash2 size={16} />
@@ -463,7 +463,7 @@ export default function StoryCanvas({
                   
                   {/* POV Character */}
                   {scene.povCharacter && (
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                    <span className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
                       <User className="w-3 h-3" />
                       {scene.povCharacter}
                     </span>
@@ -483,8 +483,8 @@ export default function StoryCanvas({
                           onClick={() => worldElement && router.push('/dashboard/world')}
                           className={`text-xs flex items-center gap-1 transition-colors ${
                             worldElement
-                              ? 'text-blue-400 hover:text-blue-300 cursor-pointer'
-                              : 'text-gray-400'
+                              ? 'text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 cursor-pointer'
+                              : 'text-gray-600 dark:text-gray-400'
                           }`}
                         >
                           <MapPin className="w-3 h-3" />
@@ -503,7 +503,7 @@ export default function StoryCanvas({
                         [scene.id]: !expandedMetadata[scene.id],
                       });
                     }}
-                    className="sm:ml-auto text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors w-full sm:w-auto"
+                    className="sm:ml-auto text-xs text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1 transition-colors w-full sm:w-auto"
                   >
                     {expandedMetadata[scene.id] ? (
                       <>
@@ -525,12 +525,12 @@ export default function StoryCanvas({
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="mt-3 pt-3 border-t border-gray-700 space-y-2"
+                    className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2"
                   >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {/* POV Character */}
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1">POV Character</label>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">POV Character</label>
                         <input
                           type="text"
                           value={scene.povCharacter || ''}
@@ -543,13 +543,13 @@ export default function StoryCanvas({
                             onStoryChange?.(updated);
                           }}
                           placeholder="Character name..."
-                          className="w-full px-2 py-1.5 bg-gray-900/50 border border-gray-700 rounded text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                          className="w-full px-2 py-1.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
                         />
                       </div>
                       
                       {/* Location */}
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1">Location</label>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Location</label>
                         <input
                           type="text"
                           value={scene.location || ''}
@@ -562,7 +562,7 @@ export default function StoryCanvas({
                             onStoryChange?.(updated);
                           }}
                           placeholder="Scene location..."
-                          className="w-full px-2 py-1.5 bg-gray-900/50 border border-gray-700 rounded text-sm text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                          className="w-full px-2 py-1.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
                         />
                       </div>
                     </div>
@@ -675,8 +675,8 @@ export default function StoryCanvas({
 
         {/* Add Scene Button */}
         {story.scenes.length === 0 ? (
-          <div className="text-center py-12 border-2 border-dashed border-gray-700 rounded-lg">
-            <p className="text-gray-400 mb-4">No scenes yet. Start creating your story!</p>
+          <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">No scenes yet. Start creating your story!</p>
             <button
               onClick={addScene}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors inline-flex items-center gap-2"
@@ -688,7 +688,7 @@ export default function StoryCanvas({
         ) : (
           <button
             onClick={addScene}
-            className="w-full py-3 border-2 border-dashed border-gray-700 rounded-lg text-gray-400 hover:text-white hover:border-gray-600 transition-all inline-flex items-center justify-center gap-2"
+            className="w-full py-3 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-400 dark:hover:border-gray-600 transition-all inline-flex items-center justify-center gap-2"
           >
             <Plus size={16} />
             Add Scene
@@ -764,7 +764,7 @@ export default function StoryCanvas({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed inset-4 bg-gray-800 rounded-lg border border-gray-700 z-50 overflow-y-auto"
+            className="fixed inset-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 z-50 overflow-y-auto"
           >
             <div className="p-6">
               <BranchingTool

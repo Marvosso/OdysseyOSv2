@@ -431,18 +431,18 @@ export default function DashboardLayout({
       {/* Sidebar - hidden on Writer page for full-screen editing */}
       {pathname !== '/dashboard/writer' && (
       <aside
-        className={`fixed left-0 top-0 bottom-0 z-[9999] w-64 flex flex-col bg-gray-800/95 border-r border-gray-700 pointer-events-auto transition-transform duration-200 ease-out md:translate-x-0 ${
+        className={`fixed left-0 top-0 bottom-0 z-[9999] w-64 flex flex-col bg-white dark:bg-gray-800/95 border-r border-gray-200 dark:border-gray-700 pointer-events-auto transition-transform duration-200 ease-out md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="p-6 border-b border-gray-700">
-          <h1 className="text-xl font-bold text-white truncate mb-3">{process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}</h1>
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate mb-3">{process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}</h1>
           {currentStoryTitle && (
-            <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
-              <div className="text-xs text-gray-400 truncate" title={currentStoryTitle}>
+            <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700/50">
+              <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={currentStoryTitle}>
                 Project
               </div>
-              <div className="text-sm font-medium text-white truncate" title={currentStoryTitle}>
+              <div className="text-sm font-medium text-gray-900 dark:text-white truncate" title={currentStoryTitle}>
                 {currentStoryTitle}
               </div>
               <div className="mt-1.5 flex items-center gap-2">
@@ -451,7 +451,7 @@ export default function DashboardLayout({
                     onClick={handleSidebarSync}
                     disabled={isSyncing}
                     title="Sync to cloud"
-                    className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors disabled:opacity-50"
                   >
                     {syncSuccess ? <Check className="w-3 h-3" /> : <CloudUpload className="w-3 h-3" />}
                     {isSyncing ? 'Syncing…' : syncSuccess ? 'Synced' : 'Sync'}
@@ -466,7 +466,7 @@ export default function DashboardLayout({
                       window.location.reload();
                     }
                   }}
-                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
                 >
                   Switch project
                 </button>
@@ -476,22 +476,22 @@ export default function DashboardLayout({
           
           {/* Signed-in user: show email, tier, and profile/session */}
           {user && (
-            <div className="mb-3 p-2 bg-gray-900/50 rounded-lg border border-gray-700/50">
+            <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700/50">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-400">Signed in</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">Signed in</span>
                 <button
                   onClick={() => setShowGuestModal(true)}
-                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  className="text-xs text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition-colors"
                   title="Session, backup & subscription"
                 >
                   <User className="w-3 h-3" />
                 </button>
               </div>
-              <div className="text-xs font-medium text-white truncate" title={user.email}>
+              <div className="text-xs font-medium text-gray-900 dark:text-white truncate" title={user.email}>
                 {user.email || 'Signed in'}
               </div>
               {!tierLoading && (
-                <div className="text-xs text-gray-400 mt-0.5 capitalize" title="Your plan">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 capitalize" title="Your plan">
                   Plan: {tier}
                 </div>
               )}
@@ -501,12 +501,12 @@ export default function DashboardLayout({
           {/* Search Button */}
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-700/50 hover:bg-gray-700 rounded-lg text-gray-300 hover:text-white transition-colors text-sm mb-2"
+            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors text-sm mb-2"
             title="Search (Cmd/Ctrl + K)"
           >
             <Search className="w-4 h-4" />
             <span className="flex-1 text-left">Search...</span>
-            <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs text-gray-400">
+            <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-transparent text-xs text-gray-500 dark:text-gray-400">
               {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}K
             </kbd>
           </button>
@@ -514,12 +514,12 @@ export default function DashboardLayout({
           {/* Keyboard Shortcuts Button */}
           <button
             onClick={() => openCheatsheet?.()}
-            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-700/50 hover:bg-gray-700 rounded-lg text-gray-300 hover:text-white transition-colors text-sm"
+            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700/50 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors text-sm"
             title="Keyboard Shortcuts (Ctrl+Shift+?)"
           >
             <Keyboard className="w-4 h-4" />
             <span className="flex-1 text-left">Shortcuts</span>
-            <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs text-gray-400">
+            <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-transparent text-xs text-gray-500 dark:text-gray-400">
               ?
             </kbd>
           </button>
@@ -541,7 +541,7 @@ export default function DashboardLayout({
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-left min-h-[44px] ${
                   isActive
                     ? `${item.accent} text-white shadow-lg`
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800/50'
                 }`}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
@@ -552,17 +552,17 @@ export default function DashboardLayout({
         </nav>
 
         {/* User section */}
-        <div className="p-4 border-t border-gray-700 space-y-2">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
           <button
             onClick={async () => {
               await supabase.auth.signOut();
               router.replace('/auth');
             }}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/50 transition-colors min-h-[44px]"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors min-h-[44px]"
           >
             <span className="font-medium">Sign Out</span>
           </button>
-          <p className="text-center text-xs text-gray-500" title={process.env.NODE_ENV === 'development' ? 'Development build' : undefined}>
+          <p className="text-center text-xs text-gray-500 dark:text-gray-500" title={process.env.NODE_ENV === 'development' ? 'Development build' : undefined}>
             {process.env.NODE_ENV === 'development' ? 'OdysseyOS · dev' : 'OdysseyOS'}
           </p>
         </div>
@@ -570,8 +570,8 @@ export default function DashboardLayout({
       )}
 
       {/* Main content - full width on Writer, otherwise offset for sidebar */}
-      <main className={`relative z-0 flex-1 min-w-0 overflow-auto ${pathname === '/dashboard/writer' ? 'ml-0' : 'ml-0 md:ml-64'}`}>
-        <div className={pathname === '/dashboard/writer' ? 'p-0 h-full' : 'px-4 py-4 md:p-6'}>
+      <main className={`relative z-0 flex-1 min-w-0 min-h-0 overflow-auto ${pathname === '/dashboard/writer' ? 'ml-0' : 'ml-0 md:ml-64'}`}>
+        <div className={pathname === '/dashboard/writer' ? 'p-0 h-full flex flex-col min-h-0' : 'px-4 py-4 md:p-6 flex flex-col min-h-0 flex-1'}>
           {/* Top bar: menu (mobile) and theme toggle — hidden on Writer (Writer has its own header with toggle) */}
           {pathname !== '/dashboard/writer' && (
           <div className="flex items-center justify-between gap-2 mb-4">
@@ -598,14 +598,15 @@ export default function DashboardLayout({
               ✓ DEV — No migration wizard when signed in. Sidebar shows your email.
             </div>
           )}
-          <div className="max-w-prose md:max-w-none mx-auto md:mx-0">
+          <div className="max-w-prose md:max-w-none mx-auto md:mx-0 flex-1 min-h-0 flex flex-col">
             <AnimatePresence mode="wait">
               <motion.div
                 key={pathname}
-                initial={{ opacity: 0, y: 6, filter: 'blur(2px)' }}
+                initial={false}
                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                 exit={{ opacity: 0, y: -4, filter: 'blur(2px)' }}
-                transition={{ duration: 0.32, ease: [0.25, 0.46, 0.45, 0.94] }}
+                transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+                className="flex-1 min-h-0 flex flex-col"
               >
                 {children}
               </motion.div>

@@ -230,21 +230,21 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <BookOpen className="w-6 h-6 text-purple-400" />
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+          <BookOpen className="w-6 h-6 text-purple-500 dark:text-purple-400" />
           Story Outline
         </h2>
         <div className="flex items-center gap-2">
           {outline && (
             <>
               {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
+              <div className="flex items-center gap-1 bg-gray-200 dark:bg-gray-800 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('list')}
                   className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-2 transition-colors ${
                     viewMode === 'list'
                       ? 'bg-purple-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
                   <List className="w-4 h-4" />
@@ -255,7 +255,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                   className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-2 transition-colors ${
                     viewMode === 'graph'
                       ? 'bg-purple-600 text-white'
-                      : 'text-gray-400 hover:text-white'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                   }`}
                 >
                   <Network className="w-4 h-4" />
@@ -264,7 +264,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
               </div>
               <button
                 onClick={handleClearOutline}
-                className="px-3 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-600/30 rounded-lg text-sm flex items-center gap-2"
+                className="px-3 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-600 dark:text-red-400 border border-red-600/30 rounded-lg text-sm flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
                 Clear
@@ -273,18 +273,18 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
           )}
           <button
             onClick={onSkip}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm flex items-center gap-2"
+            className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg text-sm flex items-center gap-2"
           >
             <SkipForward className="w-4 h-4" />
-            Skip to Scenes
+            Skip to Writer
           </button>
         </div>
       </div>
 
       {/* Template selector: always visible on all screen sizes — dropdown when outline exists */}
       {outline && (
-        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
-          <label htmlFor="outline-structure-select" className="text-sm font-medium text-gray-300 whitespace-nowrap">
+        <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <label htmlFor="outline-structure-select" className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
             Structure:
           </label>
           <select
@@ -294,7 +294,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
               const id = e.target.value;
               if (id) handleSelectTemplate(id);
             }}
-            className="flex-1 min-w-[200px] max-w-full bg-gray-700 border border-gray-600 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="flex-1 min-w-[200px] max-w-full bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
           >
             <option value="">Choose structure…</option>
             {outlineTemplates.map((t) => (
@@ -307,7 +307,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
           <button
             type="button"
             onClick={() => setShowTemplates(true)}
-            className="text-sm text-purple-400 hover:text-purple-300 whitespace-nowrap"
+            className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 whitespace-nowrap"
           >
             Show all templates
           </button>
@@ -322,8 +322,8 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            <div className="p-4 sm:p-5 bg-purple-900/20 border border-purple-500/30 rounded-xl">
-              <p className="text-white font-medium mb-4 sm:mb-5">Choose a structure to get started</p>
+            <div className="p-4 sm:p-5 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-500/30 rounded-xl">
+              <p className="text-gray-800 dark:text-white font-medium mb-4 sm:mb-5">Choose a structure to get started</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {outlineTemplates.map((template) => (
                   <motion.button
@@ -331,18 +331,18 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => handleSelectTemplate(template.id)}
-                    className="p-4 sm:p-5 bg-gray-800 hover:bg-purple-900/40 border border-gray-700 hover:border-purple-500/50 rounded-xl text-left transition-all min-h-[120px] flex flex-col"
+                    className="p-4 sm:p-5 bg-white dark:bg-gray-800 hover:bg-purple-100 dark:hover:bg-purple-900/40 border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500/50 rounded-xl text-left transition-all min-h-[120px] flex flex-col"
                   >
                     <div className="flex items-start gap-2 mb-2">
-                      <Layout className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-                      <h3 className="font-semibold text-white text-base leading-tight">{template.name}</h3>
+                      <Layout className="w-5 h-5 text-purple-500 dark:text-purple-400 flex-shrink-0 mt-0.5" />
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-base leading-tight">{template.name}</h3>
                     </div>
-                    <p className="text-sm text-gray-400 flex-1 mb-3 line-clamp-2">{template.shortDescription}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 flex-1 mb-3 line-clamp-2">{template.shortDescription}</p>
                     <div className="flex flex-wrap gap-1.5">
                       {template.bestFor.slice(0, 4).map((genre) => (
                         <span
                           key={genre}
-                          className="px-2 py-0.5 text-xs rounded-full bg-gray-700/80 text-gray-300"
+                          className="px-2 py-0.5 text-xs rounded-full bg-gray-200 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300"
                         >
                           {genre}
                         </span>
@@ -381,36 +381,36 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
             transition={{ duration: 0.2 }}
             className="space-y-4"
           >
-            <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg space-y-3">
+            <div className="p-4 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg space-y-3">
               <div>
-                <label className="text-sm text-gray-400 block mb-1">Story Premise</label>
+                <label className="text-sm text-gray-600 dark:text-gray-400 block mb-1">Story Premise</label>
                 <input
                   type="text"
                   value={outline.storyPremise}
                   onChange={(e) => setOutline({ ...outline, storyPremise: e.target.value })}
                   placeholder="What is your story about?"
-                  className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm text-gray-400 block mb-1">Theme</label>
+                  <label className="text-sm text-gray-600 dark:text-gray-400 block mb-1">Theme</label>
                   <input
                     type="text"
                     value={outline.theme}
                     onChange={(e) => setOutline({ ...outline, theme: e.target.value })}
                     placeholder="e.g., redemption, love, justice"
-                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-gray-400 block mb-1">Genre</label>
+                  <label className="text-sm text-gray-600 dark:text-gray-400 block mb-1">Genre</label>
                   <input
                     type="text"
                     value={outline.genre}
                     onChange={(e) => setOutline({ ...outline, genre: e.target.value })}
                     placeholder="e.g., fantasy, thriller, romance"
-                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
               </div>
@@ -432,7 +432,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-white">Chapters</h3>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Chapters</h3>
                 <button
                   onClick={handleAddChapter}
                   className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-full text-sm flex items-center gap-1"
@@ -448,21 +448,21 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                   id={`chapter-${chapter.id}`}
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="border border-gray-700 rounded-lg overflow-hidden bg-gray-800/30"
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800/30"
                 >
-                  <div className="w-full p-4 flex items-center justify-between gap-2 hover:bg-gray-800/50 transition-colors">
+                  <div className="w-full p-4 flex items-center justify-between gap-2 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors">
                     <button
                       onClick={() => toggleChapter(chapter.id)}
                       className="flex items-center gap-3 flex-1 min-w-0 text-left"
                     >
                       {expandedChapters.has(chapter.id) ? (
-                        <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-white font-medium">{chapter.title}</h4>
-                        <p className="text-sm text-gray-400 truncate">{chapter.description}</p>
+                        <h4 className="text-gray-900 dark:text-white font-medium">{chapter.title}</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{chapter.description}</p>
                       </div>
                     </button>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -475,7 +475,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                           e.stopPropagation();
                           handleDeleteChapter(chapter.id);
                         }}
-                        className="p-1.5 rounded-md text-gray-400 hover:text-red-400 hover:bg-red-500/20 transition-colors"
+                        className="p-1.5 rounded-md text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-500/20 transition-colors"
                         title="Delete chapter"
                         aria-label="Delete chapter"
                       >
@@ -497,7 +497,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                             <div
                               key={point.id}
                               id={`point-${point.id}`}
-                              className="p-3 bg-gray-700/50 border border-gray-600 rounded-lg"
+                              className="p-3 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg"
                             >
                               {editingPoint === point.id ? (
                                 <div className="space-y-2">
@@ -509,7 +509,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                                         title: e.target.value,
                                       })
                                     }
-                                    className="w-full bg-gray-600 text-white rounded px-2 py-1 text-sm focus:outline-none"
+                                    className="w-full bg-white dark:bg-gray-600 text-gray-900 dark:text-white rounded px-2 py-1 text-sm focus:outline-none border border-gray-200 dark:border-transparent"
                                   />
                                   <textarea
                                     value={point.description}
@@ -519,7 +519,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                                       })
                                     }
                                     placeholder="Describe this plot point..."
-                                    className="w-full bg-gray-600 text-white rounded px-2 py-2 text-sm focus:outline-none resize-none h-20"
+                                    className="w-full bg-white dark:bg-gray-600 text-gray-900 dark:text-white rounded px-2 py-2 text-sm focus:outline-none resize-none h-20 border border-gray-200 dark:border-transparent"
                                   />
                                   <div className="flex items-center gap-2">
                                     <button
@@ -530,7 +530,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                                     </button>
                                     <button
                                       onClick={() => setEditingPoint(null)}
-                                      className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white rounded text-xs"
+                                      className="px-2 py-1 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-800 dark:text-white rounded text-xs"
                                     >
                                       Cancel
                                     </button>
@@ -540,13 +540,13 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                      <FileText className="w-4 h-4 text-purple-400" />
-                                      <h5 className="text-white font-medium text-sm">{point.title}</h5>
+                                      <FileText className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+                                      <h5 className="text-gray-900 dark:text-white font-medium text-sm">{point.title}</h5>
                                     </div>
-                                    <p className="text-xs text-gray-400">{point.description}</p>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">{point.description}</p>
                                     <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                                       <span>~{point.estimatedScenes} scenes</span>
-                                      <span className="px-2 py-0.5 bg-gray-700 rounded-full">
+                                      <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300">
                                         {point.emotionalTone}
                                       </span>
                                     </div>
@@ -554,15 +554,15 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
                                   <div className="flex items-center gap-1">
                                     <button
                                       onClick={() => setEditingPoint(point.id)}
-                                      className="p-1 hover:bg-gray-600 rounded"
+                                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                                     >
-                                      <Edit3 className="w-3 h-3 text-gray-400" />
+                                      <Edit3 className="w-3 h-3 text-gray-500 dark:text-gray-400" />
                                     </button>
                                     <button
                                       onClick={() => handleDeletePoint(chapter.id, point.id)}
                                       className="p-1 hover:bg-red-500/20 rounded"
                                     >
-                                      <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-400" />
+                                      <Trash2 className="w-3 h-3 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" />
                                     </button>
                                   </div>
                                 </div>
@@ -572,7 +572,7 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
 
                           <button
                             onClick={() => handleAddPoint(chapter.id)}
-                            className="w-full p-2 border-2 border-dashed border-gray-700 hover:border-purple-500/50 rounded-lg text-gray-400 hover:text-purple-400 text-sm flex items-center justify-center gap-2"
+                            className="w-full p-2 border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500/50 rounded-lg text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 text-sm flex items-center justify-center gap-2"
                           >
                             <Plus className="w-4 h-4" />
                             Add Plot Point
@@ -585,17 +585,17 @@ export default function OutlineBuilder({ story, onOutlineComplete, onSkip }: Out
               ))}
             </div>
 
-            <div className="pt-4 border-t border-gray-700">
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => outline && onOutlineComplete(outline)}
                 disabled={!outline || outline.chapters.length === 0}
-                className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold flex items-center justify-center gap-2"
+                className="w-full py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold flex items-center justify-center gap-2"
               >
                 <BookOpen className="w-5 h-5" />
-                Continue to Scenes
+                Continue to Writer
               </button>
               <p className="text-center text-xs text-gray-500 mt-2">
-                Your outline will guide scene creation
+                Your outline will guide your writing
               </p>
             </div>
           </motion.div>

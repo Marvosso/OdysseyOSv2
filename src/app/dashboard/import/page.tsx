@@ -238,8 +238,8 @@ export default function ImportPage() {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <FileText className="w-6 h-6 text-purple-400" />
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+            <FileText className="w-6 h-6 text-purple-500 dark:text-purple-400" />
             Import Preview
           </h2>
         </div>
@@ -269,7 +269,7 @@ export default function ImportPage() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-4 bg-gray-800/50 border border-purple-500/30 rounded-lg"
+            className="p-4 bg-white dark:bg-gray-800/50 border border-purple-200 dark:border-purple-500/30 rounded-lg"
           >
             <AIEnhancementPanel
               importResult={importResult}
@@ -319,25 +319,25 @@ export default function ImportPage() {
 
         {/* Preview Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Title</p>
-            <p className="text-white font-semibold mt-1">{importResult.title}</p>
+          <div className="p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Title</p>
+            <p className="text-gray-800 dark:text-white font-semibold mt-1">{importResult.title}</p>
           </div>
-          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Word Count</p>
-            <p className="text-white font-semibold mt-1">
+          <div className="p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Word Count</p>
+            <p className="text-gray-800 dark:text-white font-semibold mt-1">
               {importResult.preview.totalWords.toLocaleString()}
             </p>
           </div>
-          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Chapters</p>
-            <p className="text-white font-semibold mt-1">
+          <div className="p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Chapters</p>
+            <p className="text-gray-800 dark:text-white font-semibold mt-1">
               {importResult.preview.chapterCount}
             </p>
           </div>
-          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-            <p className="text-gray-400 text-sm">Scenes</p>
-            <p className="text-white font-semibold mt-1">
+          <div className="p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Scenes</p>
+            <p className="text-gray-800 dark:text-white font-semibold mt-1">
               {importResult.preview.sceneCount}
             </p>
           </div>
@@ -345,12 +345,12 @@ export default function ImportPage() {
 
         {/* Detected Chapters */}
         {importResult.detectedChapters.length > 0 && (
-          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-            <h3 className="text-white font-semibold mb-3">Detected Chapters</h3>
+          <div className="p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-gray-800 dark:text-white font-semibold mb-3">Detected Chapters</h3>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {importResult.detectedChapters.map((chapter, index) => (
-                <div key={index} className="flex items-center justify-between p-2 bg-gray-800/30 rounded">
-                  <span className="text-gray-300">{chapter.title}</span>
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/30 rounded">
+                  <span className="text-gray-700 dark:text-gray-300">{chapter.title}</span>
                   <span className="text-gray-500 text-sm">
                     {(chapter.confidence * 100).toFixed(0)}% confidence
                   </span>
@@ -362,8 +362,8 @@ export default function ImportPage() {
 
         {/* Detected Characters */}
         {importResult.detectedCharacters.length > 0 && (
-          <div className="p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-            <h3 className="text-white font-semibold mb-3">Detected Characters</h3>
+          <div className="p-4 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-gray-800 dark:text-white font-semibold mb-3">Detected Characters</h3>
             <div className="flex flex-wrap gap-2">
               {importResult.detectedCharacters.slice(0, 20).map((character, index) => (
                 <div
@@ -400,7 +400,7 @@ export default function ImportPage() {
           </button>
           <button
             onClick={handleCancel}
-            className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+            className="px-4 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg flex items-center gap-2 transition-colors"
           >
             <X className="w-5 h-5" />
             Cancel
@@ -413,8 +413,8 @@ export default function ImportPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-          <Upload className="w-6 h-6 text-purple-400" />
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+          <Upload className="w-6 h-6 text-purple-500 dark:text-purple-400" />
           Import Story
         </h2>
       </div>
@@ -431,7 +431,7 @@ export default function ImportPage() {
           className={`border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer ${
             isDragging
               ? 'border-purple-500 bg-purple-500/10'
-              : 'border-gray-600 bg-gray-800/50 hover:border-purple-400 hover:bg-gray-800'
+              : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 hover:border-purple-400 hover:bg-gray-100 dark:hover:bg-gray-800'
           }`}
         >
           <input
@@ -442,11 +442,11 @@ export default function ImportPage() {
             id="file-upload"
           />
           <label htmlFor="file-upload" className="cursor-pointer">
-            <Upload className="w-16 h-16 mx-auto text-purple-400 mb-4" />
-            <p className="text-white text-lg font-medium mb-2">
+            <Upload className="w-16 h-16 mx-auto text-purple-500 dark:text-purple-400 mb-4" />
+            <p className="text-gray-800 dark:text-white text-lg font-medium mb-2">
               Drop your story file here
             </p>
-            <p className="text-gray-400 text-sm mb-4">
+            <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
               or click to browse
             </p>
             <p className="text-gray-500 text-xs">
@@ -459,10 +459,10 @@ export default function ImportPage() {
                   id="enable-ai"
                   checked={enableAI}
                   onChange={(e) => setEnableAI(e.target.checked)}
-                  className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                  className="w-4 h-4 text-purple-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500"
                 />
-                <label htmlFor="enable-ai" className="text-sm text-gray-300 flex items-center gap-2 cursor-pointer">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
+                <label htmlFor="enable-ai" className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2 cursor-pointer">
+                  <Sparkles className="w-4 h-4 text-purple-500 dark:text-purple-400" />
                   Enable AI Analysis
                 </label>
               </div>
@@ -474,7 +474,7 @@ export default function ImportPage() {
         <div className="text-center">
           <button
             onClick={() => setShowPasteInput(!showPasteInput)}
-            className="text-gray-400 hover:text-purple-400 text-sm flex items-center gap-2 mx-auto transition-colors"
+            className="text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 text-sm flex items-center gap-2 mx-auto transition-colors"
           >
             <Clipboard className="w-4 h-4" />
             {showPasteInput ? 'Hide' : 'Or paste text instead'}
@@ -492,12 +492,12 @@ export default function ImportPage() {
               value={pastedText}
               onChange={(e) => setPastedText(e.target.value)}
               placeholder="Paste your story text here..."
-              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-white placeholder:text-gray-500 min-h-[200px]"
+              className="w-full px-4 py-3 bg-white dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900 dark:text-white placeholder:text-gray-500 min-h-[200px]"
             />
             <button
               onClick={handlePaste}
               disabled={!pastedText.trim() || isProcessing}
-              className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-300 text-white rounded-lg font-medium transition-colors"
+              className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-500 dark:disabled:text-gray-300 text-white rounded-lg font-medium transition-colors"
             >
               Import Pasted Text
             </button>
@@ -523,11 +523,11 @@ export default function ImportPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center justify-center p-8 bg-gray-800/50 rounded-lg"
+            className="flex items-center justify-center p-8 bg-white dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-transparent"
           >
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto mb-3" />
-              <p className="text-gray-300 text-sm">Processing your story...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 dark:border-purple-400 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-300 text-sm">Processing your story...</p>
               <p className="text-gray-500 text-xs mt-1">
                 Detecting chapters, scenes, and characters
               </p>

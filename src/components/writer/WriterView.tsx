@@ -238,10 +238,10 @@ export default function WriterView() {
       </header>
 
       <div className="flex flex-1 min-h-0">
-        {/* Main editor – page feel: centered column, generous padding */}
-        <main className="flex-1 min-w-0 overflow-auto">
+        {/* Main editor – full width and height below header */}
+        <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto">
           {!activeScene && scenes.length > 0 ? (
-            <div className="odyssey-editor-page min-h-full flex items-center justify-center">
+            <div className="odyssey-editor-page odyssey-editor-page--full min-h-full flex items-center justify-center">
               <p className="text-gray-500 dark:text-gray-400 text-sm">Select a chapter from the dropdown above.</p>
             </div>
           ) : (
@@ -252,9 +252,9 @@ export default function WriterView() {
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, y: -6, filter: 'blur(2px)' }}
               transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="odyssey-editor-page min-h-full"
+              className="odyssey-editor-page odyssey-editor-page--full flex-1 min-h-0 flex flex-col"
             >
-              <div className="relative rounded-2xl bg-white dark:bg-[#1e1e2a] shadow-xl dark:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.15)] border border-gray-100 dark:border-white/5 overflow-hidden min-h-[500px] focus-within:shadow-2xl dark:focus-within:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.2)] transition-shadow duration-300">
+              <div className="relative flex-1 min-h-0 flex flex-col rounded-2xl bg-white dark:bg-[#1e1e2a] shadow-xl dark:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.15)] border border-gray-100 dark:border-white/5 overflow-hidden focus-within:shadow-2xl dark:focus-within:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.2)] transition-shadow duration-300">
                 {/* Typing glow: low-opacity purple radial, only when focused + typed in last 2s */}
                 {editorFocused && typingGlow && (
                   <div
@@ -271,7 +271,7 @@ export default function WriterView() {
                   onChange={handleEditorInput}
                   onFocus={() => setEditorFocused(true)}
                   onBlur={() => setEditorFocused(false)}
-                  className="odyssey-editor relative w-full min-h-[500px] px-8 py-10 rounded-2xl border-0 bg-transparent focus:ring-0 focus:outline-none outline-none resize-none font-serif text-lg leading-relaxed tracking-wide text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-400"
+                  className="odyssey-editor relative w-full flex-1 min-h-0 px-8 py-10 rounded-2xl border-0 bg-transparent focus:ring-0 focus:outline-none outline-none resize-none font-serif text-lg leading-relaxed tracking-wide text-gray-800 dark:text-gray-200 placeholder:text-gray-400 dark:placeholder:text-gray-400"
                   style={{ lineHeight: '1.75' }}
                   placeholder="Write your chapter here…"
                   spellCheck
