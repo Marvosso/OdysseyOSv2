@@ -31,9 +31,27 @@ interface Feature {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   path: string;
+  tier: 'free' | 'pro' | 'studio';
   shortDescription: string;
   detailedDescription: string;
   features?: string[];
+}
+
+function TierBadge({ tier }: { tier: Feature['tier'] }) {
+  const styles = {
+    free: 'bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600',
+    pro: 'bg-indigo-100 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/50',
+    studio: 'bg-amber-100 dark:bg-amber-600/30 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-500/50',
+  };
+  const label = tier.charAt(0).toUpperCase() + tier.slice(1);
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${styles[tier]}`}
+      title={`Available on ${label} plan`}
+    >
+      {label}
+    </span>
+  );
 }
 
 const features: Feature[] = [
@@ -42,6 +60,7 @@ const features: Feature[] = [
     label: 'Stories',
     icon: BookOpen,
     path: '/dashboard',
+    tier: 'free',
     shortDescription: 'Manage your project and chapters: add, reorder, and open chapters for editing.',
     detailedDescription: 'The Stories tab is your project hub. See your current story and a read-only list of all chapters with title, status, word count, and a short preview. Add, delete, or reorder chapters with drag-and-drop. Click a chapter to open it in the Writer tab for focused editing.',
     features: [
@@ -56,6 +75,7 @@ const features: Feature[] = [
     label: 'Writer',
     icon: PenLine,
     path: '/dashboard/writer',
+    tier: 'free',
     shortDescription: 'Full-screen focused editing for one chapter at a time.',
     detailedDescription: 'The Writer tab gives you a distraction-free editing experience. Edit the current chapter with a full-width editor, collapsible side panels for characters and world elements, word count, and previous/next chapter navigation. Changes autosave as you type.',
     features: [
@@ -73,6 +93,7 @@ const features: Feature[] = [
     label: 'Characters',
     icon: Users,
     path: '/dashboard/characters',
+    tier: 'free',
     shortDescription: 'Build and manage your story characters with detailed profiles.',
     detailedDescription: 'Create comprehensive character profiles with names, descriptions, motivations, and relationships. Characters are automatically detected during story import and can be linked to scenes and world elements.',
     features: [
@@ -87,6 +108,7 @@ const features: Feature[] = [
     label: 'AI Tools',
     icon: Sparkles,
     path: '/dashboard/ai',
+    tier: 'pro',
     shortDescription: 'Leverage AI to analyze story structure and get writing suggestions.',
     detailedDescription: 'Use AI-powered tools to analyze your story structure, detect narrative patterns, and receive intelligent writing suggestions. The AI can help identify pacing issues, character development opportunities, and structural improvements.',
     features: [
@@ -101,6 +123,7 @@ const features: Feature[] = [
     label: 'Outline',
     icon: FileText,
     path: '/dashboard/outline',
+    tier: 'free',
     shortDescription: 'Plan your story structure with visual outlines and chapter organization.',
     detailedDescription: 'Build and visualize your story outline with chapters, scenes, and plot points. Organize your narrative structure before writing, or use it to track your progress as you develop your story.',
     features: [
@@ -115,6 +138,7 @@ const features: Feature[] = [
     label: 'World Builder',
     icon: Globe,
     path: '/dashboard/world',
+    tier: 'pro',
     shortDescription: 'Create and manage your story world with locations, cultures, and systems.',
     detailedDescription: 'Build rich, interconnected worlds with locations, cultures, factions, magic systems, and more. Link world elements to scenes and characters to maintain consistency throughout your narrative.',
     features: [
@@ -130,6 +154,7 @@ const features: Feature[] = [
     label: 'Beats',
     icon: BarChart3,
     path: '/dashboard/beats',
+    tier: 'pro',
     shortDescription: 'Track story beats and narrative pacing throughout your story.',
     detailedDescription: 'Visualize and manage story beats to ensure proper pacing and narrative flow. Track key moments, plot points, and emotional arcs across your entire story.',
     features: [
@@ -144,6 +169,7 @@ const features: Feature[] = [
     label: 'Analytics',
     icon: TrendingUp,
     path: '/dashboard/analytics',
+    tier: 'pro',
     shortDescription: 'View writing metrics, goals, and productivity insights.',
     detailedDescription: 'Track your writing progress with analytics dashboards. See word count over time, writing speed, time-of-day patterns, and goal projections. Use data to build better writing habits.',
     features: [
@@ -158,6 +184,7 @@ const features: Feature[] = [
     label: 'Export',
     icon: Download,
     path: '/dashboard/export',
+    tier: 'free',
     shortDescription: 'Export your story in multiple formats for publishing or sharing.',
     detailedDescription: 'Export your completed story in various formats including PDF, DOCX, EPUB, and plain text. Customize formatting options to match your publishing needs.',
     features: [
@@ -172,6 +199,7 @@ const features: Feature[] = [
     label: 'Publish',
     icon: Share2,
     path: '/dashboard/publish',
+    tier: 'studio',
     shortDescription: 'Prepare and publish your story to various platforms.',
     detailedDescription: 'Prepare your story for publication with formatting tools, metadata management, and platform-specific export options. Get your story ready for readers.',
     features: [
@@ -186,6 +214,7 @@ const features: Feature[] = [
     label: 'Import',
     icon: Upload,
     path: '/dashboard/import',
+    tier: 'free',
     shortDescription: 'Import existing stories from text files with automatic structure detection.',
     detailedDescription: 'Import your existing stories from .txt or .md files. OdysseyOS automatically detects word count, chapters, scenes, and characters. Preview the parsed structure before importing to ensure accuracy.',
     features: [
@@ -247,7 +276,10 @@ function FeatureModal({ feature, isOpen, onClose }: FeatureModalProps) {
                     <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{feature.label}</h2>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{feature.label}</h2>
+                      <TierBadge tier={feature.tier} />
+                    </div>
                     <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">{feature.shortDescription}</p>
                   </div>
                 </div>
@@ -352,7 +384,10 @@ export default function FeatureTour() {
                     <Icon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">{feature.label}</h3>
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{feature.label}</h3>
+                      <TierBadge tier={feature.tier} />
+                    </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{feature.shortDescription}</p>
                   </div>
                 </div>
@@ -389,6 +424,12 @@ export default function FeatureTour() {
           Start by importing an existing story or create a new one in the Stories tab. Use the sidebar to navigate between 
           different features and explore how they can enhance your writing workflow.
         </p>
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Plans:</span>
+          <TierBadge tier="free" />
+          <TierBadge tier="pro" />
+          <TierBadge tier="studio" />
+        </div>
         <div className="flex flex-wrap gap-2">
           <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-600/20 text-indigo-700 dark:text-indigo-300 rounded-full text-sm">
             Tip: Hover over any feature for a quick preview
