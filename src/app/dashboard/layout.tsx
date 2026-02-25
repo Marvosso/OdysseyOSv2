@@ -598,6 +598,9 @@ export default function DashboardLayout({
               ✓ DEV — No migration wizard when signed in. Sidebar shows your email.
             </div>
           )}
+          {pathname === '/dashboard/writer' ? (
+            children
+          ) : (
           <div className="max-w-prose md:max-w-none mx-auto md:mx-0 flex-1 min-h-0 flex flex-col">
             <AnimatePresence mode="wait">
               <motion.div
@@ -612,6 +615,7 @@ export default function DashboardLayout({
               </motion.div>
             </AnimatePresence>
           </div>
+          )}
         </div>
       </main>
 

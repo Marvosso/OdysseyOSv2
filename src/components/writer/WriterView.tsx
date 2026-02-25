@@ -139,7 +139,7 @@ export default function WriterView() {
   const worldElements = (story as { worldElements?: { name: string }[] })?.worldElements ?? [];
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[rgb(var(--background-rgb))]">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-[rgb(var(--background-rgb))]">
       {/* Top bar: Back, title, progress, word count, nav, panels toggle */}
       <header className="flex-shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#1a1a24] shadow-sm">
         <div className="flex items-center gap-2 flex-wrap">
@@ -237,9 +237,9 @@ export default function WriterView() {
         </div>
       </header>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 w-full min-w-0">
         {/* Main editor – full width and height below header */}
-        <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto">
+        <main className="flex-1 min-w-0 min-h-0 w-full flex flex-col overflow-auto">
           {!activeScene && scenes.length > 0 ? (
             <div className="odyssey-editor-page odyssey-editor-page--full min-h-full flex items-center justify-center">
               <p className="text-gray-500 dark:text-gray-400 text-sm">Select a chapter from the dropdown above.</p>
@@ -252,9 +252,9 @@ export default function WriterView() {
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, y: -6, filter: 'blur(2px)' }}
               transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="odyssey-editor-page odyssey-editor-page--full flex-1 min-h-0 flex flex-col"
+              className="odyssey-editor-page odyssey-editor-page--full flex-1 min-h-0 w-full flex flex-col"
             >
-              <div className="relative flex-1 min-h-0 flex flex-col rounded-2xl bg-white dark:bg-[#1e1e2a] shadow-xl dark:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.15)] border border-gray-100 dark:border-white/5 overflow-hidden focus-within:shadow-2xl dark:focus-within:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.2)] transition-shadow duration-300">
+              <div className="relative flex-1 min-h-0 w-full flex flex-col rounded-2xl bg-white dark:bg-[#1e1e2a] shadow-xl dark:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.15)] border border-gray-100 dark:border-white/5 overflow-hidden focus-within:shadow-2xl dark:focus-within:shadow-[0_20px_80px_rgba(0,0,0,0.6),0_0_120px_rgba(109,40,217,0.2)] transition-shadow duration-300">
                 {/* Typing glow: low-opacity purple radial, only when focused + typed in last 2s */}
                 {editorFocused && typingGlow && (
                   <div

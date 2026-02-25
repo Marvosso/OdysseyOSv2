@@ -206,8 +206,12 @@ body {
 }
 /* Full-width variant for Writer page so editor spans the main area */
 .odyssey-editor-page--full {
+  width: 100%;
   max-width: none;
+  margin-left: 0;
+  margin-right: 0;
   padding: 1.5rem 1.5rem;
+  box-sizing: border-box;
 }
 @media (min-width: 768px) {
   .odyssey-editor-page {
