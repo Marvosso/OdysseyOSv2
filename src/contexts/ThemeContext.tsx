@@ -14,47 +14,33 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'dark';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
 function getStoredTheme(): ThemeMode {
-  if (typeof window === 'undefined') return 'system';
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
-  return 'system';
+  if (typeof window === 'undefined') return 'dark';
+  return 'dark'; // Light mode hidden for now — always use dark
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>(getStoredTheme);
-  const [resolved, setResolved] = useState<'light' | 'dark'>(() =>
-    theme === 'system' ? getSystemTheme() : theme
-  );
+  const [resolved, setResolved] = useState<'light' | 'dark'>('dark');
 
   useEffect(() => {
-    const next = theme === 'system' ? getSystemTheme() : theme;
-    setResolved(next);
-    const root = document.documentElement;
-    root.setAttribute('data-theme', next);
+    setResolved('dark');
+    document.documentElement.setAttribute('data-theme', 'dark');
   }, [theme]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handle = () => {
-      if (theme === 'system') {
-        const next = mq.matches ? 'dark' : 'light';
-        setResolved(next);
-        document.documentElement.setAttribute('data-theme', next);
-      }
+      document.documentElement.setAttribute('data-theme', 'dark');
+      setResolved('dark');
     };
     mq.addEventListener('change', handle);
     return () => mq.removeEventListener('change', handle);
-  }, [theme]);
+  }, []);
 
   const setTheme = (mode: ThemeMode) => {
-    setThemeState(mode);
-    if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, mode);
+    setThemeState('dark'); // Ignore; light mode hidden
+    if (typeof window !== 'undefined') localStorage.setItem(STORAGE_KEY, 'dark');
   };
 
   return (

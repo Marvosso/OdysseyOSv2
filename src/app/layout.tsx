@@ -41,7 +41,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('odysseyos_theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.setAttribute('data-theme',t==='light'||t==='dark'?t:d);})();`,
+            __html: `(function(){document.documentElement.setAttribute('data-theme','dark');})();`,
           }}
         />
         <script

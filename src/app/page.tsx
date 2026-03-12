@@ -10,8 +10,6 @@ import {
   Sparkles,
   Mic,
   Layout,
-  FileText,
-  BarChart3,
   Check,
   ArrowRight,
   ChevronRight,
@@ -73,24 +71,84 @@ export default function LandingPage() {
             Built for Storytellers
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { label: 'Outline template picker', icon: Layout, gradient: 'from-purple-500/20 to-indigo-500/20' },
-              { label: 'Character profile linked to scenes', icon: Users, gradient: 'from-pink-500/20 to-rose-500/20' },
-              { label: 'Writing editor workspace', icon: PenLine, gradient: 'from-violet-500/20 to-purple-500/20' },
-              { label: 'Story beats visualization', icon: BarChart3, gradient: 'from-amber-500/20 to-orange-500/20' },
-              { label: 'Voice narration player', icon: Mic, gradient: 'from-emerald-500/20 to-teal-500/20' },
-              { label: 'Chapter writing view', icon: FileText, gradient: 'from-indigo-500/20 to-blue-500/20' },
-            ].map(({ label, icon: Icon, gradient }) => (
-              <div
-                key={label}
-                className={`rounded-2xl border border-gray-200 dark:border-gray-700 bg-gradient-to-br ${gradient} dark:bg-opacity-50 p-8 min-h-[200px] flex flex-col items-center justify-center text-center shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-lg transition-shadow duration-300`}
-              >
-                <div className="p-4 rounded-xl bg-white/80 dark:bg-gray-800/80 mb-4">
-                  <Icon className="w-10 h-10 text-purple-600 dark:text-purple-400" />
-                </div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</p>
+            {/* Outline template picker — real screenshot */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800/50 shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-lg transition-shadow duration-300">
+              <div className="aspect-video bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                <img
+                  src="/screenshots/outline-template.png"
+                  alt="Story Outline — template picker, premise, chapters and scenes"
+                  className="w-full h-full object-cover object-top"
+                />
               </div>
-            ))}
+              <p className="p-4 text-sm font-medium text-gray-700 dark:text-gray-300 text-center border-t border-gray-200 dark:border-gray-700">
+                Outline template picker
+              </p>
+            </div>
+            {/* Story beats visualization — real screenshot */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800/50 shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-lg transition-shadow duration-300">
+              <div className="aspect-video bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                <img
+                  src="/screenshots/story-beats.png"
+                  alt="Scene Breakdown — structure templates and beat cards with duration and impact"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+              <p className="p-4 text-sm font-medium text-gray-700 dark:text-gray-300 text-center border-t border-gray-200 dark:border-gray-700">
+                Story beats visualization
+              </p>
+            </div>
+            {/* Character Hub / character linking — real screenshot */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800/50 shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-lg transition-shadow duration-300">
+              <div className="aspect-video bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                <img
+                  src="/screenshots/character-hub.png"
+                  alt="Character Hub — roles, add character, detected from your story linking"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+              <p className="p-4 text-sm font-medium text-gray-700 dark:text-gray-300 text-center border-t border-gray-200 dark:border-gray-700">
+                Character profile linked to scenes
+              </p>
+            </div>
+            {/* Writing editor workspace — real screenshot */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800/50 shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-lg transition-shadow duration-300">
+              <div className="aspect-video bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                <img
+                  src="/screenshots/writing-workspace.png"
+                  alt="Writing workspace — chapter editor with Reference panel (Characters, World, Notes / AI)"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+              <p className="p-4 text-sm font-medium text-gray-700 dark:text-gray-300 text-center border-t border-gray-200 dark:border-gray-700">
+                Writing editor workspace
+              </p>
+            </div>
+            {/* Voice narration — real screenshot */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800/50 shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-lg transition-shadow duration-300">
+              <div className="aspect-video bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                <img
+                  src="/screenshots/narration.png"
+                  alt="Narration — voice selection and narrate by scene or chapter"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+              <p className="p-4 text-sm font-medium text-gray-700 dark:text-gray-300 text-center border-t border-gray-200 dark:border-gray-700">
+                Voice narration player
+              </p>
+            </div>
+            {/* World Builder — real screenshot */}
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-gray-50 dark:bg-gray-800/50 shadow-card dark:shadow-none hover:shadow-card-md dark:hover:shadow-lg transition-shadow duration-300">
+              <div className="aspect-video bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                <img
+                  src="/screenshots/world-builder.png"
+                  alt="World Builder — locations, culture, magic, technology, politics, economy, religion"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+              <p className="p-4 text-sm font-medium text-gray-700 dark:text-gray-300 text-center border-t border-gray-200 dark:border-gray-700">
+                World Builder
+              </p>
+            </div>
           </div>
         </div>
       </section>
