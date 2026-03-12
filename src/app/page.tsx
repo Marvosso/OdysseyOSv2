@@ -252,6 +252,7 @@ export default function LandingPage() {
             {/* Pro */}
             <div className="rounded-2xl border-2 border-purple-500 bg-white dark:bg-gray-800/50 p-6 flex flex-col shadow-lg shadow-purple-500/10">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">Pro</h3>
+              <p className="text-lg font-semibold text-purple-600 dark:text-purple-400 mt-1">$15/mo</p>
               <ul className="mt-4 space-y-2 text-gray-600 dark:text-gray-400 flex-1">
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500 flex-shrink-0" /> Unlimited projects</li>
                 <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500 flex-shrink-0" /> Advanced templates</li>
